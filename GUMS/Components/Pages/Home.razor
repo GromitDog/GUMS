@@ -93,7 +93,7 @@
             var activeMembers = await PersonService.GetActiveAsync();
             totalCount = activeMembers.Count;
             
-            // Count in a single pass through the collection
+            // Reset counts and iterate once through the collection
             leaderCount = 0;
             rainbowCount = 0;
             brownieCount = 0;
@@ -126,6 +126,16 @@
                     }
                 }
             }
+        }
+        catch
+        {
+            // Reset counts on error
+            leaderCount = 0;
+            rainbowCount = 0;
+            brownieCount = 0;
+            guideCount = 0;
+            rangerCount = 0;
+            totalCount = 0;
         }
         finally
         {
