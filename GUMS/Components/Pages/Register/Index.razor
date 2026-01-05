@@ -81,7 +81,13 @@
     {
         <div class="card">
             <div class="card-body">
-                <p class="text-muted mb-3">Showing @members.Count member(s)</p>
+                @{
+                    var girls = members.Where(m => m.PersonType == PersonType.Girl).OrderBy(m => m.FullName).ToList();
+                    var leaders = members.Where(m => m.PersonType == PersonType.Leader).OrderBy(m => m.FullName).ToList();
+                }
+
+                <p class="text-muted mb-3">Showing @members.Count member(s) (@girls.Count girl(s), @leaders.Count leader(s))</p>
+
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
@@ -96,51 +102,114 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var member in members)
+                            @if (girls.Any())
                             {
-                                <tr>
-                                    <td>@member.MembershipNumber</td>
-                                    <td>
-                                        @if (member.IsDataRemoved)
-                                        {
-                                            <span class="text-muted fst-italic">Removed Member</span>
-                                        }
-                                        else
-                                        {
-                                            @member.FullName
-                                        }
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-@(member.PersonType == PersonType.Girl ? "info" : "secondary")">
-                                            @member.PersonType
-                                        </span>
-                                    </td>
-                                    <td>@(member.Section?.ToString() ?? "-")</td>
-                                    <td>
-                                        @if (member.IsDataRemoved)
-                                        {
-                                            <span class="badge bg-dark">Data Removed</span>
-                                        }
-                                        else if (member.IsActive)
-                                        {
-                                            <span class="badge bg-success">Active</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-warning text-dark">Inactive</span>
-                                        }
-                                    </td>
-                                    <td>@member.DateJoined.ToString("dd/MM/yyyy")</td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <a href="/Register/View/@member.Id" class="btn btn-outline-primary">View</a>
-                                            @if (!member.IsDataRemoved)
-                                            {
-                                                <a href="/Register/Edit/@member.Id" class="btn btn-outline-secondary">Edit</a>
-                                            }
-                                        </div>
+                                <tr class="table-active">
+                                    <td colspan="7" class="fw-bold" style="background-color: #E3F2FD; color: #007BC4;">
+                                        <i class="bi bi-people-fill"></i> Girls (@girls.Count)
                                     </td>
                                 </tr>
+                                @foreach (var member in girls)
+                                {
+                                    <tr>
+                                        <td>@member.MembershipNumber</td>
+                                        <td>
+                                            @if (member.IsDataRemoved)
+                                            {
+                                                <span class="text-muted fst-italic">Removed Member</span>
+                                            }
+                                            else
+                                            {
+                                                @member.FullName
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">
+                                                @member.PersonType
+                                            </span>
+                                        </td>
+                                        <td>@(member.Section?.ToString() ?? "-")</td>
+                                        <td>
+                                            @if (member.IsDataRemoved)
+                                            {
+                                                <span class="badge bg-dark">Data Removed</span>
+                                            }
+                                            else if (member.IsActive)
+                                            {
+                                                <span class="badge bg-success">Active</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning text-dark">Inactive</span>
+                                            }
+                                        </td>
+                                        <td>@member.DateJoined.ToString("dd/MM/yyyy")</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="/Register/View/@member.Id" class="btn btn-outline-primary">View</a>
+                                                @if (!member.IsDataRemoved)
+                                                {
+                                                    <a href="/Register/Edit/@member.Id" class="btn btn-outline-secondary">Edit</a>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+
+                            @if (leaders.Any())
+                            {
+                                <tr class="table-active">
+                                    <td colspan="7" class="fw-bold" style="background-color: #F5F5F5; color: #161B4E;">
+                                        <i class="bi bi-award-fill"></i> Leaders (@leaders.Count)
+                                    </td>
+                                </tr>
+                                @foreach (var member in leaders)
+                                {
+                                    <tr>
+                                        <td>@member.MembershipNumber</td>
+                                        <td>
+                                            @if (member.IsDataRemoved)
+                                            {
+                                                <span class="text-muted fst-italic">Removed Member</span>
+                                            }
+                                            else
+                                            {
+                                                @member.FullName
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">
+                                                @member.PersonType
+                                            </span>
+                                        </td>
+                                        <td>@(member.Section?.ToString() ?? "-")</td>
+                                        <td>
+                                            @if (member.IsDataRemoved)
+                                            {
+                                                <span class="badge bg-dark">Data Removed</span>
+                                            }
+                                            else if (member.IsActive)
+                                            {
+                                                <span class="badge bg-success">Active</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning text-dark">Inactive</span>
+                                            }
+                                        </td>
+                                        <td>@member.DateJoined.ToString("dd/MM/yyyy")</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="/Register/View/@member.Id" class="btn btn-outline-primary">View</a>
+                                                @if (!member.IsDataRemoved)
+                                                {
+                                                    <a href="/Register/Edit/@member.Id" class="btn btn-outline-secondary">Edit</a>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
                             }
                         </tbody>
                     </table>
