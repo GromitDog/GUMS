@@ -17,7 +17,10 @@
       "Bash(dotnet add:*)",
       "Bash(dotnet test:*)",
       "Bash(dotnet remove:*)",
-      "Bash(Select-String -Pattern \"\\(Passed!|Failed!|Total tests|GUMS\\\\.Tests\\\\.Services\\)\")"
+      "Bash(Select-String -Pattern \"\\(Passed!|Failed!|Total tests|GUMS\\\\.Tests\\\\.Services\\)\")",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "WebFetch(domain:girlguiding.foleon.com)"
     ]
   }
 }
