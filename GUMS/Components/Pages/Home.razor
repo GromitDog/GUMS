@@ -91,13 +91,41 @@
         try
         {
             var activeMembers = await PersonService.GetActiveAsync();
-            
-            leaderCount = activeMembers.Count(m => m.PersonType == PersonType.Leader);
-            rainbowCount = activeMembers.Count(m => m.Section == Section.Rainbow);
-            brownieCount = activeMembers.Count(m => m.Section == Section.Brownie);
-            guideCount = activeMembers.Count(m => m.Section == Section.Guide);
-            rangerCount = activeMembers.Count(m => m.Section == Section.Ranger);
             totalCount = activeMembers.Count;
+            
+            // Count in a single pass through the collection
+            leaderCount = 0;
+            rainbowCount = 0;
+            brownieCount = 0;
+            guideCount = 0;
+            rangerCount = 0;
+            
+            foreach (var member in activeMembers)
+            {
+                if (member.PersonType == PersonType.Leader)
+                {
+                    leaderCount++;
+                }
+                else if (member.PersonType == PersonType.Girl)
+                {
+                    // Only count girls by section
+                    switch (member.Section)
+                    {
+                        case Section.Rainbow:
+                            rainbowCount++;
+                            break;
+                        case Section.Brownie:
+                            brownieCount++;
+                            break;
+                        case Section.Guide:
+                            guideCount++;
+                            break;
+                        case Section.Ranger:
+                            rangerCount++;
+                            break;
+                    }
+                }
+            }
         }
         finally
         {
