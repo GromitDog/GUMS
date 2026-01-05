@@ -6,7 +6,13 @@ using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
+// Initialize SQLCipher native library
+SQLitePCL.Batteries_V2.Init();
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Register encryption service first (as singleton so we can resolve it early)
+builder.Services.AddSingleton<IDatabaseEncryptionService, DatabaseEncryptionService>();
 
 // Configure database path
 var dbPath = Path.Combine(
@@ -16,9 +22,14 @@ var dbPath = Path.Combine(
 // Ensure directory exists
 Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
 
-// Add database context
+// Get or create database encryption key
+var encryptionServiceProvider = builder.Services.BuildServiceProvider();
+var encryptionService = encryptionServiceProvider.GetRequiredService<IDatabaseEncryptionService>();
+var encryptionKey = encryptionService.GetOrCreateEncryptionKey();
+
+// Add database context with encrypted connection
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite($"Data Source={dbPath}"));
+    options.UseSqlite($"Data Source={dbPath};Password={encryptionKey}"));
 
 // Add Identity services
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
