@@ -1,0 +1,275 @@
+@page "/Register/Edit/{Id:int}"
+@using GUMS.Data.Entities
+@using GUMS.Data.Enums
+@using GUMS.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IPersonService PersonService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit Member - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/Register">Register</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Edit Member</li>
+        </ol>
+    </nav>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (person == null)
+    {
+        <div class="alert alert-danger">
+            Member not found.
+        </div>
+    }
+    else
+    {
+        <h2 class="mb-4">Edit @(person.PersonType == PersonType.Girl ? "Girl" : "Leader")</h2>
+
+        @if (errorMessage != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+            </div>
+        }
+
+        <EditForm Model="person" OnValidSubmit="HandleSubmit" FormName="editMemberForm">
+            <DataAnnotationsValidator />
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Basic Information -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Basic Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Membership Number *</label>
+                                    <InputText class="form-control" @bind-Value="person.MembershipNumber" />
+                                    <ValidationMessage For="() => person.MembershipNumber" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Full Name *</label>
+                                    <InputText class="form-control" @bind-Value="person.FullName" />
+                                    <ValidationMessage For="() => person.FullName" />
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Date of Birth *</label>
+                                    <InputDate class="form-control" @bind-Value="person.DateOfBirth" />
+                                    <ValidationMessage For="() => person.DateOfBirth" />
+                                </div>
+                                @if (person.PersonType == PersonType.Girl)
+                                {
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Section *</label>
+                                        <InputSelect class="form-select" @bind-Value="person.Section">
+                                            <option value="">-- Select Section --</option>
+                                            <option value="@Section.Rainbow">Rainbow</option>
+                                            <option value="@Section.Brownie">Brownie</option>
+                                            <option value="@Section.Guide">Guide</option>
+                                            <option value="@Section.Ranger">Ranger</option>
+                                        </InputSelect>
+                                        <ValidationMessage For="() => person.Section" />
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Date Joined</label>
+                                    <InputDate class="form-control" @bind-Value="person.DateJoined" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Status</label>
+                                    <select class="form-select" @bind="person.IsActive">
+                                        <option value="true">Active</option>
+                                        <option value="false">Inactive</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            @if (!person.IsActive && person.DateLeft.HasValue)
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">Date Left</label>
+                                    <InputDate class="form-control" @bind-Value="person.DateLeft" />
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Emergency Contacts -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Emergency Contacts</h5>
+                        </div>
+                        <div class="card-body">
+                            <EmergencyContactEditor Contacts="person.EmergencyContacts" />
+                        </div>
+                    </div>
+
+                    <!-- Medical & Wellbeing -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Medical & Wellbeing</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Allergies / Intolerances</label>
+                                <InputTextArea class="form-control" rows="3" @bind-Value="person.Allergies" />
+                            </div>
+
+                            @if (person.PersonType == PersonType.Girl)
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">Disabilities / Additional Needs</label>
+                                    <InputTextArea class="form-control" rows="3" @bind-Value="person.Disabilities" />
+                                </div>
+                            }
+
+                            <div class="mb-3">
+                                <label class="form-label">General Notes</label>
+                                <InputTextArea class="form-control" rows="3" @bind-Value="person.Notes" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Permissions -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Photo Permission</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="photoPermission" id="photoNone"
+                                       checked="@(person.PhotoPermission == PhotoPermission.None)"
+                                       @onchange="() => person.PhotoPermission = PhotoPermission.None" />
+                                <label class="form-check-label" for="photoNone">
+                                    <strong>No Photos</strong> - Do not take or use photos
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="photoPermission" id="photoUnit"
+                                       checked="@(person.PhotoPermission == PhotoPermission.UnitOnly)"
+                                       @onchange="() => person.PhotoPermission = PhotoPermission.UnitOnly" />
+                                <label class="form-check-label" for="photoUnit">
+                                    <strong>Unit Use Only</strong> - Internal communications and displays only
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="photoPermission" id="photoAll"
+                                       checked="@(person.PhotoPermission == PhotoPermission.AllMedia)"
+                                       @onchange="() => person.PhotoPermission = PhotoPermission.AllMedia" />
+                                <label class="form-check-label" for="photoAll">
+                                    <strong>All Media</strong> - Social media, publicity, and all uses
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="d-flex gap-2 mb-4">
+                        <button type="submit" class="btn btn-primary" disabled="@isProcessing">
+                            @if (isProcessing)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <span>Saving...</span>
+                            }
+                            else
+                            {
+                                <span>Save Changes</span>
+                            }
+                        </button>
+                        <a href="/Register/View/@Id" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Person? person;
+    private string? errorMessage;
+    private bool isLoading = true;
+    private bool isProcessing = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            person = await PersonService.GetByIdAsync(Id);
+        }
+        catch
+        {
+            person = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (person == null) return;
+
+        isProcessing = true;
+        errorMessage = null;
+
+        try
+        {
+            // Validate at least one emergency contact
+            if (!person.EmergencyContacts.Any())
+            {
+                errorMessage = "At least one emergency contact is required.";
+                return;
+            }
+
+            // Validate emergency contacts have required fields
+            foreach (var contact in person.EmergencyContacts)
+            {
+                if (string.IsNullOrWhiteSpace(contact.ContactName) ||
+                    string.IsNullOrWhiteSpace(contact.Relationship) ||
+                    string.IsNullOrWhiteSpace(contact.PrimaryPhone))
+                {
+                    errorMessage = "All emergency contacts must have a name, relationship, and primary phone number.";
+                    return;
+                }
+            }
+
+            // Update the person
+            await PersonService.UpdateAsync(person);
+
+            // Navigate to view page
+            NavigationManager.NavigateTo($"/Register/View/{Id}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error saving changes: {ex.Message}";
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+}

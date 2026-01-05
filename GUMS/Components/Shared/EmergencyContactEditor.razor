@@ -1,0 +1,103 @@
+@using GUMS.Data.Entities
+
+<div class="emergency-contacts-editor">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5>Emergency Contacts</h5>
+        <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AddContact">
+            <i class="bi bi-plus-circle"></i> Add Contact
+        </button>
+    </div>
+
+    @if (Contacts == null || !Contacts.Any())
+    {
+        <p class="text-muted">No emergency contacts added yet. Click "Add Contact" to add one.</p>
+    }
+    else
+    {
+        @foreach (var contact in Contacts.OrderBy(c => c.SortOrder))
+        {
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h6 class="card-title mb-0">Contact @(Contacts.IndexOf(contact) + 1)</h6>
+                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemoveContact(contact)">
+                            <i class="bi bi-trash"></i> Remove
+                        </button>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Contact Name *</label>
+                            <InputText class="form-control" @bind-Value="contact.ContactName" placeholder="Jane Smith" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Relationship *</label>
+                            <InputText class="form-control" @bind-Value="contact.Relationship" placeholder="Mother" />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Primary Phone *</label>
+                            <InputText class="form-control" @bind-Value="contact.PrimaryPhone" placeholder="07123 456789" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Secondary Phone</label>
+                            <InputText class="form-control" @bind-Value="contact.SecondaryPhone" placeholder="01234 567890" />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email</label>
+                            <InputText class="form-control" type="email" @bind-Value="contact.Email" placeholder="jane.smith@example.com" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Notes</label>
+                            <InputText class="form-control" @bind-Value="contact.Notes" placeholder="e.g., Lives with Mon-Wed" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+    @if (Contacts != null && Contacts.Count > 1)
+    {
+        <p class="text-muted small">
+            <i class="bi bi-info-circle"></i> For split families, all emergency contacts' emails will be included in communications.
+        </p>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public List<EmergencyContact> Contacts { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<List<EmergencyContact>> ContactsChanged { get; set; }
+
+    private void AddContact()
+    {
+        var newContact = new EmergencyContact
+        {
+            SortOrder = Contacts.Any() ? Contacts.Max(c => c.SortOrder) + 1 : 0
+        };
+
+        Contacts.Add(newContact);
+        ContactsChanged.InvokeAsync(Contacts);
+    }
+
+    private void RemoveContact(EmergencyContact contact)
+    {
+        Contacts.Remove(contact);
+
+        // Re-order remaining contacts
+        for (int i = 0; i < Contacts.Count; i++)
+        {
+            Contacts[i].SortOrder = i;
+        }
+
+        ContactsChanged.InvokeAsync(Contacts);
+    }
+}

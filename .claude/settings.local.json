@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(git -C \"C:\\\\Users\\\\amyjm\\\\RiderProjects\\\\GUMS\" log --oneline)",
+      "Bash(git -C \"C:\\\\Users\\\\amyjm\\\\RiderProjects\\\\GUMS\" status --short)",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(dotnet build:*)",
+      "Bash(git -C \"C:\\\\Users\\\\amyjm\\\\RiderProjects\\\\GUMS\" status)",
+      "Bash(git -C \"C:\\\\Users\\\\amyjm\\\\RiderProjects\\\\GUMS\" diff --stat)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nImplement Phase 1: Foundation for secure member management\n\nEnable Girl Guide units to manage member registration, emergency contacts, and comply with GDPR data protection requirements. Includes complete authentication system, member CRUD operations, and critical data removal workflow that preserves historical records while anonymizing personal information.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C:*)",
+      "Bash(dotnet new:*)",
+      "Bash(dotnet sln:*)",
+      "Bash(dotnet add:*)",
+      "Bash(dotnet test:*)",
+      "Bash(dotnet remove:*)",
+      "Bash(Select-String -Pattern \"\\(Passed!|Failed!|Total tests|GUMS\\\\.Tests\\\\.Services\\)\")"
+    ]
+  }
+}

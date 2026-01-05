@@ -1,0 +1,65 @@
+@page
+@model GUMS.Pages.Account.LoginModel
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - GUMS</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/app.css" />
+</head>
+<body>
+    <div class="min-vh-100 d-flex align-items-center justify-content-center bg-light">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-6 col-lg-5">
+                    <div class="text-center mb-4">
+                        <h1 class="display-4">GUMS</h1>
+                        <p class="text-muted">Girl Guide Unit Management System</p>
+                    </div>
+                    <div class="card shadow">
+                        <div class="card-body p-4">
+                            <h3 class="mb-4">Sign In</h3>
+
+                            @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                            {
+                                <div class="alert alert-danger" role="alert">
+                                    @Model.ErrorMessage
+                                </div>
+                            }
+
+                            <form method="post">
+                                <div class="mb-3">
+                                    <label asp-for="Input.Email" class="form-label">Email Address</label>
+                                    <input asp-for="Input.Email" class="form-control" placeholder="admin@example.com" />
+                                    <span asp-validation-for="Input.Email" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Input.Password" class="form-label">Password</label>
+                                    <input asp-for="Input.Password" type="password" class="form-control" />
+                                    <span asp-validation-for="Input.Password" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3 form-check">
+                                    <input asp-for="Input.RememberMe" type="checkbox" class="form-check-input" />
+                                    <label asp-for="Input.RememberMe" class="form-check-label">Remember me</label>
+                                </div>
+
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary btn-lg">Sign In</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

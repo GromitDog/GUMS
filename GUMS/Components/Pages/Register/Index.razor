@@ -1,0 +1,220 @@
+@page "/Register"
+@using GUMS.Data.Enums
+@using GUMS.Data.Entities
+@using GUMS.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IPersonService PersonService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Member Register - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Member Register</h2>
+        <div>
+            <a href="/Register/AddGirl" class="btn btn-primary me-2">
+                <i class="bi bi-person-plus"></i> Add Girl
+            </a>
+            <a href="/Register/AddLeader" class="btn btn-secondary">
+                <i class="bi bi-person-plus-fill"></i> Add Leader
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Search</label>
+                    <input type="text" class="form-control" @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" placeholder="Name or membership number..." />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Type</label>
+                    <select class="form-select" @bind="filterType" @bind:after="LoadMembers">
+                        <option value="">All</option>
+                        <option value="Girl">Girls</option>
+                        <option value="Leader">Leaders</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Section</label>
+                    <select class="form-select" @bind="filterSection" @bind:after="LoadMembers">
+                        <option value="">All Sections</option>
+                        <option value="Rainbow">Rainbows</option>
+                        <option value="Brownie">Brownies</option>
+                        <option value="Guide">Guides</option>
+                        <option value="Ranger">Rangers</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" @bind="filterStatus" @bind:after="LoadMembers">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="all">All</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Members List -->
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading members...</p>
+        </div>
+    }
+    else if (!members.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No members found. Click "Add Girl" or "Add Leader" to get started.
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body">
+                <p class="text-muted mb-3">Showing @members.Count member(s)</p>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Membership Number</th>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Section</th>
+                                <th>Status</th>
+                                <th>Date Joined</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var member in members)
+                            {
+                                <tr>
+                                    <td>@member.MembershipNumber</td>
+                                    <td>
+                                        @if (member.IsDataRemoved)
+                                        {
+                                            <span class="text-muted fst-italic">Removed Member</span>
+                                        }
+                                        else
+                                        {
+                                            @member.FullName
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@(member.PersonType == PersonType.Girl ? "info" : "secondary")">
+                                            @member.PersonType
+                                        </span>
+                                    </td>
+                                    <td>@(member.Section?.ToString() ?? "-")</td>
+                                    <td>
+                                        @if (member.IsDataRemoved)
+                                        {
+                                            <span class="badge bg-dark">Data Removed</span>
+                                        }
+                                        else if (member.IsActive)
+                                        {
+                                            <span class="badge bg-success">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark">Inactive</span>
+                                        }
+                                    </td>
+                                    <td>@member.DateJoined.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="/Register/View/@member.Id" class="btn btn-outline-primary">View</a>
+                                            @if (!member.IsDataRemoved)
+                                            {
+                                                <a href="/Register/Edit/@member.Id" class="btn btn-outline-secondary">Edit</a>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Person> members = new();
+    private string searchTerm = string.Empty;
+    private string filterType = string.Empty;
+    private string filterSection = string.Empty;
+    private string filterStatus = "active";
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMembers();
+    }
+
+    private async Task LoadMembers()
+    {
+        isLoading = true;
+
+        try
+        {
+            // Start with all or active members based on filter
+            List<Person> allMembers;
+            if (filterStatus == "active")
+            {
+                allMembers = await PersonService.GetActiveAsync();
+            }
+            else if (filterStatus == "inactive")
+            {
+                allMembers = await PersonService.GetInactiveAsync();
+            }
+            else
+            {
+                allMembers = await PersonService.GetAllAsync();
+            }
+
+            // Apply type filter
+            if (!string.IsNullOrEmpty(filterType) && Enum.TryParse<PersonType>(filterType, out var type))
+            {
+                allMembers = allMembers.Where(m => m.PersonType == type).ToList();
+            }
+
+            // Apply section filter
+            if (!string.IsNullOrEmpty(filterSection) && Enum.TryParse<Section>(filterSection, out var section))
+            {
+                allMembers = allMembers.Where(m => m.Section == section).ToList();
+            }
+
+            // Apply search filter
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                allMembers = allMembers.Where(m =>
+                    m.MembershipNumber.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    (m.FullName != null && m.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                ).ToList();
+            }
+
+            members = allMembers;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleSearch()
+    {
+        await LoadMembers();
+    }
+}

@@ -1,0 +1,23 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Home - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <h1>Welcome to GUMS</h1>
+    <p class="lead">Girl Guide Unit Management System</p>
+
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Member Register</h5>
+                    <p class="card-text">Manage girls and leaders in your unit.</p>
+                    <a href="/Register" class="btn btn-primary">View Register</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
