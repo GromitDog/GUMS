@@ -24,13 +24,15 @@ public class ConfigurationService : IConfigurationService
         }
 
         // Get from database (should only be one row)
-        _cachedConfiguration = await _context.UnitConfigurations.FirstOrDefaultAsync();
+        // Use AsNoTracking to prevent EF Core from tracking this entity
+        // This ensures the cached instance won't be modified by other database operations
+        _cachedConfiguration = await _context.UnitConfigurations.AsNoTracking().FirstOrDefaultAsync();
 
         // If no configuration exists, create default
         if (_cachedConfiguration == null)
         {
             await EnsureDefaultConfigurationAsync();
-            _cachedConfiguration = await _context.UnitConfigurations.FirstAsync();
+            _cachedConfiguration = await _context.UnitConfigurations.AsNoTracking().FirstAsync();
         }
 
         return _cachedConfiguration;
