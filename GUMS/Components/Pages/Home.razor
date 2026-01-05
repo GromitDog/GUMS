@@ -1,7 +1,10 @@
 ﻿@page "/"
 @using Microsoft.AspNetCore.Authorization
+@using GUMS.Data.Enums
+@using GUMS.Services
 @attribute [Authorize]
 @rendermode InteractiveServer
+@inject IPersonService PersonService
 
 <PageTitle>Home - GUMS</PageTitle>
 
@@ -14,10 +17,129 @@
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Member Register</h5>
-                    <p class="card-text">See all your girls and leaders in one place.</p>
-                    <a href="/Register" class="btn btn-primary">View Register</a>
+                    @if (isLoading)
+                    {
+                        <div class="text-center py-2">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            @if (leaderCount > 0)
+                            {
+                                <p class="card-text mb-1">
+                                    <strong>@leaderCount</strong> @(leaderCount == 1 ? "Leader" : "Leaders")
+                                </p>
+                            }
+                            @if (rainbowCount > 0)
+                            {
+                                <p class="card-text mb-1">
+                                    <strong>@rainbowCount</strong> @(rainbowCount == 1 ? "Rainbow" : "Rainbows")
+                                </p>
+                            }
+                            @if (brownieCount > 0)
+                            {
+                                <p class="card-text mb-1">
+                                    <strong>@brownieCount</strong> @(brownieCount == 1 ? "Brownie" : "Brownies")
+                                </p>
+                            }
+                            @if (guideCount > 0)
+                            {
+                                <p class="card-text mb-1">
+                                    <strong>@guideCount</strong> @(guideCount == 1 ? "Guide" : "Guides")
+                                </p>
+                            }
+                            @if (rangerCount > 0)
+                            {
+                                <p class="card-text mb-1">
+                                    <strong>@rangerCount</strong> @(rangerCount == 1 ? "Ranger" : "Rangers")
+                                </p>
+                            }
+                            @if (totalCount == 0)
+                            {
+                                <p class="card-text text-muted">No active members yet.</p>
+                            }
+                        </div>
+                    }
+                    <a href="/Register" class="btn btn-primary">Manage Members</a>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+@code {
+    private bool isLoading = true;
+    private int leaderCount = 0;
+    private int rainbowCount = 0;
+    private int brownieCount = 0;
+    private int guideCount = 0;
+    private int rangerCount = 0;
+    private int totalCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMembershipSummary();
+    }
+
+    private async Task LoadMembershipSummary()
+    {
+        isLoading = true;
+        try
+        {
+            var activeMembers = await PersonService.GetActiveAsync();
+            totalCount = activeMembers.Count;
+            
+            // Reset counts and iterate once through the collection
+            leaderCount = 0;
+            rainbowCount = 0;
+            brownieCount = 0;
+            guideCount = 0;
+            rangerCount = 0;
+            
+            foreach (var member in activeMembers)
+            {
+                if (member.PersonType == PersonType.Leader)
+                {
+                    leaderCount++;
+                }
+                else if (member.PersonType == PersonType.Girl)
+                {
+                    // Only count girls by section
+                    switch (member.Section)
+                    {
+                        case Section.Rainbow:
+                            rainbowCount++;
+                            break;
+                        case Section.Brownie:
+                            brownieCount++;
+                            break;
+                        case Section.Guide:
+                            guideCount++;
+                            break;
+                        case Section.Ranger:
+                            rangerCount++;
+                            break;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Reset counts on error
+            leaderCount = 0;
+            rainbowCount = 0;
+            brownieCount = 0;
+            guideCount = 0;
+            rangerCount = 0;
+            totalCount = 0;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
