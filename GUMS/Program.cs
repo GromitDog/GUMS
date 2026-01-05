@@ -6,30 +6,22 @@ using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-// Initialize SQLCipher native library
-SQLitePCL.Batteries_V2.Init();
-
 var builder = WebApplication.CreateBuilder(args);
-
-// Register encryption service first (as singleton so we can resolve it early)
-builder.Services.AddSingleton<IDatabaseEncryptionService, DatabaseEncryptionService>();
 
 // Configure database path
 var dbPath = Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
     "GUMS", "gums.db");
 
-// Ensure directory exists
-Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
+// Ensure directory exists and secure it (Windows file permissions)
+var dbDirectory = Path.GetDirectoryName(dbPath)!;
+Directory.CreateDirectory(dbDirectory);
+DatabaseSecurityService.SecureDatabaseDirectory(dbDirectory);
 
-// Get or create database encryption key
-var encryptionServiceProvider = builder.Services.BuildServiceProvider();
-var encryptionService = encryptionServiceProvider.GetRequiredService<IDatabaseEncryptionService>();
-var encryptionKey = encryptionService.GetOrCreateEncryptionKey();
-
-// Add database context with encrypted connection
+// Add database context with standard SQLite
+var connectionString = $"Data Source={dbPath}";
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite($"Data Source={dbPath};Password={encryptionKey}"));
+    options.UseSqlite(connectionString));
 
 // Add Identity services
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>

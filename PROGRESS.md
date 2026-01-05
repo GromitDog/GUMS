@@ -10,7 +10,6 @@
 ### 1. NuGet Packages Added
 - Microsoft.EntityFrameworkCore.Sqlite (9.0.0)
 - Microsoft.EntityFrameworkCore.Design (9.0.0)
-- SQLitePCLRaw.bundle_e_sqlcipher (2.1.10)
 - Microsoft.AspNetCore.Identity.EntityFrameworkCore (9.0.0)
 
 ### 2. Data Layer - Complete
@@ -146,18 +145,17 @@
 - ✅ SQLite database at: `%APPDATA%\GUMS\gums.db`
 - ✅ Auto-applies migrations on startup
 - ✅ Default unit configuration created automatically
-- ✅ **Encryption: FULLY IMPLEMENTED** - SQLCipher with AES-256 encryption
-  - Automatic 256-bit key generation
-  - Windows DPAPI key protection
-  - See DATABASE_ENCRYPTION.md for details
+- ✅ **Security: Windows File Permissions**
+  - Restricts database access to current Windows user only
+  - Automatic ACL configuration on startup
+  - See DATABASE_SECURITY.md for details
 
 **Services:**
 - ✅ ConfigurationService - fully implemented with caching
 - ✅ ConfigurationServiceTests - 12 comprehensive unit tests
 - ✅ PersonService - fully implemented with data removal
 - ✅ PersonServiceTests - comprehensive unit tests
-- ✅ DatabaseEncryptionService - manages SQLCipher encryption keys with DPAPI
-- ✅ DatabaseEncryptionServiceTests - 12 comprehensive unit tests
+- ✅ DatabaseSecurityService - sets Windows file permissions
 - ✅ Authentication - ASP.NET Core Identity configured and working
 
 **UI - Phase 1 COMPLETE:**
@@ -249,9 +247,9 @@ The `PersonService.RemoveMemberDataAsync()` method implements GDPR "right to be 
 - Directory created automatically in Program.cs
 
 ### SQLCipher Encryption
-- NuGet package installed: SQLitePCLRaw.bundle_e_sqlcipher
-- **Not yet configured** - need to add PRAGMA key to connection
-- Will be configured when implementing database password in Setup page
+- Database security via Windows file permissions (ACLs)
+- Restricts access to current Windows user only
+- See DATABASE_SECURITY.md for details
 
 ---
 
