@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
   <!-- Girl Guiding Trefoil Placeholder -->
-  <!-- Simple trefoil shape in Girl Guiding colors with better visibility -->
-  <circle cx="60" cy="35" r="18" fill="#FFFFFF"/>
-  <circle cx="42" cy="65" r="18" fill="#FFFFFF"/>
-  <circle cx="78" cy="65" r="18" fill="#FFFFFF"/>
-  <circle cx="60" cy="58" r="12" fill="#44BDEE"/>
+  <!-- Simple trefoil shape in Girl Guiding colors with good contrast -->
+  <circle cx="60" cy="35" r="18" fill="#FFFFFF" stroke="#44BDEE" stroke-width="2"/>
+  <circle cx="42" cy="65" r="18" fill="#FFFFFF" stroke="#44BDEE" stroke-width="2"/>
+  <circle cx="78" cy="65" r="18" fill="#FFFFFF" stroke="#44BDEE" stroke-width="2"/>
+  <circle cx="60" cy="58" r="12" fill="#44BDEE" stroke="#FFFFFF" stroke-width="2"/>
   <text x="60" y="105" font-family="Arial, sans-serif" font-size="16" fill="#FFFFFF" text-anchor="middle" font-weight="bold">UNIT</text>
 </svg>

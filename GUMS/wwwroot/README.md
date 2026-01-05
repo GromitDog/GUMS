@@ -17,7 +17,7 @@ To use your own unit logo:
 
 ### Girl Guiding Branding Guidelines
 
-Please ensure your logo follows the [Girl Guiding Brand Guidelines](https://girlguiding.foleon.com/girlguiding-brand-guidelines/brand-guidelines/):
+Please ensure your logo follows the [Girl Guiding Brand Guidelines](https://girlguiding.foleon.com/girlguiding-brand-guidelines/brand-guidelines/) (check for most current version):
 
 - Use official Girl Guiding logos and colors
 - Maintain appropriate clear space around the logo

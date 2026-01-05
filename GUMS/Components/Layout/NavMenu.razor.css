@@ -34,6 +34,7 @@
     height: 70px;
     width: auto;
     margin-right: 15px;
+    /* Prevent logo from shrinking when space is limited to maintain branding consistency */
     flex-shrink: 0;
 }
 
