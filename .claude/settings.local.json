@@ -25,7 +25,8 @@
       "Bash(del \"C:\\\\Users\\\\amyjm\\\\RiderProjects\\\\GUMS\\\\GUMS\\\\Services\\\\IDatabaseEncryptionService.cs\")",
       "Bash(del \"C:\\\\Users\\\\amyjm\\\\RiderProjects\\\\GUMS\\\\GUMS\\\\Data\\\\SqlCipherConnection.cs\")",
       "Bash(del \"C:\\\\Users\\\\amyjm\\\\RiderProjects\\\\GUMS\\\\GUMS\\\\Data\\\\SqlCipherConnectionInterceptor.cs\")",
-      "Bash(dotnet run:*)"
+      "Bash(dotnet run:*)",
+      "Bash(mkdir:*)"
     ]
   }
 }

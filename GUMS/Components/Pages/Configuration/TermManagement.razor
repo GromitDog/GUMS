@@ -1,0 +1,461 @@
+@page "/Configuration/Terms"
+@using GUMS.Data.Entities
+@using GUMS.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject ITermService TermService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Term Dates - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Term Dates</h2>
+        <button class="btn btn-primary" @onclick="ShowAddForm">
+            <i class="bi bi-calendar-plus"></i> Add New Term
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+        </div>
+    }
+
+    <!-- Add/Edit Form -->
+    @if (showForm)
+    {
+        <div class="card mb-4">
+            <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-event"></i> @(editingTerm == null ? "Add New Term" : "Edit Term")
+                </h5>
+            </div>
+            <div class="card-body">
+                <EditForm Model="currentTerm" OnValidSubmit="SaveTerm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" />
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Term Name</label>
+                            <InputText class="form-control" @bind-Value="currentTerm.Name" placeholder="e.g. Autumn 2026" />
+                            <ValidationMessage For="@(() => currentTerm.Name)" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Termly Subscription Amount (£)</label>
+                            <InputNumber class="form-control" @bind-Value="currentTerm.SubsAmount" placeholder="20.00" />
+                            <ValidationMessage For="@(() => currentTerm.SubsAmount)" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Start Date</label>
+                            <InputDate class="form-control" @bind-Value="currentTerm.StartDate" />
+                            <ValidationMessage For="@(() => currentTerm.StartDate)" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">End Date</label>
+                            <InputDate class="form-control" @bind-Value="currentTerm.EndDate" />
+                            <ValidationMessage For="@(() => currentTerm.EndDate)" />
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            <i class="bi bi-save"></i> Save Term
+                        </button>
+                        <button type="button" class="btn btn-secondary" @onclick="CancelForm">
+                            Cancel
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
+
+    <!-- Terms List -->
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading terms...</p>
+        </div>
+    }
+    else if (!allTerms.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No terms have been set up yet. Add your first term to get started with meeting planning!
+        </div>
+    }
+    else
+    {
+        @if (currentTerm != null && !showForm)
+        {
+            <!-- Current Term Card -->
+            <div class="card mb-4" style="border: 2px solid var(--gg-bright-cyan); background-color: #E3F9FF;">
+                <div class="card-header" style="background-color: var(--gg-bright-cyan); color: white;">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calendar-check"></i> Current Term
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="mb-2">@currentTermData?.Name</h4>
+                            <p class="mb-1">
+                                <strong>Dates:</strong> @currentTermData?.StartDate.ToString("dd MMM yyyy") - @currentTermData?.EndDate.ToString("dd MMM yyyy")
+                            </p>
+                            <p class="mb-0">
+                                <strong>Subscription:</strong> £@currentTermData?.SubsAmount.ToString("F2")
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <button class="btn btn-outline-primary btn-sm me-2" @onclick="() => EditTerm(currentTermData)">
+                                <i class="bi bi-pencil"></i> Edit
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" @onclick="() => ConfirmDelete(currentTermData)">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (futureTerms.Any())
+        {
+            <!-- Future Terms -->
+            <div class="card mb-4">
+                <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calendar-week"></i> Future Terms (@futureTerms.Count)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Term Name</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Subscription</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var term in futureTerms)
+                                {
+                                    <tr>
+                                        <td><strong>@term.Name</strong></td>
+                                        <td>@term.StartDate.ToString("dd MMM yyyy")</td>
+                                        <td>@term.EndDate.ToString("dd MMM yyyy")</td>
+                                        <td>£@term.SubsAmount.ToString("F2")</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button class="btn btn-outline-primary" @onclick="() => EditTerm(term)">
+                                                    <i class="bi bi-pencil"></i> Edit
+                                                </button>
+                                                <button class="btn btn-outline-danger" @onclick="() => ConfirmDelete(term)">
+                                                    <i class="bi bi-trash"></i> Delete
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (pastTerms.Any())
+        {
+            <!-- Past Terms -->
+            <div class="card">
+                <div class="card-header" style="background-color: #6c757d; color: white;">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calendar-x"></i> Past Terms (@pastTerms.Count)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Term Name</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Subscription</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var term in pastTerms)
+                                {
+                                    <tr class="text-muted">
+                                        <td>@term.Name</td>
+                                        <td>@term.StartDate.ToString("dd MMM yyyy")</td>
+                                        <td>@term.EndDate.ToString("dd MMM yyyy")</td>
+                                        <td>£@term.SubsAmount.ToString("F2")</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button class="btn btn-outline-primary" @onclick="() => EditTerm(term)">
+                                                    <i class="bi bi-pencil"></i> Edit
+                                                </button>
+                                                <button class="btn btn-outline-danger" @onclick="() => ConfirmDelete(term)">
+                                                    <i class="bi bi-trash"></i> Delete
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+    <!-- Delete Confirmation Modal -->
+    @if (showDeleteConfirm)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Confirm Deletion
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CancelDelete"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete the term <strong>@termToDelete?.Name</strong>?</p>
+                        <p class="text-muted">
+                            This action cannot be undone. You cannot delete a term that has meetings or payments associated with it.
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelDelete">
+                            Cancel
+                        </button>
+                        <button type="button" class="btn btn-danger" @onclick="DeleteTerm" disabled="@isDeleting">
+                            @if (isDeleting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            <i class="bi bi-trash"></i> Delete Term
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Term> allTerms = new();
+    private List<Term> futureTerms = new();
+    private List<Term> pastTerms = new();
+    private Term? currentTermData;
+
+    private Term currentTerm = new();
+    private Term? editingTerm;
+    private Term? termToDelete;
+
+    private bool isLoading = true;
+    private bool showForm = false;
+    private bool isSaving = false;
+    private bool showDeleteConfirm = false;
+    private bool isDeleting = false;
+
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTerms();
+    }
+
+    private async Task LoadTerms()
+    {
+        isLoading = true;
+
+        try
+        {
+            allTerms = await TermService.GetAllAsync();
+            currentTermData = await TermService.GetCurrentTermAsync();
+            futureTerms = await TermService.GetFutureTermsAsync();
+            pastTerms = await TermService.GetPastTermsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading terms: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowAddForm()
+    {
+        editingTerm = null;
+        currentTerm = new Term
+        {
+            Name = string.Empty,
+            StartDate = DateTime.Today,
+            EndDate = DateTime.Today.AddMonths(3),
+            SubsAmount = 20.00m
+        };
+        showForm = true;
+        ClearMessages();
+    }
+
+    private void EditTerm(Term? term)
+    {
+        if (term == null) return;
+
+        editingTerm = term;
+        currentTerm = new Term
+        {
+            Id = term.Id,
+            Name = term.Name,
+            StartDate = term.StartDate,
+            EndDate = term.EndDate,
+            SubsAmount = term.SubsAmount
+        };
+        showForm = true;
+        ClearMessages();
+    }
+
+    private async Task SaveTerm()
+    {
+        isSaving = true;
+        ClearMessages();
+
+        try
+        {
+            var result = editingTerm == null
+                ? await TermService.CreateAsync(currentTerm)
+                : await TermService.UpdateAsync(currentTerm);
+
+            if (result.Success)
+            {
+                successMessage = editingTerm == null
+                    ? $"Term '{currentTerm.Name}' has been added successfully!"
+                    : $"Term '{currentTerm.Name}' has been updated successfully!";
+
+                showForm = false;
+                await LoadTerms();
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void CancelForm()
+    {
+        showForm = false;
+        currentTerm = new();
+        editingTerm = null;
+        ClearMessages();
+    }
+
+    private void ConfirmDelete(Term? term)
+    {
+        if (term == null) return;
+
+        termToDelete = term;
+        showDeleteConfirm = true;
+        ClearMessages();
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteConfirm = false;
+        termToDelete = null;
+    }
+
+    private async Task DeleteTerm()
+    {
+        if (termToDelete == null) return;
+
+        isDeleting = true;
+        ClearMessages();
+
+        try
+        {
+            var result = await TermService.DeleteAsync(termToDelete.Id);
+
+            if (result.Success)
+            {
+                successMessage = $"Term '{termToDelete.Name}' has been deleted successfully.";
+                showDeleteConfirm = false;
+                termToDelete = null;
+                await LoadTerms();
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage;
+                showDeleteConfirm = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+            showDeleteConfirm = false;
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private void ClearMessages()
+    {
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+    }
+
+    private void ClearError()
+    {
+        errorMessage = string.Empty;
+    }
+
+    private void ClearSuccess()
+    {
+        successMessage = string.Empty;
+    }
+}
