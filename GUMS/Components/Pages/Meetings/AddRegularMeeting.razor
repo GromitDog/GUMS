@@ -1,0 +1,315 @@
+@page "/Meetings/AddRegular"
+@using GUMS.Data.Entities
+@using GUMS.Data.Enums
+@using GUMS.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IMeetingService MeetingService
+@inject IConfigurationService ConfigService
+@inject ITermService TermService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Plan a Meeting - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/Meetings">Meetings</a></li>
+            <li class="breadcrumb-item active">Plan a Meeting</li>
+        </ol>
+    </nav>
+
+    <h2 class="mb-4">Plan a Regular Meeting</h2>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calendar-plus"></i> Meeting Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="meeting" OnValidSubmit="SaveMeeting">
+                        <DataAnnotationsValidator />
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Meeting Date</label>
+                                <InputDate class="form-control" @bind-Value="meeting.Date" />
+                                <ValidationMessage For="@(() => meeting.Date)" />
+                                @if (suggestedDates.Any() && !suggestedDatesUsed)
+                                {
+                                    <small class="text-muted">
+                                        Suggested dates:
+                                        @foreach (var date in suggestedDates.Take(3))
+                                        {
+                                            <button type="button" class="btn btn-link btn-sm p-0 ms-1" @onclick="() => UseSuggestedDate(date)">
+                                                @date.ToString("dd MMM")
+                                            </button>
+                                        }
+                                    </small>
+                                }
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Meeting Title</label>
+                                <InputText class="form-control" @bind-Value="meeting.Title" placeholder="e.g. Weekly Meeting" />
+                                <ValidationMessage For="@(() => meeting.Title)" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Start Time</label>
+                                <InputDate Type="InputDateType.Time" class="form-control" @bind-Value="startTime" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">End Time</label>
+                                <InputDate Type="InputDateType.Time" class="form-control" @bind-Value="endTime" />
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label">Location Name</label>
+                                <InputText class="form-control" @bind-Value="meeting.LocationName" placeholder="e.g. Village Hall" />
+                                <ValidationMessage For="@(() => meeting.LocationName)" />
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label">Location Address (Optional)</label>
+                                <InputTextArea class="form-control" @bind-Value="meeting.LocationAddress" rows="2" placeholder="Full address" />
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label">Description (Optional)</label>
+                                <InputTextArea class="form-control" @bind-Value="meeting.Description" rows="3" placeholder="Any additional notes about this meeting" />
+                            </div>
+                        </div>
+
+                        <!-- Activities Section -->
+                        <div class="mt-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">Activities Planned</h6>
+                                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AddActivity">
+                                    <i class="bi bi-plus-circle"></i> Add Activity
+                                </button>
+                            </div>
+
+                            @if (activities.Any())
+                            {
+                                <div class="list-group">
+                                    @for (int i = 0; i < activities.Count; i++)
+                                    {
+                                        var index = i;
+                                        var activity = activities[i];
+                                        <div class="list-group-item">
+                                            <div class="row g-2 align-items-center">
+                                                <div class="col-md-6">
+                                                    <input type="text" class="form-control form-control-sm"
+                                                           placeholder="Activity name"
+                                                           @bind="activity.Name" />
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox"
+                                                               id="consent-@index"
+                                                               @bind="activity.RequiresConsent" />
+                                                        <label class="form-check-label" for="consent-@index">
+                                                            Requires consent form
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-2 text-end">
+                                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                                            @onclick="() => RemoveActivity(index)">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            @if (!string.IsNullOrEmpty(activity.Description))
+                                            {
+                                                <div class="row g-2 mt-2">
+                                                    <div class="col-12">
+                                                        <textarea class="form-control form-control-sm"
+                                                                  rows="2"
+                                                                  placeholder="Activity notes (optional)"
+                                                                  @bind="activity.Description"></textarea>
+                                                    </div>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="mt-1">
+                                                    <button type="button" class="btn btn-link btn-sm p-0"
+                                                            @onclick="() => activity.Description = string.Empty">
+                                                        <i class="bi bi-plus"></i> Add notes
+                                                    </button>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted">No activities added yet. Click "Add Activity" to plan what you'll do in this meeting.</p>
+                            }
+                        </div>
+
+                        <div class="mt-4 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                                @if (isSaving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                }
+                                <i class="bi bi-save"></i> Save Meeting
+                            </button>
+                            <a href="/Meetings" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card" style="background-color: #E3F2FD;">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-lightbulb"></i> Tips for Planning
+                    </h6>
+                    <ul class="mb-0">
+                        <li>Times and location default from your unit settings</li>
+                        <li>Add activities so everyone knows what to expect</li>
+                        <li>Regular meetings are for your usual weekly sessions</li>
+                        <li>For camps or special events with costs, use "Add Special Event" instead</li>
+                    </ul>
+                </div>
+            </div>
+
+            @if (currentTerm != null)
+            {
+                <div class="card mt-3">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="bi bi-calendar-check"></i> Current Term
+                        </h6>
+                        <p class="mb-1"><strong>@currentTerm.Name</strong></p>
+                        <p class="text-muted mb-0">
+                            @currentTerm.StartDate.ToString("dd MMM") - @currentTerm.EndDate.ToString("dd MMM yyyy")
+                        </p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private Meeting meeting = new();
+    private List<Activity> activities = new();
+    private DateTime startTime = DateTime.Today;
+    private DateTime endTime = DateTime.Today;
+    private List<DateTime> suggestedDates = new();
+    private bool suggestedDatesUsed = false;
+    private Term? currentTerm;
+
+    private bool isSaving = false;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load configuration defaults
+        var config = await ConfigService.GetConfigurationAsync();
+        meeting.Date = DateTime.Today;
+        meeting.MeetingType = MeetingType.Regular;
+        meeting.Title = "Weekly Meeting";
+        meeting.LocationName = config.DefaultLocationName;
+        meeting.LocationAddress = config.DefaultLocationAddress;
+
+        startTime = DateTime.Today.Add(config.DefaultMeetingStartTime.ToTimeSpan());
+        endTime = DateTime.Today.Add(config.DefaultMeetingEndTime.ToTimeSpan());
+
+        // Load current term and suggested dates
+        currentTerm = await TermService.GetCurrentTermAsync();
+        if (currentTerm != null)
+        {
+            suggestedDates = await MeetingService.GetSuggestedMeetingDatesForTermAsync(currentTerm.Id);
+        }
+    }
+
+    private void UseSuggestedDate(DateTime date)
+    {
+        meeting.Date = date;
+        suggestedDatesUsed = true;
+    }
+
+    private void AddActivity()
+    {
+        activities.Add(new Activity
+        {
+            Name = string.Empty,
+            RequiresConsent = false,
+            SortOrder = activities.Count
+        });
+    }
+
+    private void RemoveActivity(int index)
+    {
+        activities.RemoveAt(index);
+        // Update sort orders
+        for (int i = 0; i < activities.Count; i++)
+        {
+            activities[i].SortOrder = i;
+        }
+    }
+
+    private async Task SaveMeeting()
+    {
+        isSaving = true;
+        ClearError();
+
+        try
+        {
+            // Set times
+            meeting.StartTime = TimeOnly.FromDateTime(startTime);
+            meeting.EndTime = TimeOnly.FromDateTime(endTime);
+
+            // Filter out empty activities
+            meeting.Activities = activities
+                .Where(a => !string.IsNullOrWhiteSpace(a.Name))
+                .ToList();
+
+            var result = await MeetingService.CreateAsync(meeting);
+
+            if (result.Success)
+            {
+                NavigationManager.NavigateTo("/Meetings?success=created");
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void ClearError()
+    {
+        errorMessage = string.Empty;
+    }
+}

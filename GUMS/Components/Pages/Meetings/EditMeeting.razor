@@ -1,0 +1,448 @@
+@page "/Meetings/Edit/{MeetingId:int}"
+@using GUMS.Data.Entities
+@using GUMS.Data.Enums
+@using GUMS.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IMeetingService MeetingService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit Meeting - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/Meetings">Meetings</a></li>
+            <li class="breadcrumb-item active">Edit Meeting</li>
+        </ol>
+    </nav>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (meeting == null)
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle-fill"></i> Meeting not found.
+        </div>
+    }
+    else
+    {
+        <h2 class="mb-4">Edit Meeting</h2>
+
+        @if (meeting.Date < DateTime.Today)
+        {
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i>
+                <strong>Note:</strong> This meeting is in the past. Changes may affect historical records.
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+                <button type="button" class="btn-close" @onclick="ClearError"></button>
+            </div>
+        }
+
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                        <h5 class="mb-0">
+                            <i class="bi bi-pencil"></i> Meeting Details
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <EditForm Model="meeting" OnValidSubmit="SaveMeeting">
+                            <DataAnnotationsValidator />
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Date</label>
+                                    <InputDate class="form-control" @bind-Value="meeting.Date" />
+                                    <ValidationMessage For="@(() => meeting.Date)" />
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Type</label>
+                                    <InputSelect class="form-select" @bind-Value="meeting.MeetingType">
+                                        <option value="@MeetingType.Regular">Regular Meeting</option>
+                                        <option value="@MeetingType.Extra">Special Event</option>
+                                    </InputSelect>
+                                </div>
+
+                                <div class="col-md-12">
+                                    <label class="form-label">Title</label>
+                                    <InputText class="form-control" @bind-Value="meeting.Title" />
+                                    <ValidationMessage For="@(() => meeting.Title)" />
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Start Time</label>
+                                    <InputDate Type="InputDateType.Time" class="form-control" @bind-Value="startTime" />
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">End Time</label>
+                                    <InputDate Type="InputDateType.Time" class="form-control" @bind-Value="endTime" />
+                                </div>
+
+                                <div class="col-md-12">
+                                    <label class="form-label">Location Name</label>
+                                    <InputText class="form-control" @bind-Value="meeting.LocationName" />
+                                    <ValidationMessage For="@(() => meeting.LocationName)" />
+                                </div>
+
+                                <div class="col-md-12">
+                                    <label class="form-label">Location Address (Optional)</label>
+                                    <InputTextArea class="form-control" @bind-Value="meeting.LocationAddress" rows="2" />
+                                </div>
+
+                                <div class="col-md-12">
+                                    <label class="form-label">Description (Optional)</label>
+                                    <InputTextArea class="form-control" @bind-Value="meeting.Description" rows="3" />
+                                </div>
+
+                                @if (meeting.MeetingType == MeetingType.Extra)
+                                {
+                                    <div class="col-12">
+                                        <div class="card" style="background-color: #FFF9E6; border-color: #FFE08A;">
+                                            <div class="card-body">
+                                                <h6 class="card-title">
+                                                    <i class="bi bi-currency-pound"></i> Cost Information
+                                                </h6>
+
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Cost Per Attendee (£)</label>
+                                                        <InputNumber class="form-control" @bind-Value="meeting.CostPerAttendee"
+                                                                   placeholder="0.00" step="0.01" />
+                                                    </div>
+
+                                                    @if (meeting.CostPerAttendee.HasValue && meeting.CostPerAttendee.Value > 0)
+                                                    {
+                                                        <div class="col-md-6">
+                                                            <label class="form-label">Payment Deadline</label>
+                                                            <InputDate class="form-control" @bind-Value="meeting.PaymentDeadline" />
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Activities Section -->
+                            <div class="mt-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="mb-0">Activities</h6>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AddActivity">
+                                        <i class="bi bi-plus-circle"></i> Add Activity
+                                    </button>
+                                </div>
+
+                                @if (activities.Any())
+                                {
+                                    <div class="list-group">
+                                        @for (int i = 0; i < activities.Count; i++)
+                                        {
+                                            var index = i;
+                                            var activity = activities[i];
+                                            <div class="list-group-item">
+                                                <div class="row g-2 align-items-center">
+                                                    <div class="col-md-6">
+                                                        <input type="text" class="form-control form-control-sm"
+                                                               placeholder="Activity name"
+                                                               @bind="activity.Name" />
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox"
+                                                                   id="consent-@index"
+                                                                   @bind="activity.RequiresConsent" />
+                                                            <label class="form-check-label" for="consent-@index">
+                                                                Requires consent
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-2 text-end">
+                                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                                                @onclick="() => RemoveActivity(index)">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="row g-2 mt-2">
+                                                    <div class="col-12">
+                                                        <textarea class="form-control form-control-sm"
+                                                                  rows="2"
+                                                                  placeholder="Activity notes (optional)"
+                                                                  @bind="activity.Description"></textarea>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-muted">No activities for this meeting.</p>
+                                }
+                            </div>
+
+                            <div class="mt-4 d-flex gap-2">
+                                <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                                    @if (isSaving)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    <i class="bi bi-save"></i> Save Changes
+                                </button>
+                                <a href="/Meetings/View/@MeetingId" class="btn btn-secondary">Cancel</a>
+                                <button type="button" class="btn btn-outline-danger ms-auto" @onclick="ShowDeleteConfirm">
+                                    <i class="bi bi-trash"></i> Delete Meeting
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card" style="background-color: #E3F2FD;">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="bi bi-info-circle"></i> Editing Tips
+                        </h6>
+                        <ul class="mb-0">
+                            <li>Changes to past meetings may affect historical records</li>
+                            <li>Activities are managed separately - add or remove as needed</li>
+                            <li>You can't delete meetings that have attendance recorded</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        @if (showDeleteConfirm)
+        {
+            <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title">
+                                <i class="bi bi-exclamation-triangle-fill"></i> Confirm Deletion
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" @onclick="CancelDelete"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Are you sure you want to delete <strong>@meeting.Title</strong>?</p>
+                            <p class="text-muted">
+                                This action cannot be undone. You cannot delete meetings that have attendance recorded.
+                            </p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CancelDelete">
+                                Cancel
+                            </button>
+                            <button type="button" class="btn btn-danger" @onclick="DeleteMeeting" disabled="@isDeleting">
+                                @if (isDeleting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                }
+                                <i class="bi bi-trash"></i> Delete Meeting
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int MeetingId { get; set; }
+
+    private Meeting? meeting;
+    private List<Activity> activities = new();
+    private DateTime startTime;
+    private DateTime endTime;
+
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool showDeleteConfirm = false;
+    private bool isDeleting = false;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMeeting();
+    }
+
+    private async Task LoadMeeting()
+    {
+        isLoading = true;
+
+        try
+        {
+            meeting = await MeetingService.GetByIdAsync(MeetingId);
+            if (meeting != null)
+            {
+                startTime = DateTime.Today.Add(meeting.StartTime.ToTimeSpan());
+                endTime = DateTime.Today.Add(meeting.EndTime.ToTimeSpan());
+                activities = await MeetingService.GetActivitiesForMeetingAsync(MeetingId);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading meeting: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void AddActivity()
+    {
+        activities.Add(new Activity
+        {
+            MeetingId = MeetingId,
+            Name = string.Empty,
+            RequiresConsent = false,
+            SortOrder = activities.Count
+        });
+    }
+
+    private void RemoveActivity(int index)
+    {
+        activities.RemoveAt(index);
+        for (int i = 0; i < activities.Count; i++)
+        {
+            activities[i].SortOrder = i;
+        }
+    }
+
+    private async Task SaveMeeting()
+    {
+        if (meeting == null) return;
+
+        isSaving = true;
+        ClearError();
+
+        try
+        {
+            // Set times
+            meeting.StartTime = TimeOnly.FromDateTime(startTime);
+            meeting.EndTime = TimeOnly.FromDateTime(endTime);
+
+            var result = await MeetingService.UpdateAsync(meeting);
+
+            if (result.Success)
+            {
+                // Update activities separately
+                await UpdateActivities();
+                NavigationManager.NavigateTo($"/Meetings/View/{MeetingId}?success=updated");
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task UpdateActivities()
+    {
+        // This is a simplified approach - in production you'd want to track
+        // which activities are new, modified, or deleted
+        var existingActivities = await MeetingService.GetActivitiesForMeetingAsync(MeetingId);
+
+        // Delete removed activities
+        foreach (var existing in existingActivities)
+        {
+            if (!activities.Any(a => a.Id == existing.Id))
+            {
+                await MeetingService.DeleteActivityAsync(existing.Id);
+            }
+        }
+
+        // Update or add activities
+        foreach (var activity in activities.Where(a => !string.IsNullOrWhiteSpace(a.Name)))
+        {
+            if (activity.Id > 0)
+            {
+                await MeetingService.UpdateActivityAsync(activity);
+            }
+            else
+            {
+                activity.MeetingId = MeetingId;
+                await MeetingService.AddActivityAsync(activity);
+            }
+        }
+    }
+
+    private void ShowDeleteConfirm()
+    {
+        showDeleteConfirm = true;
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteConfirm = false;
+    }
+
+    private async Task DeleteMeeting()
+    {
+        if (meeting == null) return;
+
+        isDeleting = true;
+
+        try
+        {
+            var result = await MeetingService.DeleteAsync(MeetingId);
+
+            if (result.Success)
+            {
+                NavigationManager.NavigateTo("/Meetings?success=deleted");
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage;
+                showDeleteConfirm = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+            showDeleteConfirm = false;
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private void ClearError()
+    {
+        errorMessage = string.Empty;
+    }
+}

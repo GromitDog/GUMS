@@ -1,0 +1,342 @@
+@page "/Meetings/View/{MeetingId:int}"
+@using GUMS.Data.Entities
+@using GUMS.Data.Enums
+@using GUMS.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IMeetingService MeetingService
+@inject NavigationManager NavigationManager
+
+<PageTitle>View Meeting - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/Meetings">Meetings</a></li>
+            <li class="breadcrumb-item active">Meeting Details</li>
+        </ol>
+    </nav>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (meeting == null)
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle-fill"></i> Meeting not found.
+        </div>
+    }
+    else
+    {
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>@meeting.Title</h2>
+            <div>
+                <a href="/Meetings/Edit/@MeetingId" class="btn btn-primary">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Meeting Details Card -->
+                <div class="card mb-4">
+                    <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                        <h5 class="mb-0">
+                            <i class="bi bi-calendar-event"></i> Meeting Details
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <h6 class="text-muted mb-2">Date & Time</h6>
+                                <p class="mb-1">
+                                    <strong>@meeting.Date.ToString("dddd, dd MMMM yyyy")</strong>
+                                </p>
+                                <p class="mb-0">
+                                    @meeting.StartTime.ToString("HH:mm") - @meeting.EndTime.ToString("HH:mm")
+                                    <span class="text-muted">
+                                        (@((meeting.EndTime.ToTimeSpan() - meeting.StartTime.ToTimeSpan()).TotalHours.ToString("F1")) hours)
+                                    </span>
+                                </p>
+                            </div>
+
+                            <div class="col-md-6">
+                                <h6 class="text-muted mb-2">Type</h6>
+                                @if (meeting.MeetingType == MeetingType.Regular)
+                                {
+                                    <span class="badge bg-info fs-6">Regular Meeting</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark fs-6">Special Event</span>
+                                }
+                            </div>
+
+                            <div class="col-md-12">
+                                <h6 class="text-muted mb-2">Location</h6>
+                                <p class="mb-1"><strong>@meeting.LocationName</strong></p>
+                                @if (!string.IsNullOrEmpty(meeting.LocationAddress))
+                                {
+                                    <p class="mb-0 text-muted">@meeting.LocationAddress</p>
+                                }
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(meeting.Description))
+                            {
+                                <div class="col-md-12">
+                                    <h6 class="text-muted mb-2">Description</h6>
+                                    <p class="mb-0">@meeting.Description</p>
+                                </div>
+                            }
+
+                            @if (meeting.CostPerAttendee.HasValue && meeting.CostPerAttendee.Value > 0)
+                            {
+                                <div class="col-md-12">
+                                    <div class="card" style="background-color: #FFF9E6; border-color: #FFE08A;">
+                                        <div class="card-body">
+                                            <h6 class="card-title">
+                                                <i class="bi bi-currency-pound"></i> Cost Information
+                                            </h6>
+                                            <p class="mb-1">
+                                                <strong>Cost per attendee:</strong> £@meeting.CostPerAttendee.Value.ToString("F2")
+                                            </p>
+                                            @if (meeting.PaymentDeadline.HasValue)
+                                            {
+                                                <p class="mb-0">
+                                                    <strong>Payment deadline:</strong> @meeting.PaymentDeadline.Value.ToString("dd MMMM yyyy")
+                                                </p>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activities Card -->
+                @if (activities.Any())
+                {
+                    <div class="card mb-4">
+                        <div class="card-header" style="background-color: var(--gg-bright-cyan); color: white;">
+                            <h5 class="mb-0">
+                                <i class="bi bi-list-check"></i> Activities Planned (@activities.Count)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush">
+                                @foreach (var activity in activities)
+                                {
+                                    <div class="list-group-item @(activity.RequiresConsent ? "border-warning border-2" : "")">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h6 class="mb-1">@activity.Name</h6>
+                                                @if (!string.IsNullOrEmpty(activity.Description))
+                                                {
+                                                    <p class="mb-1 text-muted">@activity.Description</p>
+                                                }
+                                            </div>
+                                            @if (activity.RequiresConsent)
+                                            {
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="bi bi-exclamation-triangle"></i> Consent Required
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+
+                            @if (activities.Any(a => a.RequiresConsent))
+                            {
+                                <div class="alert alert-warning mt-3 mb-0" role="alert">
+                                    <i class="bi bi-info-circle"></i>
+                                    <strong>Remember:</strong> Some activities require consent forms from parents.
+                                    You'll be able to track consent status in the attendance section (coming soon).
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- Attendance Section (Placeholder for Phase 2 Step 3) -->
+                <div class="card">
+                    <div class="card-header" style="background-color: #6c757d; color: white;">
+                        <h5 class="mb-0">
+                            <i class="bi bi-people"></i> Attendance
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (meeting.Date < DateTime.Today)
+                        {
+                            <p class="text-muted mb-0">
+                                <i class="bi bi-info-circle"></i> This meeting has passed. Attendance tracking will be available in the next phase.
+                            </p>
+                        }
+                        else if (meeting.Date == DateTime.Today)
+                        {
+                            <p class="text-muted mb-0">
+                                <i class="bi bi-info-circle"></i> This meeting is today! Attendance tracking will be available in the next phase.
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="text-muted mb-0">
+                                <i class="bi bi-info-circle"></i> Attendance tracking will be available once this feature is implemented in the next phase.
+                            </p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <!-- Quick Actions -->
+                <div class="card mb-3">
+                    <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
+                        <h6 class="mb-0">Quick Actions</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="/Meetings/Edit/@MeetingId" class="btn btn-primary">
+                                <i class="bi bi-pencil"></i> Edit Meeting
+                            </a>
+                            @if (meeting.Date > DateTime.Today)
+                            {
+                                <button class="btn btn-outline-secondary" disabled>
+                                    <i class="bi bi-people"></i> Record Attendance
+                                    <small class="d-block">Coming Soon</small>
+                                </button>
+                            }
+                            @if (meeting.CostPerAttendee.HasValue && meeting.CostPerAttendee.Value > 0)
+                            {
+                                <button class="btn btn-outline-secondary" disabled>
+                                    <i class="bi bi-currency-pound"></i> View Payments
+                                    <small class="d-block">Coming Soon</small>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Meeting Status -->
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="bi bi-info-circle"></i> Meeting Status
+                        </h6>
+                        @if (meeting.Date < DateTime.Today)
+                        {
+                            <p class="mb-1">
+                                <span class="badge bg-secondary">Past Meeting</span>
+                            </p>
+                            <p class="text-muted mb-0">
+                                This meeting happened @((DateTime.Today - meeting.Date).Days) day(s) ago.
+                            </p>
+                        }
+                        else if (meeting.Date == DateTime.Today)
+                        {
+                            <p class="mb-1">
+                                <span class="badge bg-success">Today</span>
+                            </p>
+                            <p class="text-muted mb-0">
+                                This meeting is happening today!
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="mb-1">
+                                <span class="badge bg-info">Upcoming</span>
+                            </p>
+                            <p class="text-muted mb-0">
+                                This meeting is in @((meeting.Date - DateTime.Today).Days) day(s).
+                            </p>
+                        }
+
+                        @if (meeting.CostPerAttendee.HasValue && meeting.CostPerAttendee.Value > 0)
+                        {
+                            <hr />
+                            <p class="mb-1">
+                                <i class="bi bi-currency-pound"></i> <strong>Has Cost:</strong> £@meeting.CostPerAttendee.Value.ToString("F2")
+                            </p>
+                        }
+
+                        @if (activities.Any(a => a.RequiresConsent))
+                        {
+                            <hr />
+                            <p class="mb-0">
+                                <i class="bi bi-exclamation-triangle text-warning"></i>
+                                <strong>Consent forms required</strong>
+                            </p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int MeetingId { get; set; }
+
+    private Meeting? meeting;
+    private List<Activity> activities = new();
+
+    private bool isLoading = true;
+    private string successMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check for success message from navigation state
+        var uri = new Uri(NavigationManager.Uri);
+        if (uri.Query.Contains("success=updated"))
+        {
+            successMessage = "Meeting updated successfully!";
+        }
+
+        await LoadMeeting();
+    }
+
+    private async Task LoadMeeting()
+    {
+        isLoading = true;
+
+        try
+        {
+            meeting = await MeetingService.GetByIdAsync(MeetingId);
+            if (meeting != null)
+            {
+                activities = await MeetingService.GetActivitiesForMeetingAsync(MeetingId);
+            }
+        }
+        catch (Exception ex)
+        {
+            // In production, log this error
+            Console.WriteLine($"Error loading meeting: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ClearSuccess()
+    {
+        successMessage = string.Empty;
+    }
+}
