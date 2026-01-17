@@ -1,0 +1,391 @@
+@page "/Meetings/Alerts"
+@using GUMS.Data.Entities
+@using GUMS.Data.Enums
+@using GUMS.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IAttendanceService AttendanceService
+@inject ITermService TermService
+@inject IPersonService PersonService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Attendance Alerts - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/Meetings">Meetings</a></li>
+            <li class="breadcrumb-item active">Attendance Alerts</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Attendance Alerts</h2>
+            <p class="text-muted mb-0">
+                Review members who may need follow-up due to attendance concerns.
+            </p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Checking attendance records...</p>
+        </div>
+    }
+    else if (currentTerm == null)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No active term found. Please <a href="/Configuration/Terms">configure term dates</a> to enable attendance tracking.
+        </div>
+    }
+    else
+    {
+        <!-- Term Info -->
+        <div class="card mb-4">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>Current Term:</strong> @currentTerm.Name
+                        <span class="text-muted ms-2">
+                            (@currentTerm.StartDate.ToString("dd MMM") - @currentTerm.EndDate.ToString("dd MMM yyyy"))
+                        </span>
+                    </div>
+                    <div>
+                        <span class="badge bg-info">@termProgress% complete</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card @(fullTermAbsences.Any() ? "border-danger" : "")">
+                    <div class="card-body text-center">
+                        <h3 class="mb-0 @(fullTermAbsences.Any() ? "text-danger" : "text-success")">
+                            @fullTermAbsences.Count
+                        </h3>
+                        <p class="text-muted mb-0">Full-Term Absences</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card @(lowAttendanceAlerts.Any() ? "border-warning" : "")">
+                    <div class="card-body text-center">
+                        <h3 class="mb-0 @(lowAttendanceAlerts.Any() ? "text-warning" : "text-success")">
+                            @lowAttendanceAlerts.Count
+                        </h3>
+                        <p class="text-muted mb-0">Low Attendance (&lt;25%)</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h3 class="mb-0 text-primary">@totalMeetingsInTerm</h3>
+                        <p class="text-muted mb-0">Meetings This Term</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (!fullTermAbsences.Any() && !lowAttendanceAlerts.Any())
+        {
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle-fill"></i> Great news! No attendance concerns this term. All members are attending regularly.
+            </div>
+        }
+        else
+        {
+            <!-- Full-Term Absences -->
+            @if (fullTermAbsences.Any())
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Full-Term Absences (@fullTermAbsences.Count)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            These members have not attended any meetings this term. Consider reaching out to check in with their families.
+                        </p>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Member</th>
+                                        <th>Membership #</th>
+                                        <th>Meetings Missed</th>
+                                        <th>Notes</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var alert in fullTermAbsences)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@alert.MemberName</strong>
+                                            </td>
+                                            <td>@alert.MembershipNumber</td>
+                                            <td>
+                                                <span class="badge bg-danger">0/@alert.TotalMeetings</span>
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(GetAlertNote(alert.MembershipNumber)))
+                                                {
+                                                    <small class="text-muted">@GetAlertNote(alert.MembershipNumber)</small>
+                                                }
+                                                else
+                                                {
+                                                    <small class="text-muted fst-italic">No notes</small>
+                                                }
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenNoteModal(alert)">
+                                                    <i class="bi bi-pencil"></i> Add Note
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Low Attendance -->
+            @if (lowAttendanceAlerts.Any())
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="bi bi-exclamation-circle-fill"></i> Low Attendance (@lowAttendanceAlerts.Count)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            These members have attended less than 25% of meetings this term. Keep an eye on their attendance.
+                        </p>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Member</th>
+                                        <th>Membership #</th>
+                                        <th>Attendance</th>
+                                        <th>Rate</th>
+                                        <th>Notes</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var alert in lowAttendanceAlerts.OrderBy(a => a.AttendancePercent))
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@alert.MemberName</strong>
+                                            </td>
+                                            <td>@alert.MembershipNumber</td>
+                                            <td>
+                                                <span class="badge bg-warning text-dark">
+                                                    @alert.MeetingsAttended/@alert.TotalMeetings
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="progress" style="width: 80px; height: 20px;">
+                                                    <div class="progress-bar bg-warning" role="progressbar"
+                                                         style="width: @alert.AttendancePercent%;">
+                                                        @alert.AttendancePercent.ToString("F0")%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(GetAlertNote(alert.MembershipNumber)))
+                                                {
+                                                    <small class="text-muted">@GetAlertNote(alert.MembershipNumber)</small>
+                                                }
+                                                else
+                                                {
+                                                    <small class="text-muted fst-italic">No notes</small>
+                                                }
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenNoteModal(alert)">
+                                                    <i class="bi bi-pencil"></i> Add Note
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+
+        <!-- Tips Card -->
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-lightbulb text-warning"></i> Tips for Following Up
+                </h6>
+                <ul class="mb-0 ps-3">
+                    <li class="mb-2">Reach out to parents via email or phone to check if everything is okay</li>
+                    <li class="mb-2">Add notes about conversations to keep track of reasons (illness, holidays, etc.)</li>
+                    <li class="mb-2">Always approach with care and understanding - there may be family circumstances</li>
+                </ul>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Note Modal -->
+@if (showNoteModal && selectedAlert != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Note for @selectedAlert.MemberName</h5>
+                    <button type="button" class="btn-close" @onclick="CloseNoteModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Note</label>
+                        <textarea class="form-control" rows="3" @bind="noteText"
+                                  placeholder="e.g., Spoke to parent on 15 Jan - family illness, expecting return next week"></textarea>
+                        <small class="text-muted">Record any conversations or reasons for absence</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseNoteModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveNote">
+                        <i class="bi bi-check"></i> Save Note
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private Term? currentTerm;
+    private List<MemberAttendanceAlert> fullTermAbsences = new();
+    private List<MemberAttendanceAlert> lowAttendanceAlerts = new();
+    private Dictionary<string, string> alertNotes = new();
+    private int totalMeetingsInTerm = 0;
+    private int termProgress = 0;
+
+    private bool isLoading = true;
+    private string successMessage = string.Empty;
+
+    // Modal state
+    private bool showNoteModal = false;
+    private MemberAttendanceAlert? selectedAlert;
+    private string noteText = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAlerts();
+    }
+
+    private async Task LoadAlerts()
+    {
+        isLoading = true;
+
+        try
+        {
+            currentTerm = await TermService.GetCurrentTermAsync();
+
+            if (currentTerm != null)
+            {
+                // Calculate term progress
+                var totalDays = (currentTerm.EndDate - currentTerm.StartDate).Days;
+                var daysPassed = (DateTime.Today - currentTerm.StartDate).Days;
+                termProgress = totalDays > 0 ? Math.Min(100, Math.Max(0, (int)((double)daysPassed / totalDays * 100))) : 0;
+
+                // Get alerts
+                fullTermAbsences = await AttendanceService.GetFullTermAbsencesAsync(currentTerm.Id);
+                lowAttendanceAlerts = await AttendanceService.GetLowAttendanceAlertsAsync(currentTerm.Id, 25);
+
+                // Get total meetings count
+                if (fullTermAbsences.Any())
+                {
+                    totalMeetingsInTerm = fullTermAbsences.First().TotalMeetings;
+                }
+                else if (lowAttendanceAlerts.Any())
+                {
+                    totalMeetingsInTerm = lowAttendanceAlerts.First().TotalMeetings;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading alerts: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetAlertNote(string membershipNumber)
+    {
+        return alertNotes.GetValueOrDefault(membershipNumber, string.Empty);
+    }
+
+    private void OpenNoteModal(MemberAttendanceAlert alert)
+    {
+        selectedAlert = alert;
+        noteText = GetAlertNote(alert.MembershipNumber);
+        showNoteModal = true;
+    }
+
+    private void CloseNoteModal()
+    {
+        showNoteModal = false;
+        selectedAlert = null;
+        noteText = string.Empty;
+    }
+
+    private void SaveNote()
+    {
+        if (selectedAlert != null)
+        {
+            if (string.IsNullOrWhiteSpace(noteText))
+            {
+                alertNotes.Remove(selectedAlert.MembershipNumber);
+            }
+            else
+            {
+                alertNotes[selectedAlert.MembershipNumber] = noteText.Trim();
+            }
+
+            successMessage = $"Note saved for {selectedAlert.MemberName}";
+        }
+
+        CloseNoteModal();
+    }
+
+    private void ClearSuccess() => successMessage = string.Empty;
+}

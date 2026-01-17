@@ -6,6 +6,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject IMeetingService MeetingService
+@inject IAttendanceService AttendanceService
 @inject NavigationManager NavigationManager
 
 <PageTitle>View Meeting - GUMS</PageTitle>
@@ -23,6 +24,14 @@
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="bi bi-check-circle-fill"></i> @successMessage
             <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
         </div>
     }
 
@@ -174,31 +183,85 @@
                     </div>
                 }
 
-                <!-- Attendance Section (Placeholder for Phase 2 Step 3) -->
+                <!-- Attendance Section -->
                 <div class="card">
-                    <div class="card-header" style="background-color: #6c757d; color: white;">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background-color: var(--gg-bright-cyan); color: white;">
                         <h5 class="mb-0">
                             <i class="bi bi-people"></i> Attendance
                         </h5>
+                        <a href="/Meetings/Attendance/@MeetingId" class="btn btn-sm btn-light">
+                            <i class="bi bi-pencil"></i> @(attendanceStats?.HasBeenRecorded == true ? "Edit" : "Record")
+                        </a>
                     </div>
                     <div class="card-body">
-                        @if (meeting.Date < DateTime.Today)
+                        @if (attendanceStats == null)
                         {
-                            <p class="text-muted mb-0">
-                                <i class="bi bi-info-circle"></i> This meeting has passed. Attendance tracking will be available in the next phase.
-                            </p>
+                            <div class="text-center py-3">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
                         }
-                        else if (meeting.Date == DateTime.Today)
+                        else if (!attendanceStats.HasBeenRecorded)
                         {
-                            <p class="text-muted mb-0">
-                                <i class="bi bi-info-circle"></i> This meeting is today! Attendance tracking will be available in the next phase.
-                            </p>
+                            <div class="text-center py-3">
+                                <i class="bi bi-clipboard-check" style="font-size: 2rem; color: #6c757d;"></i>
+                                <p class="text-muted mb-2">Attendance has not been recorded yet.</p>
+                                <a href="/Meetings/Attendance/@MeetingId" class="btn btn-primary">
+                                    <i class="bi bi-people"></i> Record Attendance
+                                </a>
+                            </div>
                         }
                         else
                         {
-                            <p class="text-muted mb-0">
-                                <i class="bi bi-info-circle"></i> Attendance tracking will be available once this feature is implemented in the next phase.
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <h3 class="mb-0 text-success">@attendanceStats.Attended</h3>
+                                    <small class="text-muted">Present</small>
+                                </div>
+                                <div class="col-4">
+                                    <h3 class="mb-0 text-danger">@attendanceStats.NotAttended</h3>
+                                    <small class="text-muted">Absent</small>
+                                </div>
+                                <div class="col-4">
+                                    <h3 class="mb-0 text-primary">@attendanceStats.TotalMembers</h3>
+                                    <small class="text-muted">Total</small>
+                                </div>
+                            </div>
+                            <div class="progress mt-3" style="height: 20px;">
+                                <div class="progress-bar bg-success" role="progressbar"
+                                     style="width: @attendanceStats.AttendancePercent%;"
+                                     aria-valuenow="@attendanceStats.AttendancePercent"
+                                     aria-valuemin="0" aria-valuemax="100">
+                                    @attendanceStats.AttendancePercent.ToString("F0")%
+                                </div>
+                            </div>
+                            <p class="text-center text-muted mt-2 mb-0">
+                                @attendanceStats.AttendancePercent.ToString("F0")% attendance rate
                             </p>
+
+                            @if (requiresConsent && (attendanceStats.ConsentEmailReceived > 0 || attendanceStats.ConsentFormReceived > 0))
+                            {
+                                <hr />
+                                <h6><i class="bi bi-file-earmark-check"></i> Consent Status</h6>
+                                <div class="d-flex justify-content-around text-center">
+                                    <div>
+                                        <span class="badge bg-info fs-6">@attendanceStats.ConsentEmailReceived</span>
+                                        <br /><small class="text-muted">Emails</small>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-success fs-6">@attendanceStats.ConsentFormReceived</span>
+                                        <br /><small class="text-muted">Forms</small>
+                                    </div>
+                                    @if (attendanceStats.OutstandingConsent > 0)
+                                    {
+                                        <div>
+                                            <span class="badge bg-warning text-dark fs-6">@attendanceStats.OutstandingConsent</span>
+                                            <br /><small class="text-muted">Outstanding</small>
+                                        </div>
+                                    }
+                                </div>
+                            }
                         }
                     </div>
                 </div>
@@ -215,13 +278,9 @@
                             <a href="/Meetings/Edit/@MeetingId" class="btn btn-primary">
                                 <i class="bi bi-pencil"></i> Edit Meeting
                             </a>
-                            @if (meeting.Date > DateTime.Today)
-                            {
-                                <button class="btn btn-outline-secondary" disabled>
-                                    <i class="bi bi-people"></i> Record Attendance
-                                    <small class="d-block">Coming Soon</small>
-                                </button>
-                            }
+                            <a href="/Meetings/Attendance/@MeetingId" class="btn btn-success">
+                                <i class="bi bi-people"></i> @(attendanceStats?.HasBeenRecorded == true ? "Edit Attendance" : "Record Attendance")
+                            </a>
                             @if (meeting.CostPerAttendee.HasValue && meeting.CostPerAttendee.Value > 0)
                             {
                                 <button class="btn btn-outline-secondary" disabled>
@@ -296,6 +355,8 @@
 
     private Meeting? meeting;
     private List<Activity> activities = new();
+    private AttendanceStats? attendanceStats;
+    private bool requiresConsent = false;
 
     private bool isLoading = true;
     private string successMessage = string.Empty;
@@ -322,6 +383,8 @@
             if (meeting != null)
             {
                 activities = await MeetingService.GetActivitiesForMeetingAsync(MeetingId);
+                attendanceStats = await AttendanceService.GetMeetingAttendanceStatsAsync(MeetingId);
+                requiresConsent = await AttendanceService.MeetingRequiresConsentAsync(MeetingId);
             }
         }
         catch (Exception ex)

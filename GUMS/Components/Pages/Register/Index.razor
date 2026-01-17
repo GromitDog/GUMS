@@ -31,7 +31,7 @@
                     <label class="form-label">Find someone</label>
                     <input type="text" class="form-control" @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" placeholder="Type a name or membership number" />
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label class="form-label">Show me</label>
                     <select class="form-select" @bind="filterType" @bind:after="LoadMembers">
                         <option value="">Everyone</option>
@@ -39,17 +39,7 @@
                         <option value="Leader">Leaders only</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">Section</label>
-                    <select class="form-select" @bind="filterSection" @bind:after="LoadMembers">
-                        <option value="">All sections</option>
-                        <option value="Rainbow">Rainbows</option>
-                        <option value="Brownie">Brownies</option>
-                        <option value="Guide">Guides</option>
-                        <option value="Ranger">Rangers</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
+                <div class="col-md-4">
                     <label class="form-label">Status</label>
                     <select class="form-select" @bind="filterStatus" @bind:after="LoadMembers">
                         <option value="active">Active</option>
@@ -95,7 +85,6 @@
                                 <th>Membership Number</th>
                                 <th>Name</th>
                                 <th>Type</th>
-                                <th>Section</th>
                                 <th>Status</th>
                                 <th>Date Joined</th>
                                 <th>Actions</th>
@@ -105,7 +94,7 @@
                             @if (girls.Any())
                             {
                                 <tr class="table-active">
-                                    <td colspan="7" class="fw-bold" style="background-color: #E3F2FD; color: #007BC4;">
+                                    <td colspan="6" class="fw-bold" style="background-color: #E3F2FD; color: #007BC4;">
                                         <i class="bi bi-people-fill"></i> Girls (@girls.Count)
                                     </td>
                                 </tr>
@@ -128,7 +117,6 @@
                                                 @member.PersonType
                                             </span>
                                         </td>
-                                        <td>@(member.Section?.ToString() ?? "-")</td>
                                         <td>
                                             @if (member.IsDataRemoved)
                                             {
@@ -160,7 +148,7 @@
                             @if (leaders.Any())
                             {
                                 <tr class="table-active">
-                                    <td colspan="7" class="fw-bold" style="background-color: #F5F5F5; color: #161B4E;">
+                                    <td colspan="6" class="fw-bold" style="background-color: #F5F5F5; color: #161B4E;">
                                         <i class="bi bi-award-fill"></i> Leaders (@leaders.Count)
                                     </td>
                                 </tr>
@@ -183,7 +171,6 @@
                                                 @member.PersonType
                                             </span>
                                         </td>
-                                        <td>@(member.Section?.ToString() ?? "-")</td>
                                         <td>
                                             @if (member.IsDataRemoved)
                                             {
@@ -223,7 +210,6 @@
     private List<Person> members = new();
     private string searchTerm = string.Empty;
     private string filterType = string.Empty;
-    private string filterSection = string.Empty;
     private string filterStatus = "active";
     private bool isLoading = true;
 
@@ -257,12 +243,6 @@
             if (!string.IsNullOrEmpty(filterType) && Enum.TryParse<PersonType>(filterType, out var type))
             {
                 allMembers = allMembers.Where(m => m.PersonType == type).ToList();
-            }
-
-            // Apply section filter
-            if (!string.IsNullOrEmpty(filterSection) && Enum.TryParse<Section>(filterSection, out var section))
-            {
-                allMembers = allMembers.Where(m => m.Section == section).ToList();
             }
 
             // Apply search filter

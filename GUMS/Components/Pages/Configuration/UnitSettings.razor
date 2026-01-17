@@ -1,0 +1,255 @@
+@page "/Configuration/Settings"
+@using GUMS.Data.Entities
+@using GUMS.Data.Enums
+@using GUMS.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IConfigurationService ConfigService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Unit Settings - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Home</a></li>
+            <li class="breadcrumb-item active">Unit Settings</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Unit Settings</h2>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (config != null)
+    {
+        <div class="row">
+            <div class="col-lg-8">
+                <EditForm Model="config" OnValidSubmit="SaveSettings" FormName="unitSettingsForm">
+                    <DataAnnotationsValidator />
+
+                    <!-- Unit Details -->
+                    <div class="card mb-4">
+                        <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                            <h5 class="mb-0">
+                                <i class="bi bi-house-heart"></i> Unit Details
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Unit Name</label>
+                                    <InputText class="form-control" @bind-Value="config.UnitName" placeholder="e.g. 1st Townsville Brownies" />
+                                    <ValidationMessage For="@(() => config.UnitName)" />
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Unit Type</label>
+                                    <InputSelect class="form-select" @bind-Value="config.UnitType">
+                                        <option value="@Section.Rainbow">Rainbows</option>
+                                        <option value="@Section.Brownie">Brownies</option>
+                                        <option value="@Section.Guide">Guides</option>
+                                        <option value="@Section.Ranger">Rangers</option>
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => config.UnitType)" />
+                                    <small class="text-muted">All girls in this unit will be part of this section</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Meeting Defaults -->
+                    <div class="card mb-4">
+                        <div class="card-header" style="background-color: var(--gg-bright-cyan); color: white;">
+                            <h5 class="mb-0">
+                                <i class="bi bi-calendar-week"></i> Default Meeting Settings
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-3">
+                                These settings are used when generating regular meetings for a term.
+                            </p>
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Meeting Day</label>
+                                    <InputSelect class="form-select" @bind-Value="config.MeetingDayOfWeek">
+                                        <option value="@DayOfWeek.Monday">Monday</option>
+                                        <option value="@DayOfWeek.Tuesday">Tuesday</option>
+                                        <option value="@DayOfWeek.Wednesday">Wednesday</option>
+                                        <option value="@DayOfWeek.Thursday">Thursday</option>
+                                        <option value="@DayOfWeek.Friday">Friday</option>
+                                        <option value="@DayOfWeek.Saturday">Saturday</option>
+                                        <option value="@DayOfWeek.Sunday">Sunday</option>
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => config.MeetingDayOfWeek)" />
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">Start Time</label>
+                                    <input type="time" class="form-control"
+                                           value="@config.DefaultMeetingStartTime.ToString("HH:mm")"
+                                           @onchange="@(e => config.DefaultMeetingStartTime = TimeOnly.Parse(e.Value?.ToString() ?? "18:30"))" />
+                                    <ValidationMessage For="@(() => config.DefaultMeetingStartTime)" />
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">End Time</label>
+                                    <input type="time" class="form-control"
+                                           value="@config.DefaultMeetingEndTime.ToString("HH:mm")"
+                                           @onchange="@(e => config.DefaultMeetingEndTime = TimeOnly.Parse(e.Value?.ToString() ?? "19:30"))" />
+                                    <ValidationMessage For="@(() => config.DefaultMeetingEndTime)" />
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Default Location Name</label>
+                                    <InputText class="form-control" @bind-Value="config.DefaultLocationName" placeholder="e.g. Village Hall" />
+                                    <ValidationMessage For="@(() => config.DefaultLocationName)" />
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Default Location Address</label>
+                                    <InputText class="form-control" @bind-Value="config.DefaultLocationAddress" placeholder="e.g. 123 Main Street, Town" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Settings -->
+                    <div class="card mb-4">
+                        <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
+                            <h5 class="mb-0">
+                                <i class="bi bi-currency-pound"></i> Payment Settings
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Default Termly Subscription (£)</label>
+                                    <InputNumber class="form-control" @bind-Value="config.DefaultSubsAmount" />
+                                    <ValidationMessage For="@(() => config.DefaultSubsAmount)" />
+                                    <small class="text-muted">Default amount for new terms</small>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Payment Due Days</label>
+                                    <InputNumber class="form-control" @bind-Value="config.PaymentTermDays" />
+                                    <ValidationMessage For="@(() => config.PaymentTermDays)" />
+                                    <small class="text-muted">Days after invoice before payment is overdue</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            <i class="bi bi-check-lg"></i> Save Settings
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="bi bi-info-circle text-primary"></i> About These Settings
+                        </h6>
+                        <ul class="mb-0 ps-3">
+                            <li class="mb-2"><strong>Unit Type</strong> determines the section for all girls in this unit</li>
+                            <li class="mb-2"><strong>Meeting Day</strong> is used when auto-generating meetings for a term</li>
+                            <li class="mb-2"><strong>Default times</strong> are pre-filled when creating new meetings</li>
+                            <li class="mb-2"><strong>Default location</strong> is pre-filled for new meetings</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private UnitConfiguration? config;
+
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadConfiguration();
+    }
+
+    private async Task LoadConfiguration()
+    {
+        isLoading = true;
+        try
+        {
+            config = await ConfigService.GetConfigurationAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading configuration: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveSettings()
+    {
+        if (config == null) return;
+
+        isSaving = true;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+
+        try
+        {
+            await ConfigService.UpdateConfigurationAsync(config);
+            successMessage = "Settings saved successfully!";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error saving settings: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void ClearError() => errorMessage = string.Empty;
+    private void ClearSuccess() => successMessage = string.Empty;
+}

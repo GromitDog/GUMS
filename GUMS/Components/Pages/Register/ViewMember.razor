@@ -141,12 +141,6 @@
                                     </span>
                                 </dd>
 
-                                @if (person.Section.HasValue)
-                                {
-                                    <dt class="col-sm-4">Section</dt>
-                                    <dd class="col-sm-8">@person.Section</dd>
-                                }
-
                                 <dt class="col-sm-4">Status</dt>
                                 <dd class="col-sm-8">
                                     @if (person.IsActive)
@@ -166,6 +160,21 @@
                                 {
                                     <dt class="col-sm-4">Date Left</dt>
                                     <dd class="col-sm-8">@person.DateLeft.Value.ToString("dd/MM/yyyy")</dd>
+                                }
+
+                                @if (person.PersonType == PersonType.Leader)
+                                {
+                                    @if (!string.IsNullOrWhiteSpace(person.Email))
+                                    {
+                                        <dt class="col-sm-4">Email</dt>
+                                        <dd class="col-sm-8"><a href="mailto:@person.Email">@person.Email</a></dd>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(person.Phone))
+                                    {
+                                        <dt class="col-sm-4">Phone</dt>
+                                        <dd class="col-sm-8"><a href="tel:@person.Phone">@person.Phone</a></dd>
+                                    }
                                 }
                             </dl>
                         </div>

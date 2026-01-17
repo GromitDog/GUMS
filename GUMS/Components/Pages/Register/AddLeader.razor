@@ -6,6 +6,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject IPersonService PersonService
+@inject IConfigurationService ConfigService
 @inject NavigationManager NavigationManager
 
 <PageTitle>Add Leader - GUMS</PageTitle>
@@ -62,6 +63,19 @@
                                 <label class="form-label">Date Joined</label>
                                 <InputDate class="form-control" @bind-Value="dateJoined" />
                                 <small class="form-text text-muted">Defaults to today if not specified</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Email</label>
+                                <InputText type="email" class="form-control" @bind-Value="person.Email" placeholder="e.g., leader@example.com" />
+                                <ValidationMessage For="() => person.Email" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Phone Number</label>
+                                <InputText class="form-control" @bind-Value="person.Phone" placeholder="e.g., 07123 456789" />
+                                <ValidationMessage For="() => person.Phone" />
                             </div>
                         </div>
                     </div>
@@ -180,6 +194,20 @@
     private DateTime dateJoined = DateTime.Today;
     private string? errorMessage;
     private bool isProcessing = false;
+
+    protected override Task OnInitializedAsync()
+    {
+        // Add a default empty emergency contact for the user to fill in
+        person.EmergencyContacts.Add(new EmergencyContact
+        {
+            ContactName = string.Empty,
+            Relationship = string.Empty,
+            PrimaryPhone = string.Empty,
+            SortOrder = 0
+        });
+
+        return Task.CompletedTask;
+    }
 
     private async Task HandleSubmit()
     {

@@ -1,0 +1,499 @@
+@page "/Meetings/Attendance/{MeetingId:int}"
+@using GUMS.Data.Entities
+@using GUMS.Data.Enums
+@using GUMS.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IMeetingService MeetingService
+@inject IAttendanceService AttendanceService
+@inject IPersonService PersonService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Record Attendance - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/Meetings">Meetings</a></li>
+            <li class="breadcrumb-item"><a href="/Meetings/View/@MeetingId">Meeting Details</a></li>
+            <li class="breadcrumb-item active">Record Attendance</li>
+        </ol>
+    </nav>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (meeting == null)
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle-fill"></i> Meeting not found.
+        </div>
+    }
+    else
+    {
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2>Record Attendance</h2>
+                <p class="text-muted mb-0">
+                    <strong>@meeting.Title</strong> - @meeting.Date.ToString("dddd, dd MMMM yyyy")
+                </p>
+            </div>
+            <div>
+                <button class="btn btn-success btn-lg" @onclick="SaveAttendance" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    }
+                    <i class="bi bi-check-lg"></i> Save Attendance
+                </button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Quick Stats -->
+                <div class="card mb-3">
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-around text-center">
+                            <div>
+                                <h4 class="mb-0 text-success">@attendanceRecords.Count(a => a.Attended)</h4>
+                                <small class="text-muted">Present</small>
+                            </div>
+                            <div>
+                                <h4 class="mb-0 text-danger">@attendanceRecords.Count(a => !a.Attended)</h4>
+                                <small class="text-muted">Absent</small>
+                            </div>
+                            <div>
+                                <h4 class="mb-0 text-primary">@attendanceRecords.Count</h4>
+                                <small class="text-muted">Total</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attendance Checklist -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background-color: var(--gg-primary-blue); color: white;">
+                        <h5 class="mb-0">
+                            <i class="bi bi-people"></i> Attendance Checklist
+                        </h5>
+                        <div>
+                            <button class="btn btn-sm btn-light me-1" @onclick="MarkAllPresent">
+                                <i class="bi bi-check-all"></i> All Present
+                            </button>
+                            <button class="btn btn-sm btn-outline-light" @onclick="MarkAllAbsent">
+                                <i class="bi bi-x"></i> Clear All
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        @{
+                            var girls = attendanceRecords.Where(a => memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == PersonType.Girl)
+                                .OrderBy(a => memberLookup[a.MembershipNumber].FullName)
+                                .ToList();
+                            var leaders = attendanceRecords.Where(a => memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == PersonType.Leader)
+                                .OrderBy(a => memberLookup[a.MembershipNumber].FullName)
+                                .ToList();
+                        }
+
+                        @if (girls.Any())
+                        {
+                            <div class="px-3 py-2" style="background-color: #E3F2FD;">
+                                <strong><i class="bi bi-people-fill"></i> Girls (@girls.Count)</strong>
+                            </div>
+                            <div class="list-group list-group-flush">
+                                @foreach (var record in girls)
+                                {
+                                    var member = memberLookup[record.MembershipNumber];
+                                    <div class="list-group-item d-flex justify-content-between align-items-center @(record.Attended ? "list-group-item-success" : "")">
+                                        <div class="d-flex align-items-center">
+                                            <div class="form-check form-switch me-3">
+                                                <input class="form-check-input" type="checkbox" role="switch"
+                                                       id="att-@record.MembershipNumber"
+                                                       checked="@record.Attended"
+                                                       @onchange="@(e => ToggleAttendance(record, (bool)(e.Value ?? false)))"
+                                                       style="width: 3em; height: 1.5em;" />
+                                            </div>
+                                            <div>
+                                                <strong>@member.FullName</strong>
+                                                <br />
+                                                <small class="text-muted">@member.MembershipNumber @(member.Section != null ? $"- {member.Section}" : "")</small>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            @if (record.Attended)
+                                            {
+                                                <span class="badge bg-success">Present</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Absent</span>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        @if (leaders.Any())
+                        {
+                            <div class="px-3 py-2" style="background-color: #FFF3CD;">
+                                <strong><i class="bi bi-person-badge"></i> Leaders (@leaders.Count)</strong>
+                            </div>
+                            <div class="list-group list-group-flush">
+                                @foreach (var record in leaders)
+                                {
+                                    var member = memberLookup[record.MembershipNumber];
+                                    <div class="list-group-item d-flex justify-content-between align-items-center @(record.Attended ? "list-group-item-success" : "")">
+                                        <div class="d-flex align-items-center">
+                                            <div class="form-check form-switch me-3">
+                                                <input class="form-check-input" type="checkbox" role="switch"
+                                                       id="att-@record.MembershipNumber"
+                                                       checked="@record.Attended"
+                                                       @onchange="@(e => ToggleAttendance(record, (bool)(e.Value ?? false)))"
+                                                       style="width: 3em; height: 1.5em;" />
+                                            </div>
+                                            <div>
+                                                <strong>@member.FullName</strong>
+                                                <br />
+                                                <small class="text-muted">@member.MembershipNumber - Leader</small>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            @if (record.Attended)
+                                            {
+                                                <span class="badge bg-success">Present</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Absent</span>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        @if (!attendanceRecords.Any())
+                        {
+                            <div class="p-4 text-center text-muted">
+                                <i class="bi bi-people" style="font-size: 2rem;"></i>
+                                <p class="mb-0">No active members found. Add members to your register first.</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Consent Tracking (if meeting requires consent) -->
+                @if (requiresConsent)
+                {
+                    <div class="card mt-4">
+                        <div class="card-header" style="background-color: #FFC107; color: #212529;">
+                            <h5 class="mb-0">
+                                <i class="bi bi-file-earmark-check"></i> Consent Form Tracking
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-3">
+                                This meeting has activities that require consent forms. Track the status of consent below.
+                            </p>
+
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Member</th>
+                                            <th class="text-center">Email Received</th>
+                                            <th class="text-center">Form Received</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var record in attendanceRecords.Where(a => memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == PersonType.Girl).OrderBy(a => memberLookup[a.MembershipNumber].FullName))
+                                        {
+                                            var member = memberLookup[record.MembershipNumber];
+                                            <tr>
+                                                <td>@member.FullName</td>
+                                                <td class="text-center">
+                                                    <input type="checkbox" class="form-check-input"
+                                                           checked="@record.ConsentEmailReceived"
+                                                           @onchange="@(e => ToggleConsentEmail(record, (bool)(e.Value ?? false)))" />
+                                                </td>
+                                                <td class="text-center">
+                                                    <input type="checkbox" class="form-check-input"
+                                                           checked="@record.ConsentFormReceived"
+                                                           @onchange="@(e => ToggleConsentForm(record, (bool)(e.Value ?? false)))" />
+                                                </td>
+                                                <td>
+                                                    @if (record.ConsentFormReceived)
+                                                    {
+                                                        <span class="badge bg-success">Complete</span>
+                                                    }
+                                                    else if (record.ConsentEmailReceived)
+                                                    {
+                                                        <span class="badge bg-warning text-dark">Form Outstanding</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary">Not Started</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-light rounded">
+                                <div>
+                                    <strong>Summary:</strong>
+                                    @{
+                                        var girlRecords = attendanceRecords.Where(a => memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == PersonType.Girl).ToList();
+                                        var formsComplete = girlRecords.Count(r => r.ConsentFormReceived);
+                                        var emailsReceived = girlRecords.Count(r => r.ConsentEmailReceived);
+                                    }
+                                    <span class="ms-2">@formsComplete/@girlRecords.Count forms received</span>
+                                </div>
+                                @if (girlRecords.Count - formsComplete > 0)
+                                {
+                                    <span class="text-warning">
+                                        <i class="bi bi-exclamation-triangle"></i> @(girlRecords.Count - formsComplete) outstanding
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="col-lg-4">
+                <!-- Meeting Info Card -->
+                <div class="card mb-3">
+                    <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
+                        <h6 class="mb-0">Meeting Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-2">
+                            <strong>Date:</strong><br />
+                            @meeting.Date.ToString("dddd, dd MMMM yyyy")
+                        </p>
+                        <p class="mb-2">
+                            <strong>Time:</strong><br />
+                            @meeting.StartTime.ToString("HH:mm") - @meeting.EndTime.ToString("HH:mm")
+                        </p>
+                        <p class="mb-2">
+                            <strong>Location:</strong><br />
+                            @meeting.LocationName
+                        </p>
+                        @if (meeting.MeetingType == MeetingType.Extra)
+                        {
+                            <p class="mb-0">
+                                <span class="badge bg-warning text-dark">Special Event</span>
+                            </p>
+                        }
+                    </div>
+                </div>
+
+                <!-- Tips Card -->
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="bi bi-lightbulb text-warning"></i> Quick Tips
+                        </h6>
+                        <ul class="mb-0 ps-3">
+                            <li class="mb-2">Click the toggle switch to mark each member as present or absent</li>
+                            <li class="mb-2">Use "All Present" if most members attended, then uncheck absences</li>
+                            <li class="mb-2">Click "Save Attendance" when you're done</li>
+                            @if (requiresConsent)
+                            {
+                                <li class="mb-2">Track consent forms below - check "Email" when parent confirms, "Form" when paper form received</li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="d-grid gap-2 mt-3">
+                    <button class="btn btn-success btn-lg" @onclick="SaveAttendance" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        <i class="bi bi-check-lg"></i> Save Attendance
+                    </button>
+                    <a href="/Meetings/View/@MeetingId" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Meeting
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int MeetingId { get; set; }
+
+    private Meeting? meeting;
+    private List<Attendance> attendanceRecords = new();
+    private Dictionary<string, Person> memberLookup = new();
+    private bool requiresConsent = false;
+
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            // Load meeting
+            meeting = await MeetingService.GetByIdAsync(MeetingId);
+            if (meeting == null)
+            {
+                return;
+            }
+
+            // Check if meeting requires consent
+            requiresConsent = await AttendanceService.MeetingRequiresConsentAsync(MeetingId);
+
+            // Load all active members
+            var activeMembers = await PersonService.GetActiveAsync();
+            memberLookup = activeMembers.ToDictionary(m => m.MembershipNumber);
+
+            // Check if attendance has been initialized for this meeting
+            var existingAttendance = await AttendanceService.GetAttendanceForMeetingAsync(MeetingId);
+
+            if (!existingAttendance.Any())
+            {
+                // Initialize attendance records for all active members
+                await AttendanceService.InitializeAttendanceForMeetingAsync(MeetingId);
+                existingAttendance = await AttendanceService.GetAttendanceForMeetingAsync(MeetingId);
+            }
+
+            // Build attendance records list with member info
+            attendanceRecords = existingAttendance
+                .Where(a => memberLookup.ContainsKey(a.MembershipNumber))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading data: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ToggleAttendance(Attendance record, bool attended)
+    {
+        record.Attended = attended;
+    }
+
+    private void ToggleConsentEmail(Attendance record, bool received)
+    {
+        record.ConsentEmailReceived = received;
+        if (received && !record.ConsentEmailDate.HasValue)
+        {
+            record.ConsentEmailDate = DateTime.Today;
+        }
+        else if (!received)
+        {
+            record.ConsentEmailDate = null;
+        }
+    }
+
+    private void ToggleConsentForm(Attendance record, bool received)
+    {
+        record.ConsentFormReceived = received;
+        if (received && !record.ConsentFormDate.HasValue)
+        {
+            record.ConsentFormDate = DateTime.Today;
+        }
+        else if (!received)
+        {
+            record.ConsentFormDate = null;
+        }
+    }
+
+    private void MarkAllPresent()
+    {
+        foreach (var record in attendanceRecords)
+        {
+            record.Attended = true;
+        }
+    }
+
+    private void MarkAllAbsent()
+    {
+        foreach (var record in attendanceRecords)
+        {
+            record.Attended = false;
+        }
+    }
+
+    private async Task SaveAttendance()
+    {
+        isSaving = true;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+
+        try
+        {
+            var result = await AttendanceService.SaveBulkAttendanceAsync(MeetingId, attendanceRecords);
+
+            if (result.Success)
+            {
+                var presentCount = attendanceRecords.Count(a => a.Attended);
+                successMessage = $"Attendance saved! {presentCount} present, {attendanceRecords.Count - presentCount} absent.";
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error saving attendance: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void ClearError() => errorMessage = string.Empty;
+    private void ClearSuccess() => successMessage = string.Empty;
+}

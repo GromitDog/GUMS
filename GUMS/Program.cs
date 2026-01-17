@@ -65,6 +65,7 @@ builder.Services.AddScoped<IConfigurationService, ConfigurationService>();
 builder.Services.AddScoped<IPersonService, PersonService>();
 builder.Services.AddScoped<ITermService, TermService>();
 builder.Services.AddScoped<IMeetingService, MeetingService>();
+builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 
 // Add services to the container.
 builder.Services.AddRazorPages();

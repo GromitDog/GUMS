@@ -68,26 +68,10 @@
                                 </div>
                             </div>
 
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Date of Birth *</label>
-                                    <InputDate class="form-control" @bind-Value="person.DateOfBirth" />
-                                    <ValidationMessage For="() => person.DateOfBirth" />
-                                </div>
-                                @if (person.PersonType == PersonType.Girl)
-                                {
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Section *</label>
-                                        <InputSelect class="form-select" @bind-Value="person.Section">
-                                            <option value="">-- Select Section --</option>
-                                            <option value="@Section.Rainbow">Rainbow</option>
-                                            <option value="@Section.Brownie">Brownie</option>
-                                            <option value="@Section.Guide">Guide</option>
-                                            <option value="@Section.Ranger">Ranger</option>
-                                        </InputSelect>
-                                        <ValidationMessage For="() => person.Section" />
-                                    </div>
-                                }
+                            <div class="mb-3">
+                                <label class="form-label">Date of Birth *</label>
+                                <InputDate class="form-control" @bind-Value="person.DateOfBirth" />
+                                <ValidationMessage For="() => person.DateOfBirth" />
                             </div>
 
                             <div class="row">
@@ -109,6 +93,22 @@
                                 <div class="mb-3">
                                     <label class="form-label">Date Left</label>
                                     <InputDate class="form-control" @bind-Value="person.DateLeft" />
+                                </div>
+                            }
+
+                            @if (person.PersonType == PersonType.Leader)
+                            {
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Email</label>
+                                        <InputText type="email" class="form-control" @bind-Value="person.Email" placeholder="e.g., leader@example.com" />
+                                        <ValidationMessage For="() => person.Email" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Phone Number</label>
+                                        <InputText class="form-control" @bind-Value="person.Phone" placeholder="e.g., 07123 456789" />
+                                        <ValidationMessage For="() => person.Phone" />
+                                    </div>
                                 </div>
                             }
                         </div>

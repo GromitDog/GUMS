@@ -24,6 +24,14 @@ public class Person
     // Only for girls
     public Section? Section { get; set; }
 
+    // Only for leaders - contact details
+    [MaxLength(200)]
+    [EmailAddress]
+    public string? Email { get; set; }
+
+    [MaxLength(50)]
+    public string? Phone { get; set; }
+
     [Required]
     public DateTime DateJoined { get; set; }
 

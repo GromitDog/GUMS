@@ -15,11 +15,11 @@ To use your own unit logo:
 3. Recommended dimensions: 120x120 pixels or similar square aspect ratio
 4. Supported formats: SVG (preferred), PNG, or JPG
 
-### Girl Guiding Branding Guidelines
+### Girlguiding Branding Guidelines
 
-Please ensure your logo follows the [Girl Guiding Brand Guidelines](https://girlguiding.foleon.com/girlguiding-brand-guidelines/brand-guidelines/) (check for most current version):
+Please ensure your logo follows the [Girlguiding Brand Guidelines](https://girlguiding.foleon.com/girlguiding-brand-guidelines/brand-guidelines/) (check for most current version):
 
-- Use official Girl Guiding logos and colors
+- Use official Girlguiding logos and colors
 - Maintain appropriate clear space around the logo
 - Ensure good contrast against the dark blue sidebar background
 - Logo should be clearly visible and not distorted

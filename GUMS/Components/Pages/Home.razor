@@ -5,12 +5,15 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject IPersonService PersonService
+@inject IAttendanceService AttendanceService
+@inject ITermService TermService
+@inject IMeetingService MeetingService
 
 <PageTitle>Home - GUMS</PageTitle>
 
 <div class="container-fluid py-4">
     <h1>Welcome to your unit!</h1>
-    <p class="lead">Manage your Girl Guiding unit with ease</p>
+    <p class="lead">Manage your Girlguiding unit with ease</p>
 
     <div class="row mt-4">
         <div class="col-md-4">
@@ -65,6 +68,105 @@
                         </div>
                     }
                     <a href="/Register" class="btn btn-primary">Manage Members</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Meetings Card -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Meetings</h5>
+                    @if (_isLoading)
+                    {
+                        <div class="text-center py-2">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            @if (_nextMeetingDate.HasValue)
+                            {
+                                <p class="card-text mb-1">
+                                    <strong>Next meeting:</strong> @_nextMeetingDate.Value.ToString("ddd dd MMM")
+                                </p>
+                            }
+                            <p class="card-text mb-1">
+                                <strong>@_upcomingMeetingCount</strong> upcoming @(_upcomingMeetingCount == 1 ? "meeting" : "meetings")
+                            </p>
+                        </div>
+                    }
+                    <a href="/Meetings" class="btn btn-primary">View Meetings</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attendance Alerts Card -->
+        <div class="col-md-4">
+            <div class="card @(_alertCount > 0 ? "border-warning" : "")">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        Attendance Alerts
+                        @if (_alertCount > 0)
+                        {
+                            <span class="badge bg-warning text-dark ms-2">@_alertCount</span>
+                        }
+                    </h5>
+                    @if (_isLoading)
+                    {
+                        <div class="text-center py-2">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (_currentTermName == null)
+                    {
+                        <p class="card-text text-muted">No active term configured.</p>
+                        <a href="/Configuration/Terms" class="btn btn-outline-secondary">Configure Terms</a>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <p class="card-text mb-1">
+                                <small class="text-muted">Current term: @_currentTermName</small>
+                            </p>
+                            @if (_alertCount == 0)
+                            {
+                                <p class="card-text text-success">
+                                    <i class="bi bi-check-circle"></i> No attendance concerns
+                                </p>
+                            }
+                            else
+                            {
+                                @if (_fullTermAbsenceCount > 0)
+                                {
+                                    <p class="card-text mb-1 text-danger">
+                                        <i class="bi bi-exclamation-triangle"></i> <strong>@_fullTermAbsenceCount</strong> full-term @(_fullTermAbsenceCount == 1 ? "absence" : "absences")
+                                    </p>
+                                }
+                                @if (_lowAttendanceCount > 0)
+                                {
+                                    <p class="card-text mb-1 text-warning">
+                                        <i class="bi bi-exclamation-circle"></i> <strong>@_lowAttendanceCount</strong> low attendance
+                                    </p>
+                                }
+                            }
+                        </div>
+                        <a href="/Meetings/Alerts" class="btn @(_alertCount > 0 ? "btn-warning" : "btn-outline-primary")">
+                            @if (_alertCount > 0)
+                            {
+                                <span>Review Alerts</span>
+                            }
+                            else
+                            {
+                                <span>View Details</span>
+                            }
+                        </a>
+                    }
                 </div>
             </div>
         </div>

@@ -176,10 +176,16 @@ public class MeetingService : IMeetingService
             return (false, "Meeting not found.");
         }
 
-        // Check if any attendance records exist
-        if (meeting.Attendances.Any())
+        // Check if any attendance has actually been recorded (someone marked as attended)
+        if (meeting.Attendances.Any(a => a.Attended))
         {
             return (false, "Cannot delete this meeting because attendance has been recorded. Please remove attendance records first.");
+        }
+
+        // Delete any unrecorded attendance records (created by initialization but no one marked as attended)
+        if (meeting.Attendances.Any())
+        {
+            _context.Attendances.RemoveRange(meeting.Attendances);
         }
 
         // Delete activities first (cascade should handle this, but being explicit)
@@ -269,20 +275,32 @@ public class MeetingService : IMeetingService
 
         var config = await _configService.GetConfigurationAsync();
         var meetingDay = config.MeetingDayOfWeek;
+        var today = DateTime.Today;
 
         var suggestedDates = new List<DateTime>();
-        var currentDate = term.StartDate;
 
-        // Find the first occurrence of the meeting day within the term
+        // Start from today or term start date, whichever is later
+        var currentDate = term.StartDate < today ? today : term.StartDate;
+
+        // Find the first occurrence of the meeting day
         while (currentDate <= term.EndDate && currentDate.DayOfWeek != meetingDay)
         {
             currentDate = currentDate.AddDays(1);
         }
 
-        // Add all meeting days within the term
+        // Get existing meeting dates to filter them out
+        var existingMeetingDates = await _context.Meetings
+            .Where(m => m.Date >= currentDate && m.Date <= term.EndDate)
+            .Select(m => m.Date.Date)
+            .ToListAsync();
+
+        // Add all meeting days within the term that don't already have meetings
         while (currentDate <= term.EndDate)
         {
-            suggestedDates.Add(currentDate);
+            if (!existingMeetingDates.Contains(currentDate.Date))
+            {
+                suggestedDates.Add(currentDate);
+            }
             currentDate = currentDate.AddDays(7); // Next week
         }
 

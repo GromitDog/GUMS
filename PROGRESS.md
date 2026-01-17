@@ -1,7 +1,7 @@
 # GUMS Implementation Progress
 
-**Last Updated:** 2026-01-08 (Phase 2 Step 2 COMPLETE ✅)
-**Current Phase:** Phase 2 - Meetings Management (Steps 1-2 Complete, Ready for Step 3: Attendance)
+**Last Updated:** 2026-01-17 (PHASE 2 COMPLETE ✅)
+**Current Phase:** Phase 3 - Payments (Ready to Begin)
 
 ---
 
@@ -204,50 +204,58 @@
   - ✅ Consent requirement marking
   - ✅ Smart meeting generation from terms
   - ✅ Navigation menu updated
-- ⏳ **Step 3:** Attendance tracking with quick entry
-- ⏳ **Step 4:** Consent form tracking (email + physical form)
-- ⏳ **Step 5:** Attendance monitoring and alerts
-- ⏳ **Step 6:** Integration & Polish
+- ✅ **Step 3: Attendance Tracking** (COMPLETE)
+  - ✅ IAttendanceService interface with 20+ methods
+  - ✅ AttendanceService implementation with full business logic
+  - ✅ 51 comprehensive unit tests (all passing, 119 total)
+  - ✅ RecordAttendance.razor page with quick checklist UI
+  - ✅ Consent tracking integrated (email + physical form)
+  - ✅ ViewMeeting.razor updated with attendance stats
+  - ✅ Meetings/Index.razor shows attendance status for past meetings
+  - ✅ "Mark All Present/Absent" bulk actions
+  - ✅ Attendance initialization for all active members
+- ✅ **Step 4: Attendance Monitoring & Alerts** (COMPLETE)
+  - ✅ AttendanceAlerts.razor page with full-term absences and low attendance
+  - ✅ Summary statistics (alert counts, term progress)
+  - ✅ Add notes functionality for alerts
+  - ✅ Navigation menu updated with Attendance Alerts link
+  - ✅ Home dashboard updated with attendance alerts card
+  - ✅ Meetings card added to home dashboard
+- ✅ **Step 5: Integration & Polish** (COMPLETE)
+  - ✅ Girl Guiding branding verified on all pages
+  - ✅ Quick link to Attendance Alerts from Meetings page
+  - ✅ All 119 tests passing
+  - ✅ Build successful with 0 warnings
 
 ---
 
 ## 🎯 Next Steps (When Resuming)
 
-### Phase 2 Steps 1-2 Complete Testing
-Test the complete Phase 1 + Phase 2 (Steps 1-2) workflow:
-1. **Stop running app** and rebuild: `dotnet build GUMS/GUMS.csproj`
-2. **Run tests**: `dotnet test GUMS.Tests/GUMS.Tests.csproj --verbosity minimal`
-   - Expected: 68+ tests passing
-3. **Start app**: `dotnet run --project GUMS/GUMS.csproj`
-4. **Test Terms**:
-   - Navigate to Term Dates
-   - Add a new term (e.g., Spring 2026)
-   - Edit the term
-   - View current term highlighting
-5. **Test Meetings**:
-   - Navigate to Meetings
-   - Click "Plan a Meeting"
-   - Use a suggested date from the current term
-   - Add activities with consent requirements
-   - Save and verify it appears in upcoming meetings
-   - Click "Add Special Event"
-   - Set a cost and payment deadline
-   - Add activities
-   - Save event
-   - View meeting details
-   - Edit a meeting
-   - Delete a meeting (should work if no attendance)
+### Phase 2 Complete - Ready for Phase 3: Payments
 
-### Then Start Phase 2 Step 3: Attendance Tracking
-According to PHASE2_PLAN.md:
-1. Create IAttendanceService and AttendanceService
-2. Write comprehensive unit tests
-3. Create RecordAttendance.razor page
-   - Quick checklist for regular meetings
-   - Track sign-ups vs attendance for extra meetings
-   - Track consent forms (email received + physical form received)
-4. Update ViewMeeting.razor to link to attendance
-5. Update Meetings/Index.razor to show attendance status
+**Test the complete Phase 2 workflow:**
+1. **Run tests**: `dotnet test GUMS.Tests/GUMS.Tests.csproj --verbosity minimal`
+   - Expected: 119 tests passing
+2. **Start app**: `dotnet run --project GUMS/GUMS.csproj`
+3. **Test complete workflow**:
+   - Add members to register
+   - Create terms
+   - Generate meetings for a term
+   - Record attendance for a meeting
+   - View attendance alerts on dashboard and alerts page
+
+### Start Phase 3: Payments
+According to SPECIFICATION.md, Phase 3 involves:
+1. **Payment tracking for termly subscriptions**
+   - Track who has paid subs for each term
+   - Support partial payments
+   - Payment status dashboard
+2. **Payment tracking for meeting costs**
+   - Link payments to specific meetings with costs
+   - Track who has paid for events/trips
+3. **Payment reminders and overdue tracking**
+   - Identify overdue payments
+   - Generate payment reminder lists
 
 ### Phase 1 Testing Checklist
 - [ ] First-run setup creates admin user
@@ -661,16 +669,263 @@ According to PHASE2_PLAN.md, Step 2 involves:
 
 ### Next Steps
 
-**✅ Step 2 Complete - Moving to Step 3: Attendance Tracking**
-
-According to PHASE2_PLAN.md, Step 3 involves:
-1. Create IAttendanceService and AttendanceService
-2. Build RecordAttendance.razor page
-3. Update ViewMeeting.razor to link to attendance
-4. Track consent forms (email + physical)
-
-**Estimated Time:** 1-2 sessions
+**✅ Step 3 Complete - Ready for Step 4: Attendance Monitoring & Alerts**
 
 ---
 
-**Phase 2 Progress: Steps 1-2/6 Complete (33% of Phase 2)**
+## 🎉 Phase 2 Step 3 Complete: Attendance Tracking
+
+**Date Completed:** 2026-01-17
+**Status:** ✅ COMPLETE - Service Layer + UI + Tests
+
+### What Was Built
+
+**Service Layer:**
+1. **IAttendanceService.cs** - Comprehensive interface with 20+ methods
+   - CRUD operations for attendance records
+   - Bulk attendance saving
+   - Sign-up tracking for extra meetings
+   - Consent status tracking (email + physical form)
+   - Attendance statistics calculation
+   - Full-term absence detection
+   - Low attendance alerts
+
+2. **AttendanceService.cs** - Full implementation with business rules
+   - ✅ All CRUD operations for attendance
+   - ✅ Bulk save with create/update logic
+   - ✅ Consent tracking (email + form)
+   - ✅ Meeting attendance stats
+   - ✅ Member attendance stats by term
+   - ✅ Full-term absence detection (excludes leaders and new members)
+   - ✅ Low attendance alerts (configurable threshold)
+   - ✅ Meeting initialization (creates records for all active members)
+   - ✅ Registered in DI container
+
+**Test Coverage:**
+- **AttendanceServiceTests.cs** - 51 comprehensive unit tests
+- ✅ All CRUD operations tested
+- ✅ Bulk operations tested
+- ✅ Consent tracking tested
+- ✅ Statistics calculations tested
+- ✅ Alert detection tested
+- ✅ Edge cases covered
+- ✅ 100% test pass rate (119/119 total tests passing)
+
+**UI Layer:**
+1. **RecordAttendance.razor** - Quick attendance entry page
+   - ✅ Quick checklist UI grouped by Girls/Leaders
+   - ✅ Toggle switches for each member
+   - ✅ "Mark All Present" and "Clear All" bulk actions
+   - ✅ Real-time stats (present/absent/total)
+   - ✅ Consent tracking section (for meetings with consent activities)
+   - ✅ Meeting info sidebar
+   - ✅ Success/error messaging
+
+2. **ViewMeeting.razor** - Updated with attendance section
+   - ✅ Attendance stats display (present/absent/total)
+   - ✅ Progress bar showing attendance percentage
+   - ✅ Consent status summary (emails/forms/outstanding)
+   - ✅ "Record Attendance" / "Edit Attendance" button
+   - ✅ Quick Actions updated
+
+3. **Meetings/Index.razor** - Updated with attendance status
+   - ✅ Past meetings show attendance status
+   - ✅ "Record" button for meetings without attendance
+   - ✅ X/Y badge showing attendance count
+
+### Features Delivered
+
+**Leaders can now:**
+- ✅ Record attendance with a quick checklist UI
+- ✅ Mark all members present with one click
+- ✅ Track consent emails and physical forms received
+- ✅ See attendance statistics for each meeting
+- ✅ See attendance status on the meetings list
+- ✅ Edit attendance after initial recording
+- ✅ View consent form outstanding counts
+
+**Technical Quality:**
+- ✅ Clean, maintainable code following existing patterns
+- ✅ Comprehensive test coverage (51 new tests)
+- ✅ Proper error handling
+- ✅ Responsive design
+- ✅ Girl Guiding branding
+- ✅ 0 build warnings, 0 errors
+
+### Files Created/Modified
+
+**New Files (3):**
+- `GUMS/Services/IAttendanceService.cs` (~145 lines)
+- `GUMS/Services/AttendanceService.cs` (~460 lines)
+- `GUMS.Tests/Services/AttendanceServiceTests.cs` (~975 lines)
+- `GUMS/Components/Pages/Meetings/RecordAttendance.razor` (~380 lines)
+
+**Modified Files (3):**
+- `GUMS/Components/Pages/Meetings/ViewMeeting.razor` - Added attendance section
+- `GUMS/Components/Pages/Meetings/Index.razor` - Added attendance status column
+- `GUMS/Program.cs` - Registered IAttendanceService
+
+**Total New Code:** ~1,960 lines
+
+---
+
+## 🎉 Phase 2 Step 4 Complete: Attendance Monitoring & Alerts
+
+**Date Completed:** 2026-01-17
+**Status:** ✅ COMPLETE - UI + Dashboard Updates
+
+### What Was Built
+
+**UI Layer:**
+1. **AttendanceAlerts.razor** - Attendance monitoring page
+   - ✅ Full-term absences display (members with 0 attendance)
+   - ✅ Low attendance alerts (below 25% threshold)
+   - ✅ Term progress indicator
+   - ✅ Summary stats (alert counts, meeting counts)
+   - ✅ Add notes functionality (in-memory)
+   - ✅ Tips for following up with families
+
+2. **Home.razor** - Updated dashboard
+   - ✅ New Meetings card (next meeting, upcoming count)
+   - ✅ New Attendance Alerts card with warning styling
+   - ✅ Shows full-term absence and low attendance counts
+   - ✅ Quick links to Meetings and Alerts pages
+
+3. **NavMenu.razor** - Updated navigation
+   - ✅ Added "Attendance Alerts" link
+
+### Features Delivered
+
+**Leaders can now:**
+- ✅ View full-term absence alerts on a dedicated page
+- ✅ View low attendance alerts with percentages
+- ✅ Add notes to explain absences
+- ✅ See attendance alerts on the home dashboard
+- ✅ See upcoming meetings on the home dashboard
+- ✅ Navigate directly to Attendance Alerts from the menu
+
+**Technical Quality:**
+- ✅ Clean, maintainable code following existing patterns
+- ✅ No new tests needed (uses existing AttendanceService methods)
+- ✅ 0 build warnings, 0 errors
+- ✅ All 119 tests passing
+
+### Files Created/Modified
+
+**New Files (1):**
+- `GUMS/Components/Pages/Meetings/AttendanceAlerts.razor` (~310 lines)
+
+**Modified Files (3):**
+- `GUMS/Components/Pages/Home.razor` - Added meetings and alerts cards
+- `GUMS/Components/Pages/Home.razor.cs` - Added meeting and alert logic
+- `GUMS/Components/Layout/NavMenu.razor` - Added Attendance Alerts link
+
+**Total New Code:** ~380 lines
+
+---
+
+## 🎉 Phase 2 Step 5 Complete: Integration & Polish
+
+**Date Completed:** 2026-01-17
+**Status:** ✅ COMPLETE
+
+### What Was Done
+- ✅ Girl Guiding branding verified across all new pages
+- ✅ Quick access link to Attendance Alerts from Meetings page
+- ✅ All pages use consistent styling and CSS variables
+- ✅ Final testing - all 119 tests passing
+- ✅ Build successful with 0 warnings, 0 errors
+
+---
+
+# 🎊 PHASE 2 COMPLETE!
+
+**Phase 2 - Meetings Management: 100% Complete (5/5 steps)**
+
+### Phase 2 Summary
+- **Terms:** Create, edit, delete terms with date validation
+- **Meetings:** Full CRUD, activity management, auto-generation from terms
+- **Attendance:** Quick checklist recording, consent tracking
+- **Alerts:** Full-term absences, low attendance monitoring
+- **Dashboard:** Meetings and alerts overview on home page
+
+### Test Coverage
+- **119 unit tests** all passing
+- Comprehensive coverage of all services
+
+### Ready for Phase 3: Payments
+The app now has complete meeting and attendance tracking. Next phase will add:
+- Termly subscription payment tracking
+- Meeting cost payment tracking
+- Payment reminders and overdue tracking
+
+---
+
+## 🔧 Phase 2 Testing Issues Fixed (2026-01-17)
+
+Based on testing feedback, the following improvements were made:
+
+### 1. Unit Configuration Page ✅
+**Issue:** No way to configure default meeting day of week, time, or place.
+**Fix:** Created `Components/Pages/Configuration/UnitSettings.razor`
+- Configure unit name and type
+- Set default meeting day/time
+- Set default meeting location
+- Configure subscription defaults
+- Added to NavMenu.razor as "Unit Settings"
+
+### 2. Meeting Deletion Fixed ✅
+**Issue:** Cannot delete a meeting after it has been created, even if no attendance.
+**Fix:** Updated `MeetingService.DeleteAsync()` in `Services/MeetingService.cs`
+- Changed logic to only block deletion if someone actually attended (`a.Attended == true`)
+- Unrecorded attendance records (all with `Attended = false`) are now cleaned up on delete
+- Meetings can now be deleted until someone is marked as present
+
+### 3. Section Removed from Girl Records ✅
+**Issue:** Section on member record isn't needed - it's an attribute of the unit that girls inherit.
+**Fix:** Updated `Components/Pages/Register/AddGirl.razor`
+- Removed Section dropdown from the form
+- Section now auto-set from unit configuration (`config.UnitType`)
+- Updated Required Information sidebar to remove Section reference
+- Girls inherit section from their unit membership
+
+### 4. Default Emergency Contact ✅
+**Issue:** Everyone must have at least one emergency contact; should be created by default.
+**Fix:** Updated both add member pages:
+- `AddGirl.razor` - OnInitializedAsync now adds a default empty EmergencyContact
+- `AddLeader.razor` - OnInitializedAsync now adds a default empty EmergencyContact
+- Users see a blank contact form ready to fill in instead of having to click "Add"
+
+### 5. Leader Contact Details ✅
+**Issue:** Leaders have contact details - email and phone.
+**Fix:**
+- Added `Email` and `Phone` fields to `Data/Entities/Person.cs`
+- Updated `AddLeader.razor` with email and phone input fields
+- **Note:** Requires migration - run: `dotnet ef migrations add AddLeaderContactDetails --project GUMS`
+
+### 6. Suggested Meeting Dates Fixed ✅
+**Issue:** Suggested dates for meetings don't make sense.
+**Fix:** Updated `MeetingService.GetSuggestedMeetingDatesForTermAsync()`
+- Now only suggests future dates (starting from today or term start, whichever is later)
+- Filters out dates that already have meetings scheduled
+- Uses the configured meeting day from unit settings
+- Returns dates within the term that are available
+
+### Files Created
+- `GUMS/Components/Pages/Configuration/UnitSettings.razor` (~255 lines)
+
+### Files Modified
+- `GUMS/Data/Entities/Person.cs` - Added Email and Phone properties
+- `GUMS/Services/MeetingService.cs` - Fixed DeleteAsync and GetSuggestedMeetingDatesForTermAsync
+- `GUMS/Components/Pages/Register/AddGirl.razor` - Removed Section, added OnInitializedAsync
+- `GUMS/Components/Pages/Register/AddLeader.razor` - Added email/phone fields, OnInitializedAsync
+- `GUMS/Components/Layout/NavMenu.razor` - Added Unit Settings link
+
+### Migration Required
+After stopping the running application:
+```bash
+dotnet ef migrations add AddLeaderContactDetails --project GUMS
+dotnet ef database update --project GUMS
+```
+
+---

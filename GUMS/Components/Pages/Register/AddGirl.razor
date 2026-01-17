@@ -6,6 +6,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject IPersonService PersonService
+@inject IConfigurationService ConfigService
 @inject NavigationManager NavigationManager
 
 <PageTitle>Add Girl - GUMS</PageTitle>
@@ -52,23 +53,10 @@
                             </div>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Date of Birth *</label>
-                                <InputDate class="form-control" @bind-Value="person.DateOfBirth" />
-                                <ValidationMessage For="() => person.DateOfBirth" />
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Section *</label>
-                                <InputSelect class="form-select" @bind-Value="person.Section">
-                                    <option value="">-- Select Section --</option>
-                                    <option value="@Section.Rainbow">Rainbow</option>
-                                    <option value="@Section.Brownie">Brownie</option>
-                                    <option value="@Section.Guide">Guide</option>
-                                    <option value="@Section.Ranger">Ranger</option>
-                                </InputSelect>
-                                <ValidationMessage For="() => person.Section" />
-                            </div>
+                        <div class="mb-3">
+                            <label class="form-label">Date of Birth *</label>
+                            <InputDate class="form-control" @bind-Value="person.DateOfBirth" />
+                            <ValidationMessage For="() => person.DateOfBirth" />
                         </div>
 
                         <div class="mb-3">
@@ -170,7 +158,6 @@
                             <li>Membership Number</li>
                             <li>Full Name</li>
                             <li>Date of Birth</li>
-                            <li>Section (Rainbow/Brownie/Guide/Ranger)</li>
                             <li>At least one emergency contact with:
                                 <ul>
                                     <li>Contact name</li>
@@ -197,6 +184,22 @@
     private DateTime dateJoined = DateTime.Today;
     private string? errorMessage;
     private bool isProcessing = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load unit configuration to set section automatically
+        var config = await ConfigService.GetConfigurationAsync();
+        person.Section = config.UnitType;
+
+        // Add a default empty emergency contact for the user to fill in
+        person.EmergencyContacts.Add(new EmergencyContact
+        {
+            ContactName = string.Empty,
+            Relationship = string.Empty,
+            PrimaryPhone = string.Empty,
+            SortOrder = 0
+        });
+    }
 
     private async Task HandleSubmit()
     {

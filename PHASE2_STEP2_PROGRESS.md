@@ -343,3 +343,27 @@ var result = await meetingService.AddActivityAsync(activity);
 ---
 
 **Next:** Build the 5 Meeting UI pages to complete Step 2 of Phase 2.
+
+** Things found while testing ** ✅ ALL RESOLVED
+
+- ✅ No way to configure default meeting day of week, time or place.
+  - **Fixed:** Created UnitSettings.razor configuration page
+- ✅ Cannot delete a meeting after it has been created, even if no attendance.
+  - **Fixed:** Changed DeleteAsync to only block if someone marked as attended
+- ✅ Need icons on the nav menu for better UX.
+  - **Fixed:** Icons already present (verified in NavMenu.razor)
+- ✅ Section on the member record isn't needed, it is an attribute of the unit that girls inherit by being members of the unit.
+  - **Fixed:** Removed Section dropdown from AddGirl.razor, auto-sets from unit config
+- ✅ Everyone must have at least one emergency contact, it should be created when a new member is created by default, still allow more to be added if required.
+  - **Fixed:** OnInitializedAsync in AddGirl/AddLeader adds default empty contact
+- ✅ Leaders have contact details, email and phone
+  - **Fixed:** Added Email and Phone fields to Person entity and AddLeader form
+- ✅ Suggested dates for meetings don't make sense, are they hard coded?
+  - **Fixed:** Updated GetSuggestedMeetingDatesForTermAsync to:
+    - Only show future dates (from today onwards)
+    - Filter out dates that already have meetings
+    - Use configured meeting day from unit settings
+- When attendance is recorded and the save attendance button is pressed, then return to the meeting screen without waiting for then user to navigate
+- delete meeting is only on the edit screen, should also be on the meetings list screen for quick access
+- Default meeting date should be set to the next upcoming meeting date that is in term time and does not already have a meeting when adding extra meetings.
+- The full term absence should not be an alert until we are getting close to the term end date.
