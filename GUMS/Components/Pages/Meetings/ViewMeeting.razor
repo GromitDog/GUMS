@@ -1,13 +1,8 @@
 @page "/Meetings/View/{MeetingId:int}"
-@using GUMS.Data.Entities
 @using GUMS.Data.Enums
-@using GUMS.Services
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @rendermode InteractiveServer
-@inject IMeetingService MeetingService
-@inject IAttendanceService AttendanceService
-@inject NavigationManager NavigationManager
 
 <PageTitle>View Meeting - GUMS</PageTitle>
 
@@ -288,6 +283,9 @@
                                     <small class="d-block">Coming Soon</small>
                                 </button>
                             }
+                            <button class="btn btn-outline-danger" @onclick="ShowDeleteConfirm">
+                                <i class="bi bi-trash"></i> Delete Meeting
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -346,60 +344,41 @@
                 </div>
             </div>
         </div>
+
+        <!-- Delete Confirmation Modal -->
+        @if (showDeleteConfirm)
+        {
+            <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title">
+                                <i class="bi bi-exclamation-triangle-fill"></i> Confirm Deletion
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" @onclick="CancelDelete"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Are you sure you want to delete <strong>@meeting.Title</strong>?</p>
+                            <p class="text-muted">
+                                This action cannot be undone. Meetings with recorded attendance cannot be deleted.
+                            </p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CancelDelete">
+                                Cancel
+                            </button>
+                            <button type="button" class="btn btn-danger" @onclick="DeleteMeeting" disabled="@isDeleting">
+                                @if (isDeleting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                }
+                                <i class="bi bi-trash"></i> Delete Meeting
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
     }
 </div>
 
-@code {
-    [Parameter]
-    public int MeetingId { get; set; }
-
-    private Meeting? meeting;
-    private List<Activity> activities = new();
-    private AttendanceStats? attendanceStats;
-    private bool requiresConsent = false;
-
-    private bool isLoading = true;
-    private string successMessage = string.Empty;
-
-    protected override async Task OnInitializedAsync()
-    {
-        // Check for success message from navigation state
-        var uri = new Uri(NavigationManager.Uri);
-        if (uri.Query.Contains("success=updated"))
-        {
-            successMessage = "Meeting updated successfully!";
-        }
-
-        await LoadMeeting();
-    }
-
-    private async Task LoadMeeting()
-    {
-        isLoading = true;
-
-        try
-        {
-            meeting = await MeetingService.GetByIdAsync(MeetingId);
-            if (meeting != null)
-            {
-                activities = await MeetingService.GetActivitiesForMeetingAsync(MeetingId);
-                attendanceStats = await AttendanceService.GetMeetingAttendanceStatsAsync(MeetingId);
-                requiresConsent = await AttendanceService.MeetingRequiresConsentAsync(MeetingId);
-            }
-        }
-        catch (Exception ex)
-        {
-            // In production, log this error
-            Console.WriteLine($"Error loading meeting: {ex.Message}");
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    private void ClearSuccess()
-    {
-        successMessage = string.Empty;
-    }
-}

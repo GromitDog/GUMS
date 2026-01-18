@@ -69,35 +69,3 @@
         </p>
     }
 </div>
-
-@code {
-    [Parameter]
-    public List<EmergencyContact> Contacts { get; set; } = new();
-
-    [Parameter]
-    public EventCallback<List<EmergencyContact>> ContactsChanged { get; set; }
-
-    private void AddContact()
-    {
-        var newContact = new EmergencyContact
-        {
-            SortOrder = Contacts.Any() ? Contacts.Max(c => c.SortOrder) + 1 : 0
-        };
-
-        Contacts.Add(newContact);
-        ContactsChanged.InvokeAsync(Contacts);
-    }
-
-    private void RemoveContact(EmergencyContact contact)
-    {
-        Contacts.Remove(contact);
-
-        // Re-order remaining contacts
-        for (int i = 0; i < Contacts.Count; i++)
-        {
-            Contacts[i].SortOrder = i;
-        }
-
-        ContactsChanged.InvokeAsync(Contacts);
-    }
-}

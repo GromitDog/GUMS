@@ -8,11 +8,12 @@
 @inject IAttendanceService AttendanceService
 @inject ITermService TermService
 @inject IMeetingService MeetingService
+@inject IConfigurationService ConfigService
 
 <PageTitle>Home - GUMS</PageTitle>
 
 <div class="container-fluid py-4">
-    <h1>Welcome to your unit!</h1>
+    <h1>Welcome to @(!string.IsNullOrEmpty(_unitName) ? _unitName : "your unit")!</h1>
     <p class="lead">Manage your Girlguiding unit with ease</p>
 
     <div class="row mt-4">

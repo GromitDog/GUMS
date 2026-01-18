@@ -1,12 +1,6 @@
 @page "/Configuration/Settings"
-@using GUMS.Data.Entities
 @using GUMS.Data.Enums
-@using GUMS.Services
-@using Microsoft.AspNetCore.Authorization
-@attribute [Authorize]
 @rendermode InteractiveServer
-@inject IConfigurationService ConfigService
-@inject NavigationManager NavigationManager
 
 <PageTitle>Unit Settings - GUMS</PageTitle>
 
@@ -22,23 +16,23 @@
         <h2>Unit Settings</h2>
     </div>
 
-    @if (!string.IsNullOrEmpty(errorMessage))
+    @if (!string.IsNullOrEmpty(_errorMessage))
     {
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
             <button type="button" class="btn-close" @onclick="ClearError"></button>
         </div>
     }
 
-    @if (!string.IsNullOrEmpty(successMessage))
+    @if (!string.IsNullOrEmpty(_successMessage))
     {
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
             <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
         </div>
     }
 
-    @if (isLoading)
+    @if (_isLoading)
     {
         <div class="text-center py-5">
             <div class="spinner-border text-primary" role="status">
@@ -46,11 +40,11 @@
             </div>
         </div>
     }
-    else if (config != null)
+    else if (_config != null)
     {
         <div class="row">
             <div class="col-lg-8">
-                <EditForm Model="config" OnValidSubmit="SaveSettings" FormName="unitSettingsForm">
+                <EditForm Model="_config" OnValidSubmit="SaveSettings" FormName="unitSettingsForm">
                     <DataAnnotationsValidator />
 
                     <!-- Unit Details -->
@@ -64,19 +58,19 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Unit Name</label>
-                                    <InputText class="form-control" @bind-Value="config.UnitName" placeholder="e.g. 1st Townsville Brownies" />
-                                    <ValidationMessage For="@(() => config.UnitName)" />
+                                    <InputText class="form-control" @bind-Value="_config.UnitName" placeholder="e.g. 1st Townsville Brownies" />
+                                    <ValidationMessage For="@(() => _config.UnitName)" />
                                 </div>
 
                                 <div class="col-md-6">
                                     <label class="form-label">Unit Type</label>
-                                    <InputSelect class="form-select" @bind-Value="config.UnitType">
+                                    <InputSelect class="form-select" @bind-Value="_config.UnitType">
                                         <option value="@Section.Rainbow">Rainbows</option>
                                         <option value="@Section.Brownie">Brownies</option>
                                         <option value="@Section.Guide">Guides</option>
                                         <option value="@Section.Ranger">Rangers</option>
                                     </InputSelect>
-                                    <ValidationMessage For="@(() => config.UnitType)" />
+                                    <ValidationMessage For="@(() => _config.UnitType)" />
                                     <small class="text-muted">All girls in this unit will be part of this section</small>
                                 </div>
                             </div>
@@ -98,7 +92,7 @@
                             <div class="row g-3">
                                 <div class="col-md-4">
                                     <label class="form-label">Meeting Day</label>
-                                    <InputSelect class="form-select" @bind-Value="config.MeetingDayOfWeek">
+                                    <InputSelect class="form-select" @bind-Value="_config.MeetingDayOfWeek">
                                         <option value="@DayOfWeek.Monday">Monday</option>
                                         <option value="@DayOfWeek.Tuesday">Tuesday</option>
                                         <option value="@DayOfWeek.Wednesday">Wednesday</option>
@@ -107,34 +101,34 @@
                                         <option value="@DayOfWeek.Saturday">Saturday</option>
                                         <option value="@DayOfWeek.Sunday">Sunday</option>
                                     </InputSelect>
-                                    <ValidationMessage For="@(() => config.MeetingDayOfWeek)" />
+                                    <ValidationMessage For="@(() => _config.MeetingDayOfWeek)" />
                                 </div>
 
                                 <div class="col-md-4">
                                     <label class="form-label">Start Time</label>
                                     <input type="time" class="form-control"
-                                           value="@config.DefaultMeetingStartTime.ToString("HH:mm")"
-                                           @onchange="@(e => config.DefaultMeetingStartTime = TimeOnly.Parse(e.Value?.ToString() ?? "18:30"))" />
-                                    <ValidationMessage For="@(() => config.DefaultMeetingStartTime)" />
+                                           value="@_config.DefaultMeetingStartTime.ToString("HH:mm")"
+                                           @onchange="@(e => _config.DefaultMeetingStartTime = TimeOnly.Parse(e.Value?.ToString() ?? "18:30"))" />
+                                    <ValidationMessage For="@(() => _config.DefaultMeetingStartTime)" />
                                 </div>
 
                                 <div class="col-md-4">
                                     <label class="form-label">End Time</label>
                                     <input type="time" class="form-control"
-                                           value="@config.DefaultMeetingEndTime.ToString("HH:mm")"
-                                           @onchange="@(e => config.DefaultMeetingEndTime = TimeOnly.Parse(e.Value?.ToString() ?? "19:30"))" />
-                                    <ValidationMessage For="@(() => config.DefaultMeetingEndTime)" />
+                                           value="@_config.DefaultMeetingEndTime.ToString("HH:mm")"
+                                           @onchange="@(e => _config.DefaultMeetingEndTime = TimeOnly.Parse(e.Value?.ToString() ?? "19:30"))" />
+                                    <ValidationMessage For="@(() => _config.DefaultMeetingEndTime)" />
                                 </div>
 
                                 <div class="col-md-6">
                                     <label class="form-label">Default Location Name</label>
-                                    <InputText class="form-control" @bind-Value="config.DefaultLocationName" placeholder="e.g. Village Hall" />
-                                    <ValidationMessage For="@(() => config.DefaultLocationName)" />
+                                    <InputText class="form-control" @bind-Value="_config.DefaultLocationName" placeholder="e.g. Village Hall" />
+                                    <ValidationMessage For="@(() => _config.DefaultLocationName)" />
                                 </div>
 
                                 <div class="col-md-6">
                                     <label class="form-label">Default Location Address</label>
-                                    <InputText class="form-control" @bind-Value="config.DefaultLocationAddress" placeholder="e.g. 123 Main Street, Town" />
+                                    <InputText class="form-control" @bind-Value="_config.DefaultLocationAddress" placeholder="e.g. 123 Main Street, Town" />
                                 </div>
                             </div>
                         </div>
@@ -151,15 +145,15 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Default Termly Subscription (£)</label>
-                                    <InputNumber class="form-control" @bind-Value="config.DefaultSubsAmount" />
-                                    <ValidationMessage For="@(() => config.DefaultSubsAmount)" />
+                                    <InputNumber class="form-control" @bind-Value="_config.DefaultSubsAmount" />
+                                    <ValidationMessage For="@(() => _config.DefaultSubsAmount)" />
                                     <small class="text-muted">Default amount for new terms</small>
                                 </div>
 
                                 <div class="col-md-6">
                                     <label class="form-label">Payment Due Days</label>
-                                    <InputNumber class="form-control" @bind-Value="config.PaymentTermDays" />
-                                    <ValidationMessage For="@(() => config.PaymentTermDays)" />
+                                    <InputNumber class="form-control" @bind-Value="_config.PaymentTermDays" />
+                                    <ValidationMessage For="@(() => _config.PaymentTermDays)" />
                                     <small class="text-muted">Days after invoice before payment is overdue</small>
                                 </div>
                             </div>
@@ -167,8 +161,8 @@
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary btn-lg" disabled="@isSaving">
-                            @if (isSaving)
+                        <button type="submit" class="btn btn-primary btn-lg" disabled="@_isSaving">
+                            @if (_isSaving)
                             {
                                 <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                             }
@@ -196,60 +190,3 @@
         </div>
     }
 </div>
-
-@code {
-    private UnitConfiguration? config;
-
-    private bool isLoading = true;
-    private bool isSaving = false;
-    private string errorMessage = string.Empty;
-    private string successMessage = string.Empty;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadConfiguration();
-    }
-
-    private async Task LoadConfiguration()
-    {
-        isLoading = true;
-        try
-        {
-            config = await ConfigService.GetConfigurationAsync();
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error loading configuration: {ex.Message}";
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    private async Task SaveSettings()
-    {
-        if (config == null) return;
-
-        isSaving = true;
-        errorMessage = string.Empty;
-        successMessage = string.Empty;
-
-        try
-        {
-            await ConfigService.UpdateConfigurationAsync(config);
-            successMessage = "Settings saved successfully!";
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error saving settings: {ex.Message}";
-        }
-        finally
-        {
-            isSaving = false;
-        }
-    }
-
-    private void ClearError() => errorMessage = string.Empty;
-    private void ClearSuccess() => successMessage = string.Empty;
-}

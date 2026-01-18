@@ -1,12 +1,8 @@
 @page "/Register"
 @using GUMS.Data.Enums
-@using GUMS.Data.Entities
-@using GUMS.Services
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @rendermode InteractiveServer
-@inject IPersonService PersonService
-@inject NavigationManager NavigationManager
 
 <PageTitle>Member Register - GUMS</PageTitle>
 
@@ -29,11 +25,11 @@
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">Find someone</label>
-                    <input type="text" class="form-control" @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" placeholder="Type a name or membership number" />
+                    <input type="text" class="form-control" @bind="_searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" placeholder="Type a name or membership number" />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Show me</label>
-                    <select class="form-select" @bind="filterType" @bind:after="LoadMembers">
+                    <select class="form-select" @bind="_filterType" @bind:after="LoadMembers">
                         <option value="">Everyone</option>
                         <option value="Girl">Girls only</option>
                         <option value="Leader">Leaders only</option>
@@ -41,7 +37,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Status</label>
-                    <select class="form-select" @bind="filterStatus" @bind:after="LoadMembers">
+                    <select class="form-select" @bind="_filterStatus" @bind:after="LoadMembers">
                         <option value="active">Active</option>
                         <option value="inactive">Left</option>
                         <option value="all">All</option>
@@ -52,7 +48,7 @@
     </div>
 
     <!-- Members List -->
-    @if (isLoading)
+    @if (_isLoading)
     {
         <div class="text-center py-5">
             <div class="spinner-border text-primary" role="status">
@@ -61,7 +57,7 @@
             <p class="mt-2 text-muted">Loading members...</p>
         </div>
     }
-    else if (!members.Any())
+    else if (!_members.Any())
     {
         <div class="alert alert-info">
             <i class="bi bi-info-circle"></i> Your register is empty. Add your first girl or leader to get started!
@@ -72,11 +68,11 @@
         <div class="card">
             <div class="card-body">
                 @{
-                    var girls = members.Where(m => m.PersonType == PersonType.Girl).OrderBy(m => m.FullName).ToList();
-                    var leaders = members.Where(m => m.PersonType == PersonType.Leader).OrderBy(m => m.FullName).ToList();
+                    var girls = _members.Where(m => m.PersonType == PersonType.Girl).OrderBy(m => m.FullName).ToList();
+                    var leaders = _members.Where(m => m.PersonType == PersonType.Leader).OrderBy(m => m.FullName).ToList();
                 }
 
-                <p class="text-muted mb-3">Showing @members.Count member(s) (@girls.Count girl(s), @leaders.Count leader(s))</p>
+                <p class="text-muted mb-3">Showing @_members.Count member(s) (@girls.Count girl(s), @leaders.Count leader(s))</p>
 
                 <div class="table-responsive">
                     <table class="table table-hover">
@@ -205,65 +201,3 @@
         </div>
     }
 </div>
-
-@code {
-    private List<Person> members = new();
-    private string searchTerm = string.Empty;
-    private string filterType = string.Empty;
-    private string filterStatus = "active";
-    private bool isLoading = true;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadMembers();
-    }
-
-    private async Task LoadMembers()
-    {
-        isLoading = true;
-
-        try
-        {
-            // Start with all or active members based on filter
-            List<Person> allMembers;
-            if (filterStatus == "active")
-            {
-                allMembers = await PersonService.GetActiveAsync();
-            }
-            else if (filterStatus == "inactive")
-            {
-                allMembers = await PersonService.GetInactiveAsync();
-            }
-            else
-            {
-                allMembers = await PersonService.GetAllAsync();
-            }
-
-            // Apply type filter
-            if (!string.IsNullOrEmpty(filterType) && Enum.TryParse<PersonType>(filterType, out var type))
-            {
-                allMembers = allMembers.Where(m => m.PersonType == type).ToList();
-            }
-
-            // Apply search filter
-            if (!string.IsNullOrEmpty(searchTerm))
-            {
-                allMembers = allMembers.Where(m =>
-                    m.MembershipNumber.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                    (m.FullName != null && m.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
-                ).ToList();
-            }
-
-            members = allMembers;
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    private async Task HandleSearch()
-    {
-        await LoadMembers();
-    }
-}

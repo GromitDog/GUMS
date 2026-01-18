@@ -1,13 +1,5 @@
 @page "/Meetings/AddExtra"
-@using GUMS.Data.Entities
-@using GUMS.Data.Enums
-@using GUMS.Services
-@using Microsoft.AspNetCore.Authorization
-@attribute [Authorize]
 @rendermode InteractiveServer
-@inject IMeetingService MeetingService
-@inject IConfigurationService ConfigService
-@inject NavigationManager NavigationManager
 
 <PageTitle>Add Special Event - GUMS</PageTitle>
 
@@ -21,10 +13,10 @@
 
     <h2 class="mb-4">Add Special Event</h2>
 
-    @if (!string.IsNullOrEmpty(errorMessage))
+    @if (!string.IsNullOrEmpty(_errorMessage))
     {
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
             <button type="button" class="btn-close" @onclick="ClearError"></button>
         </div>
     }
@@ -38,46 +30,46 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <EditForm Model="meeting" OnValidSubmit="SaveMeeting">
+                    <EditForm Model="_meeting" OnValidSubmit="SaveMeeting">
                         <DataAnnotationsValidator />
 
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">Event Date</label>
-                                <InputDate class="form-control" @bind-Value="meeting.Date" />
-                                <ValidationMessage For="@(() => meeting.Date)" />
+                                <InputDate class="form-control" @bind-Value="_meeting.Date" />
+                                <ValidationMessage For="@(() => _meeting.Date)" />
                             </div>
 
                             <div class="col-md-6">
                                 <label class="form-label">Event Title</label>
-                                <InputText class="form-control" @bind-Value="meeting.Title" placeholder="e.g. Summer Camp, Museum Trip" />
-                                <ValidationMessage For="@(() => meeting.Title)" />
+                                <InputText class="form-control" @bind-Value="_meeting.Title" placeholder="e.g. Summer Camp, Museum Trip" />
+                                <ValidationMessage For="@(() => _meeting.Title)" />
                             </div>
 
                             <div class="col-md-6">
                                 <label class="form-label">Start Time</label>
-                                <InputDate Type="InputDateType.Time" class="form-control" @bind-Value="startTime" />
+                                <InputDate Type="InputDateType.Time" class="form-control" @bind-Value="_startTime" />
                             </div>
 
                             <div class="col-md-6">
                                 <label class="form-label">End Time</label>
-                                <InputDate Type="InputDateType.Time" class="form-control" @bind-Value="endTime" />
+                                <InputDate Type="InputDateType.Time" class="form-control" @bind-Value="_endTime" />
                             </div>
 
                             <div class="col-md-12">
                                 <label class="form-label">Location Name</label>
-                                <InputText class="form-control" @bind-Value="meeting.LocationName" placeholder="e.g. Forest Adventure Centre" />
-                                <ValidationMessage For="@(() => meeting.LocationName)" />
+                                <InputText class="form-control" @bind-Value="_meeting.LocationName" placeholder="e.g. Forest Adventure Centre" />
+                                <ValidationMessage For="@(() => _meeting.LocationName)" />
                             </div>
 
                             <div class="col-md-12">
                                 <label class="form-label">Location Address (Optional)</label>
-                                <InputTextArea class="form-control" @bind-Value="meeting.LocationAddress" rows="2" placeholder="Full address" />
+                                <InputTextArea class="form-control" @bind-Value="_meeting.LocationAddress" rows="2" placeholder="Full address" />
                             </div>
 
                             <div class="col-md-12">
                                 <label class="form-label">Description</label>
-                                <InputTextArea class="form-control" @bind-Value="meeting.Description" rows="3" placeholder="What's happening at this event?" />
+                                <InputTextArea class="form-control" @bind-Value="_meeting.Description" rows="3" placeholder="What's happening at this event?" />
                             </div>
 
                             <!-- Cost Section -->
@@ -91,16 +83,16 @@
                                         <div class="row g-3">
                                             <div class="col-md-6">
                                                 <label class="form-label">Cost Per Attendee (£)</label>
-                                                <InputNumber class="form-control" @bind-Value="meeting.CostPerAttendee"
+                                                <InputNumber class="form-control" @bind-Value="_meeting.CostPerAttendee"
                                                            placeholder="0.00" step="0.01" />
                                                 <small class="text-muted">Leave as 0 if this event is free</small>
                                             </div>
 
-                                            @if (meeting.CostPerAttendee.HasValue && meeting.CostPerAttendee.Value > 0)
+                                            @if (_meeting.CostPerAttendee.HasValue && _meeting.CostPerAttendee.Value > 0)
                                             {
                                                 <div class="col-md-6">
                                                     <label class="form-label">Payment Deadline</label>
-                                                    <InputDate class="form-control" @bind-Value="meeting.PaymentDeadline" />
+                                                    <InputDate class="form-control" @bind-Value="_meeting.PaymentDeadline" />
                                                     <small class="text-muted">When payment is due by</small>
                                                 </div>
                                             }
@@ -119,7 +111,7 @@
                                 </button>
                             </div>
 
-                            @if (activities.Any())
+                            @if (_activities.Any())
                             {
                                 <div class="alert alert-warning" role="alert">
                                     <i class="bi bi-exclamation-triangle"></i>
@@ -127,10 +119,10 @@
                                 </div>
 
                                 <div class="list-group">
-                                    @for (int i = 0; i < activities.Count; i++)
+                                    @for (int i = 0; i < _activities.Count; i++)
                                     {
                                         var index = i;
-                                        var activity = activities[i];
+                                        var activity = _activities[i];
                                         <div class="list-group-item @(activity.RequiresConsent ? "border-warning" : "")">
                                             <div class="row g-2 align-items-center">
                                                 <div class="col-md-6">
@@ -174,8 +166,8 @@
                         </div>
 
                         <div class="mt-4 d-flex gap-2">
-                            <button type="submit" class="btn btn-primary" disabled="@isSaving">
-                                @if (isSaving)
+                            <button type="submit" class="btn btn-primary" disabled="@_isSaving">
+                                @if (_isSaving)
                                 {
                                     <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                                 }
@@ -217,86 +209,3 @@
         </div>
     </div>
 </div>
-
-@code {
-    private Meeting meeting = new();
-    private List<Activity> activities = new();
-    private DateTime startTime = DateTime.Today.AddHours(10);
-    private DateTime endTime = DateTime.Today.AddHours(15);
-
-    private bool isSaving = false;
-    private string errorMessage = string.Empty;
-
-    protected override async Task OnInitializedAsync()
-    {
-        // Set defaults for extra meeting
-        var config = await ConfigService.GetConfigurationAsync();
-        meeting.Date = DateTime.Today;
-        meeting.MeetingType = MeetingType.Extra;
-        meeting.Title = string.Empty;
-        meeting.LocationName = string.Empty;
-        meeting.CostPerAttendee = 0;
-    }
-
-    private void AddActivity()
-    {
-        activities.Add(new Activity
-        {
-            Name = string.Empty,
-            RequiresConsent = false,
-            SortOrder = activities.Count
-        });
-    }
-
-    private void RemoveActivity(int index)
-    {
-        activities.RemoveAt(index);
-        // Update sort orders
-        for (int i = 0; i < activities.Count; i++)
-        {
-            activities[i].SortOrder = i;
-        }
-    }
-
-    private async Task SaveMeeting()
-    {
-        isSaving = true;
-        ClearError();
-
-        try
-        {
-            // Set times
-            meeting.StartTime = TimeOnly.FromDateTime(startTime);
-            meeting.EndTime = TimeOnly.FromDateTime(endTime);
-
-            // Filter out empty activities
-            meeting.Activities = activities
-                .Where(a => !string.IsNullOrWhiteSpace(a.Name))
-                .ToList();
-
-            var result = await MeetingService.CreateAsync(meeting);
-
-            if (result.Success)
-            {
-                NavigationManager.NavigateTo("/Meetings?success=created");
-            }
-            else
-            {
-                errorMessage = result.ErrorMessage;
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"An error occurred: {ex.Message}";
-        }
-        finally
-        {
-            isSaving = false;
-        }
-    }
-
-    private void ClearError()
-    {
-        errorMessage = string.Empty;
-    }
-}

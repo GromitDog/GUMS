@@ -1,14 +1,5 @@
 @page "/Meetings/Alerts"
-@using GUMS.Data.Entities
-@using GUMS.Data.Enums
-@using GUMS.Services
-@using Microsoft.AspNetCore.Authorization
-@attribute [Authorize]
 @rendermode InteractiveServer
-@inject IAttendanceService AttendanceService
-@inject ITermService TermService
-@inject IPersonService PersonService
-@inject NavigationManager NavigationManager
 
 <PageTitle>Attendance Alerts - GUMS</PageTitle>
 
@@ -74,12 +65,16 @@
         <!-- Summary Stats -->
         <div class="row mb-4">
             <div class="col-md-4">
-                <div class="card @(fullTermAbsences.Any() ? "border-danger" : "")">
+                <div class="card @(fullTermAbsences.Any() && termProgress >= 75 ? "border-danger" : "")">
                     <div class="card-body text-center">
-                        <h3 class="mb-0 @(fullTermAbsences.Any() ? "text-danger" : "text-success")">
-                            @fullTermAbsences.Count
+                        <h3 class="mb-0 @(fullTermAbsences.Any() && termProgress >= 75 ? "text-danger" : "text-success")">
+                            @(termProgress >= 75 ? fullTermAbsences.Count : 0)
                         </h3>
                         <p class="text-muted mb-0">Full-Term Absences</p>
+                        @if (termProgress < 75 && fullTermAbsences.Any())
+                        {
+                            <small class="text-muted">(shown after 75% of term)</small>
+                        }
                     </div>
                 </div>
             </div>
@@ -103,7 +98,7 @@
             </div>
         </div>
 
-        @if (!fullTermAbsences.Any() && !lowAttendanceAlerts.Any())
+        @if ((!fullTermAbsences.Any() || termProgress < 75) && !lowAttendanceAlerts.Any())
         {
             <div class="alert alert-success">
                 <i class="bi bi-check-circle-fill"></i> Great news! No attendance concerns this term. All members are attending regularly.
@@ -111,8 +106,8 @@
         }
         else
         {
-            <!-- Full-Term Absences -->
-            @if (fullTermAbsences.Any())
+            <!-- Full-Term Absences (only show when term is 75% complete or more) -->
+            @if (fullTermAbsences.Any() && termProgress >= 75)
             {
                 <div class="card mb-4">
                     <div class="card-header bg-danger text-white">
@@ -286,106 +281,4 @@
             </div>
         </div>
     </div>
-}
-
-@code {
-    private Term? currentTerm;
-    private List<MemberAttendanceAlert> fullTermAbsences = new();
-    private List<MemberAttendanceAlert> lowAttendanceAlerts = new();
-    private Dictionary<string, string> alertNotes = new();
-    private int totalMeetingsInTerm = 0;
-    private int termProgress = 0;
-
-    private bool isLoading = true;
-    private string successMessage = string.Empty;
-
-    // Modal state
-    private bool showNoteModal = false;
-    private MemberAttendanceAlert? selectedAlert;
-    private string noteText = string.Empty;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadAlerts();
-    }
-
-    private async Task LoadAlerts()
-    {
-        isLoading = true;
-
-        try
-        {
-            currentTerm = await TermService.GetCurrentTermAsync();
-
-            if (currentTerm != null)
-            {
-                // Calculate term progress
-                var totalDays = (currentTerm.EndDate - currentTerm.StartDate).Days;
-                var daysPassed = (DateTime.Today - currentTerm.StartDate).Days;
-                termProgress = totalDays > 0 ? Math.Min(100, Math.Max(0, (int)((double)daysPassed / totalDays * 100))) : 0;
-
-                // Get alerts
-                fullTermAbsences = await AttendanceService.GetFullTermAbsencesAsync(currentTerm.Id);
-                lowAttendanceAlerts = await AttendanceService.GetLowAttendanceAlertsAsync(currentTerm.Id, 25);
-
-                // Get total meetings count
-                if (fullTermAbsences.Any())
-                {
-                    totalMeetingsInTerm = fullTermAbsences.First().TotalMeetings;
-                }
-                else if (lowAttendanceAlerts.Any())
-                {
-                    totalMeetingsInTerm = lowAttendanceAlerts.First().TotalMeetings;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading alerts: {ex.Message}");
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    private string GetAlertNote(string membershipNumber)
-    {
-        return alertNotes.GetValueOrDefault(membershipNumber, string.Empty);
-    }
-
-    private void OpenNoteModal(MemberAttendanceAlert alert)
-    {
-        selectedAlert = alert;
-        noteText = GetAlertNote(alert.MembershipNumber);
-        showNoteModal = true;
-    }
-
-    private void CloseNoteModal()
-    {
-        showNoteModal = false;
-        selectedAlert = null;
-        noteText = string.Empty;
-    }
-
-    private void SaveNote()
-    {
-        if (selectedAlert != null)
-        {
-            if (string.IsNullOrWhiteSpace(noteText))
-            {
-                alertNotes.Remove(selectedAlert.MembershipNumber);
-            }
-            else
-            {
-                alertNotes[selectedAlert.MembershipNumber] = noteText.Trim();
-            }
-
-            successMessage = $"Note saved for {selectedAlert.MemberName}";
-        }
-
-        CloseNoteModal();
-    }
-
-    private void ClearSuccess() => successMessage = string.Empty;
 }

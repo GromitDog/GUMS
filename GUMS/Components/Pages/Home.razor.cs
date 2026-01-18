@@ -6,23 +6,26 @@ public partial class Home
 {
     private bool _isLoading = true;
 
+    // Unit info
+    private string? _unitName;
+
     // Member counts
-    private int _leaderCount = 0;
-    private int _rainbowCount = 0;
-    private int _brownieCount = 0;
-    private int _guideCount = 0;
-    private int _rangerCount = 0;
-    private int _totalCount = 0;
+    private int _leaderCount;
+    private int _rainbowCount;
+    private int _brownieCount;
+    private int _guideCount;
+    private int _rangerCount;
+    private int _totalCount;
 
     // Meeting info
     private DateTime? _nextMeetingDate;
-    private int _upcomingMeetingCount = 0;
+    private int _upcomingMeetingCount;
 
     // Attendance alerts
     private string? _currentTermName;
-    private int _fullTermAbsenceCount = 0;
-    private int _lowAttendanceCount = 0;
-    private int _alertCount = 0;
+    private int _fullTermAbsenceCount;
+    private int _lowAttendanceCount;
+    private int _alertCount;
 
     protected override async Task OnInitializedAsync()
     {
@@ -34,6 +37,10 @@ public partial class Home
         _isLoading = true;
         try
         {
+            // Load unit configuration
+            var config = await ConfigService.GetConfigurationAsync();
+            _unitName = config.UnitName;
+
             // Load member counts
             var activeMembers = await PersonService.GetActiveAsync();
             _totalCount = activeMembers.Count;

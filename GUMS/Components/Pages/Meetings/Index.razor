@@ -1,13 +1,8 @@
 @page "/Meetings"
-@using GUMS.Data.Entities
 @using GUMS.Data.Enums
-@using GUMS.Services
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @rendermode InteractiveServer
-@inject IMeetingService MeetingService
-@inject IAttendanceService AttendanceService
-@inject NavigationManager NavigationManager
 
 <PageTitle>Meetings - GUMS</PageTitle>
 
@@ -32,6 +27,14 @@
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="bi bi-check-circle-fill"></i> @successMessage
             <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
         </div>
     }
 
@@ -154,6 +157,9 @@
                                             <div class="btn-group btn-group-sm" role="group">
                                                 <a href="/Meetings/View/@meeting.Id" class="btn btn-outline-primary">View</a>
                                                 <a href="/Meetings/Edit/@meeting.Id" class="btn btn-outline-secondary">Edit</a>
+                                                <button class="btn btn-outline-danger" @onclick="() => ShowDeleteConfirm(meeting)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -235,7 +241,12 @@
                                                 }
                                             </td>
                                             <td>
-                                                <a href="/Meetings/View/@meeting.Id" class="btn btn-sm btn-outline-primary">View</a>
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <a href="/Meetings/View/@meeting.Id" class="btn btn-outline-primary">View</a>
+                                                    <button class="btn btn-outline-danger" @onclick="() => ShowDeleteConfirm(meeting)">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     }
@@ -251,73 +262,37 @@
             </div>
         }
     }
+
+    <!-- Delete Confirmation Modal -->
+    @if (showDeleteConfirm && meetingToDelete != null)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Confirm Deletion
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CancelDelete"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete <strong>@meetingToDelete.Title</strong> on @meetingToDelete.Date.ToString("dd MMM yyyy")?</p>
+                        <p class="text-muted">
+                            This action cannot be undone. Meetings with recorded attendance cannot be deleted.
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                        <button type="button" class="btn btn-danger" @onclick="DeleteMeeting" disabled="@isDeleting">
+                            @if (isDeleting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </div>
-
-@code {
-    private List<Meeting> upcomingMeetings = new();
-    private List<Meeting> pastMeetings = new();
-    private DateTime? nextMeetingDate;
-    private Dictionary<int, AttendanceStats> attendanceStatsCache = new();
-
-    private bool isLoading = true;
-    private bool showPastMeetings = false;
-    private string successMessage = string.Empty;
-
-    protected override async Task OnInitializedAsync()
-    {
-        // Check for success message from navigation state
-        var uri = new Uri(NavigationManager.Uri);
-        if (uri.Query.Contains("success=created"))
-        {
-            successMessage = "Meeting created successfully!";
-        }
-        else if (uri.Query.Contains("success=updated"))
-        {
-            successMessage = "Meeting updated successfully!";
-        }
-        else if (uri.Query.Contains("success=deleted"))
-        {
-            successMessage = "Meeting deleted successfully!";
-        }
-
-        await LoadMeetings();
-    }
-
-    private async Task LoadMeetings()
-    {
-        isLoading = true;
-
-        try
-        {
-            upcomingMeetings = await MeetingService.GetUpcomingAsync();
-            pastMeetings = await MeetingService.GetPastAsync();
-            nextMeetingDate = await MeetingService.GetNextMeetingDateAsync();
-
-            // Load attendance stats for recent past meetings
-            foreach (var meeting in pastMeetings.Take(20))
-            {
-                var stats = await AttendanceService.GetMeetingAttendanceStatsAsync(meeting.Id);
-                attendanceStatsCache[meeting.Id] = stats;
-            }
-        }
-        catch (Exception ex)
-        {
-            // In production, log this error
-            Console.WriteLine($"Error loading meetings: {ex.Message}");
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    private void TogglePastMeetings()
-    {
-        showPastMeetings = !showPastMeetings;
-    }
-
-    private void ClearSuccess()
-    {
-        successMessage = string.Empty;
-    }
-}

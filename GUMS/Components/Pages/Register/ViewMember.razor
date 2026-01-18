@@ -1,18 +1,8 @@
 @page "/Register/View/{Id:int}"
-@using GUMS.Data.Entities
 @using GUMS.Data.Enums
-@using GUMS.Services
 @using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.AspNetCore.Identity
-@using System.Text
 @attribute [Authorize]
 @rendermode InteractiveServer
-@inject IPersonService PersonService
-@inject UserManager<IdentityUser> UserManager
-@inject AuthenticationStateProvider AuthenticationStateProvider
-@inject NavigationManager NavigationManager
-@inject IJSRuntime JS
 
 <PageTitle>View Member - GUMS</PageTitle>
 
@@ -24,7 +14,7 @@
         </ol>
     </nav>
 
-    @if (isLoading)
+    @if (_isLoading)
     {
         <div class="text-center py-5">
             <div class="spinner-border text-primary" role="status">
@@ -32,7 +22,7 @@
             </div>
         </div>
     }
-    else if (person == null)
+    else if (_person == null)
     {
         <div class="alert alert-danger">
             Member not found.
@@ -42,22 +32,22 @@
     {
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2>
-                @if (person.IsDataRemoved)
+                @if (_person.IsDataRemoved)
                 {
-                    <span class="text-muted">Removed Member @person.MembershipNumber</span>
+                    <span class="text-muted">Removed Member @_person.MembershipNumber</span>
                 }
                 else
                 {
-                    @person.FullName
+                    @_person.FullName
                 }
             </h2>
             <div>
-                @if (!person.IsDataRemoved)
+                @if (!_person.IsDataRemoved)
                 {
                     <a href="/Register/Edit/@Id" class="btn btn-secondary me-2">
                         <i class="bi bi-pencil"></i> Edit
                     </a>
-                    @if (person.IsActive)
+                    @if (_person.IsActive)
                     {
                         <button class="btn btn-warning" @onclick="ShowMarkAsLeftModal">
                             <i class="bi bi-person-dash"></i> Mark as Left
@@ -68,23 +58,23 @@
             </div>
         </div>
 
-        @if (successMessage != null)
+        @if (_successMessage != null)
         {
             <div class="alert alert-success alert-dismissible fade show" role="alert">
-                @successMessage
-                <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+                @_successMessage
+                <button type="button" class="btn-close" @onclick="() => _successMessage = null"></button>
             </div>
         }
 
-        @if (errorMessage != null)
+        @if (_errorMessage != null)
         {
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                @errorMessage
-                <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+                @_errorMessage
+                <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
             </div>
         }
 
-        @if (person.IsDataRemoved)
+        @if (_person.IsDataRemoved)
         {
             <div class="alert alert-warning">
                 <i class="bi bi-exclamation-triangle"></i> This member's personal data has been removed. Only the membership number and historical records remain.
@@ -95,20 +85,20 @@
                     <h5 class="card-title">Remaining Information</h5>
                     <dl class="row mb-0">
                         <dt class="col-sm-3">Membership Number</dt>
-                        <dd class="col-sm-9">@person.MembershipNumber</dd>
+                        <dd class="col-sm-9">@_person.MembershipNumber</dd>
 
                         <dt class="col-sm-3">Type</dt>
-                        <dd class="col-sm-9">@person.PersonType</dd>
+                        <dd class="col-sm-9">@_person.PersonType</dd>
 
                         <dt class="col-sm-3">Status</dt>
                         <dd class="col-sm-9">
                             <span class="badge bg-dark">Data Removed</span>
                         </dd>
 
-                        @if (person.DateLeft.HasValue)
+                        @if (_person.DateLeft.HasValue)
                         {
                             <dt class="col-sm-3">Date Left</dt>
-                            <dd class="col-sm-9">@person.DateLeft.Value.ToString("dd/MM/yyyy")</dd>
+                            <dd class="col-sm-9">@_person.DateLeft.Value.ToString("dd/MM/yyyy")</dd>
                         }
                     </dl>
                 </div>
@@ -126,24 +116,24 @@
                         <div class="card-body">
                             <dl class="row mb-0">
                                 <dt class="col-sm-4">Membership Number</dt>
-                                <dd class="col-sm-8">@person.MembershipNumber</dd>
+                                <dd class="col-sm-8">@_person.MembershipNumber</dd>
 
                                 <dt class="col-sm-4">Full Name</dt>
-                                <dd class="col-sm-8">@person.FullName</dd>
+                                <dd class="col-sm-8">@_person.FullName</dd>
 
                                 <dt class="col-sm-4">Date of Birth</dt>
-                                <dd class="col-sm-8">@person.DateOfBirth?.ToString("dd/MM/yyyy")</dd>
+                                <dd class="col-sm-8">@_person.DateOfBirth?.ToString("dd/MM/yyyy")</dd>
 
                                 <dt class="col-sm-4">Type</dt>
                                 <dd class="col-sm-8">
-                                    <span class="badge bg-@(person.PersonType == PersonType.Girl ? "info" : "secondary")">
-                                        @person.PersonType
+                                    <span class="badge bg-@(_person.PersonType == PersonType.Girl ? "info" : "secondary")">
+                                        @_person.PersonType
                                     </span>
                                 </dd>
 
                                 <dt class="col-sm-4">Status</dt>
                                 <dd class="col-sm-8">
-                                    @if (person.IsActive)
+                                    @if (_person.IsActive)
                                     {
                                         <span class="badge bg-success">Active</span>
                                     }
@@ -154,26 +144,26 @@
                                 </dd>
 
                                 <dt class="col-sm-4">Date Joined</dt>
-                                <dd class="col-sm-8">@person.DateJoined.ToString("dd/MM/yyyy")</dd>
+                                <dd class="col-sm-8">@_person.DateJoined.ToString("dd/MM/yyyy")</dd>
 
-                                @if (person.DateLeft.HasValue)
+                                @if (_person.DateLeft.HasValue)
                                 {
                                     <dt class="col-sm-4">Date Left</dt>
-                                    <dd class="col-sm-8">@person.DateLeft.Value.ToString("dd/MM/yyyy")</dd>
+                                    <dd class="col-sm-8">@_person.DateLeft.Value.ToString("dd/MM/yyyy")</dd>
                                 }
 
-                                @if (person.PersonType == PersonType.Leader)
+                                @if (_person.PersonType == PersonType.Leader)
                                 {
-                                    @if (!string.IsNullOrWhiteSpace(person.Email))
+                                    @if (!string.IsNullOrWhiteSpace(_person.Email))
                                     {
                                         <dt class="col-sm-4">Email</dt>
-                                        <dd class="col-sm-8"><a href="mailto:@person.Email">@person.Email</a></dd>
+                                        <dd class="col-sm-8"><a href="mailto:@_person.Email">@_person.Email</a></dd>
                                     }
 
-                                    @if (!string.IsNullOrWhiteSpace(person.Phone))
+                                    @if (!string.IsNullOrWhiteSpace(_person.Phone))
                                     {
                                         <dt class="col-sm-4">Phone</dt>
-                                        <dd class="col-sm-8"><a href="tel:@person.Phone">@person.Phone</a></dd>
+                                        <dd class="col-sm-8"><a href="tel:@_person.Phone">@_person.Phone</a></dd>
                                     }
                                 }
                             </dl>
@@ -183,18 +173,18 @@
                     <!-- Emergency Contacts -->
                     <div class="card mb-4">
                         <div class="card-header">
-                            <h5 class="mb-0">Emergency Contacts (@person.EmergencyContacts.Count)</h5>
+                            <h5 class="mb-0">Emergency Contacts (@_person.EmergencyContacts.Count)</h5>
                         </div>
                         <div class="card-body">
-                            @if (!person.EmergencyContacts.Any())
+                            @if (!_person.EmergencyContacts.Any())
                             {
                                 <p class="text-muted mb-0">No emergency contacts on record.</p>
                             }
                             else
                             {
-                                @foreach (var contact in person.EmergencyContacts.OrderBy(c => c.SortOrder))
+                                @foreach (var contact in _person.EmergencyContacts.OrderBy(c => c.SortOrder))
                                 {
-                                    <div class="@(person.EmergencyContacts.Last() != contact ? "mb-3 pb-3 border-bottom" : "")">
+                                    <div class="@(_person.EmergencyContacts.Last() != contact ? "mb-3 pb-3 border-bottom" : "")">
                                         <h6>@contact.ContactName</h6>
                                         <dl class="row small mb-0">
                                             <dt class="col-sm-4">Relationship</dt>
@@ -228,29 +218,29 @@
                     </div>
 
                     <!-- Medical & Wellbeing -->
-                    @if (!string.IsNullOrWhiteSpace(person.Allergies) || !string.IsNullOrWhiteSpace(person.Disabilities) || !string.IsNullOrWhiteSpace(person.Notes))
+                    @if (!string.IsNullOrWhiteSpace(_person.Allergies) || !string.IsNullOrWhiteSpace(_person.Disabilities) || !string.IsNullOrWhiteSpace(_person.Notes))
                     {
                         <div class="card mb-4">
                             <div class="card-header">
                                 <h5 class="mb-0">Medical & Wellbeing</h5>
                             </div>
                             <div class="card-body">
-                                @if (!string.IsNullOrWhiteSpace(person.Allergies))
+                                @if (!string.IsNullOrWhiteSpace(_person.Allergies))
                                 {
                                     <h6>Allergies / Intolerances</h6>
-                                    <p>@person.Allergies</p>
+                                    <p>@_person.Allergies</p>
                                 }
 
-                                @if (!string.IsNullOrWhiteSpace(person.Disabilities))
+                                @if (!string.IsNullOrWhiteSpace(_person.Disabilities))
                                 {
                                     <h6>Disabilities / Additional Needs</h6>
-                                    <p>@person.Disabilities</p>
+                                    <p>@_person.Disabilities</p>
                                 }
 
-                                @if (!string.IsNullOrWhiteSpace(person.Notes))
+                                @if (!string.IsNullOrWhiteSpace(_person.Notes))
                                 {
                                     <h6>General Notes</h6>
-                                    <p class="mb-0">@person.Notes</p>
+                                    <p class="mb-0">@_person.Notes</p>
                                 }
                             </div>
                         </div>
@@ -262,7 +252,7 @@
                             <h5 class="mb-0">Photo Permission</h5>
                         </div>
                         <div class="card-body">
-                            @switch (person.PhotoPermission)
+                            @switch (_person.PhotoPermission)
                             {
                                 case PhotoPermission.None:
                                     <span class="badge bg-danger">No Photos</span>
@@ -286,13 +276,13 @@
 </div>
 
 <!-- Mark as Left Modal -->
-@if (showMarkAsLeftModal && person != null)
+@if (_showMarkAsLeftModal && _person != null)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Mark @person.FullName as Left</h5>
+                    <h5 class="modal-title">Mark @_person.FullName as Left</h5>
                     <button type="button" class="btn-close" @onclick="CloseMarkAsLeftModal"></button>
                 </div>
                 <div class="modal-body">
@@ -300,7 +290,7 @@
 
                     <div class="mb-3">
                         <label class="form-label">Date Left</label>
-                        <input type="date" class="form-control" @bind="dateLeft" />
+                        <input type="date" class="form-control" @bind="_dateLeft" />
                     </div>
 
                     <div class="alert alert-warning">
@@ -315,7 +305,7 @@
                     </div>
 
                     <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="exportBeforeRemoval" @bind="exportBeforeRemoval" />
+                        <input class="form-check-input" type="checkbox" id="exportBeforeRemoval" @bind="_exportBeforeRemoval" />
                         <label class="form-check-label" for="exportBeforeRemoval">
                             Export member data before removal (Recommended)
                         </label>
@@ -323,8 +313,8 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseMarkAsLeftModal">Cancel</button>
-                    <button type="button" class="btn btn-danger" @onclick="ConfirmMarkAsLeft" disabled="@isProcessing">
-                        @if (isProcessing)
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmMarkAsLeft" disabled="@_isProcessing">
+                        @if (_isProcessing)
                         {
                             <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                             <span>Processing...</span>
@@ -338,99 +328,4 @@
             </div>
         </div>
     </div>
-}
-
-@code {
-    [Parameter]
-    public int Id { get; set; }
-
-    private Person? person;
-    private string? errorMessage;
-    private string? successMessage;
-    private bool isLoading = true;
-    private bool isProcessing = false;
-    private bool showMarkAsLeftModal = false;
-    private DateTime dateLeft = DateTime.Today;
-    private bool exportBeforeRemoval = true;
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            person = await PersonService.GetByIdAsync(Id);
-        }
-        catch
-        {
-            person = null;
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    private void ShowMarkAsLeftModal()
-    {
-        showMarkAsLeftModal = true;
-        dateLeft = DateTime.Today;
-        exportBeforeRemoval = true;
-    }
-
-    private void CloseMarkAsLeftModal()
-    {
-        showMarkAsLeftModal = false;
-        errorMessage = null;
-    }
-
-    private async Task ConfirmMarkAsLeft()
-    {
-        if (person == null) return;
-
-        isProcessing = true;
-        errorMessage = null;
-
-        try
-        {
-            // Get current user for audit log
-            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            var user = await UserManager.GetUserAsync(authState.User);
-            var userName = user?.Email ?? "Unknown";
-
-            // Export data if requested
-            if (exportBeforeRemoval)
-            {
-                var exportData = await PersonService.ExportMemberDataAsync(Id);
-                var fileName = $"{person.MembershipNumber}_{person.FullName?.Replace(" ", "_")}_Export.json";
-
-                // Trigger download
-                var bytes = Encoding.UTF8.GetBytes(exportData);
-                var base64 = Convert.ToBase64String(bytes);
-                await JS.InvokeVoidAsync("eval", $"(function(){{var link = document.createElement('a');link.download = '{fileName}';link.href = 'data:application/json;base64,{base64}';link.click();}})()");
-            }
-
-            // Set date left if different from current
-            if (person.DateLeft != dateLeft)
-            {
-                person.DateLeft = dateLeft;
-            }
-
-            // Remove member data
-            await PersonService.RemoveMemberDataAsync(Id, userName, exportBeforeRemoval);
-
-            // Reload person to show updated state
-            person = await PersonService.GetByIdAsync(Id);
-
-            // Close modal and show success message
-            showMarkAsLeftModal = false;
-            successMessage = "Member data has been successfully removed. The membership number and historical records have been retained.";
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error removing member data: {ex.Message}";
-        }
-        finally
-        {
-            isProcessing = false;
-        }
-    }
 }

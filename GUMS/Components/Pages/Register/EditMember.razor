@@ -1,12 +1,8 @@
 @page "/Register/Edit/{Id:int}"
-@using GUMS.Data.Entities
 @using GUMS.Data.Enums
-@using GUMS.Services
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @rendermode InteractiveServer
-@inject IPersonService PersonService
-@inject NavigationManager NavigationManager
 
 <PageTitle>Edit Member - GUMS</PageTitle>
 
@@ -18,7 +14,7 @@
         </ol>
     </nav>
 
-    @if (isLoading)
+    @if (_isLoading)
     {
         <div class="text-center py-5">
             <div class="spinner-border text-primary" role="status">
@@ -26,7 +22,7 @@
             </div>
         </div>
     }
-    else if (person == null)
+    else if (_person == null)
     {
         <div class="alert alert-danger">
             Member not found.
@@ -34,17 +30,17 @@
     }
     else
     {
-        <h2 class="mb-4">Edit @(person.PersonType == PersonType.Girl ? "Girl" : "Leader")</h2>
+        <h2 class="mb-4">Edit @(_person.PersonType == PersonType.Girl ? "Girl" : "Leader")</h2>
 
-        @if (errorMessage != null)
+        @if (_errorMessage != null)
         {
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                @errorMessage
-                <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+                @_errorMessage
+                <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
             </div>
         }
 
-        <EditForm Model="person" OnValidSubmit="HandleSubmit" FormName="editMemberForm">
+        <EditForm Model="_person" OnValidSubmit="HandleSubmit" FormName="editMemberForm">
             <DataAnnotationsValidator />
 
             <div class="row">
@@ -58,56 +54,56 @@
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Membership Number *</label>
-                                    <InputText class="form-control" @bind-Value="person.MembershipNumber" />
-                                    <ValidationMessage For="() => person.MembershipNumber" />
+                                    <InputText class="form-control" @bind-Value="_person.MembershipNumber" />
+                                    <ValidationMessage For="() => _person.MembershipNumber" />
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Full Name *</label>
-                                    <InputText class="form-control" @bind-Value="person.FullName" />
-                                    <ValidationMessage For="() => person.FullName" />
+                                    <InputText class="form-control" @bind-Value="_person.FullName" />
+                                    <ValidationMessage For="() => _person.FullName" />
                                 </div>
                             </div>
 
                             <div class="mb-3">
                                 <label class="form-label">Date of Birth *</label>
-                                <InputDate class="form-control" @bind-Value="person.DateOfBirth" />
-                                <ValidationMessage For="() => person.DateOfBirth" />
+                                <InputDate class="form-control" @bind-Value="_person.DateOfBirth" />
+                                <ValidationMessage For="() => _person.DateOfBirth" />
                             </div>
 
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Date Joined</label>
-                                    <InputDate class="form-control" @bind-Value="person.DateJoined" />
+                                    <InputDate class="form-control" @bind-Value="_person.DateJoined" />
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Status</label>
-                                    <select class="form-select" @bind="person.IsActive">
+                                    <select class="form-select" @bind="_person.IsActive">
                                         <option value="true">Active</option>
                                         <option value="false">Inactive</option>
                                     </select>
                                 </div>
                             </div>
 
-                            @if (!person.IsActive && person.DateLeft.HasValue)
+                            @if (!_person.IsActive && _person.DateLeft.HasValue)
                             {
                                 <div class="mb-3">
                                     <label class="form-label">Date Left</label>
-                                    <InputDate class="form-control" @bind-Value="person.DateLeft" />
+                                    <InputDate class="form-control" @bind-Value="_person.DateLeft" />
                                 </div>
                             }
 
-                            @if (person.PersonType == PersonType.Leader)
+                            @if (_person.PersonType == PersonType.Leader)
                             {
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Email</label>
-                                        <InputText type="email" class="form-control" @bind-Value="person.Email" placeholder="e.g., leader@example.com" />
-                                        <ValidationMessage For="() => person.Email" />
+                                        <InputText type="email" class="form-control" @bind-Value="_person.Email" placeholder="e.g., leader@example.com" />
+                                        <ValidationMessage For="() => _person.Email" />
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Phone Number</label>
-                                        <InputText class="form-control" @bind-Value="person.Phone" placeholder="e.g., 07123 456789" />
-                                        <ValidationMessage For="() => person.Phone" />
+                                        <InputText class="form-control" @bind-Value="_person.Phone" placeholder="e.g., 07123 456789" />
+                                        <ValidationMessage For="() => _person.Phone" />
                                     </div>
                                 </div>
                             }
@@ -120,7 +116,7 @@
                             <h5 class="mb-0">Emergency Contacts</h5>
                         </div>
                         <div class="card-body">
-                            <EmergencyContactEditor Contacts="person.EmergencyContacts" />
+                            <EmergencyContactEditor Contacts="_person.EmergencyContacts" />
                         </div>
                     </div>
 
@@ -132,20 +128,20 @@
                         <div class="card-body">
                             <div class="mb-3">
                                 <label class="form-label">Allergies / Intolerances</label>
-                                <InputTextArea class="form-control" rows="3" @bind-Value="person.Allergies" />
+                                <InputTextArea class="form-control" rows="3" @bind-Value="_person.Allergies" />
                             </div>
 
-                            @if (person.PersonType == PersonType.Girl)
+                            @if (_person.PersonType == PersonType.Girl)
                             {
                                 <div class="mb-3">
                                     <label class="form-label">Disabilities / Additional Needs</label>
-                                    <InputTextArea class="form-control" rows="3" @bind-Value="person.Disabilities" />
+                                    <InputTextArea class="form-control" rows="3" @bind-Value="_person.Disabilities" />
                                 </div>
                             }
 
                             <div class="mb-3">
                                 <label class="form-label">General Notes</label>
-                                <InputTextArea class="form-control" rows="3" @bind-Value="person.Notes" />
+                                <InputTextArea class="form-control" rows="3" @bind-Value="_person.Notes" />
                             </div>
                         </div>
                     </div>
@@ -158,24 +154,24 @@
                         <div class="card-body">
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="radio" name="photoPermission" id="photoNone"
-                                       checked="@(person.PhotoPermission == PhotoPermission.None)"
-                                       @onchange="() => person.PhotoPermission = PhotoPermission.None" />
+                                       checked="@(_person.PhotoPermission == PhotoPermission.None)"
+                                       @onchange="() => _person.PhotoPermission = PhotoPermission.None" />
                                 <label class="form-check-label" for="photoNone">
                                     <strong>No Photos</strong> - Do not take or use photos
                                 </label>
                             </div>
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="radio" name="photoPermission" id="photoUnit"
-                                       checked="@(person.PhotoPermission == PhotoPermission.UnitOnly)"
-                                       @onchange="() => person.PhotoPermission = PhotoPermission.UnitOnly" />
+                                       checked="@(_person.PhotoPermission == PhotoPermission.UnitOnly)"
+                                       @onchange="() => _person.PhotoPermission = PhotoPermission.UnitOnly" />
                                 <label class="form-check-label" for="photoUnit">
                                     <strong>Unit Use Only</strong> - Internal communications and displays only
                                 </label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="photoPermission" id="photoAll"
-                                       checked="@(person.PhotoPermission == PhotoPermission.AllMedia)"
-                                       @onchange="() => person.PhotoPermission = PhotoPermission.AllMedia" />
+                                       checked="@(_person.PhotoPermission == PhotoPermission.AllMedia)"
+                                       @onchange="() => _person.PhotoPermission = PhotoPermission.AllMedia" />
                                 <label class="form-check-label" for="photoAll">
                                     <strong>All Media</strong> - Social media, publicity, and all uses
                                 </label>
@@ -185,8 +181,8 @@
 
                     <!-- Actions -->
                     <div class="d-flex gap-2 mb-4">
-                        <button type="submit" class="btn btn-primary" disabled="@isProcessing">
-                            @if (isProcessing)
+                        <button type="submit" class="btn btn-primary" disabled="@_isProcessing">
+                            @if (_isProcessing)
                             {
                                 <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                                 <span>Saving...</span>
@@ -203,73 +199,3 @@
         </EditForm>
     }
 </div>
-
-@code {
-    [Parameter]
-    public int Id { get; set; }
-
-    private Person? person;
-    private string? errorMessage;
-    private bool isLoading = true;
-    private bool isProcessing = false;
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            person = await PersonService.GetByIdAsync(Id);
-        }
-        catch
-        {
-            person = null;
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    private async Task HandleSubmit()
-    {
-        if (person == null) return;
-
-        isProcessing = true;
-        errorMessage = null;
-
-        try
-        {
-            // Validate at least one emergency contact
-            if (!person.EmergencyContacts.Any())
-            {
-                errorMessage = "At least one emergency contact is required.";
-                return;
-            }
-
-            // Validate emergency contacts have required fields
-            foreach (var contact in person.EmergencyContacts)
-            {
-                if (string.IsNullOrWhiteSpace(contact.ContactName) ||
-                    string.IsNullOrWhiteSpace(contact.Relationship) ||
-                    string.IsNullOrWhiteSpace(contact.PrimaryPhone))
-                {
-                    errorMessage = "All emergency contacts must have a name, relationship, and primary phone number.";
-                    return;
-                }
-            }
-
-            // Update the person
-            await PersonService.UpdateAsync(person);
-
-            // Navigate to view page
-            NavigationManager.NavigateTo($"/Register/View/{Id}");
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error saving changes: {ex.Message}";
-        }
-        finally
-        {
-            isProcessing = false;
-        }
-    }
-}
