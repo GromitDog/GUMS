@@ -22,6 +22,9 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     public DbSet<Term> Terms { get; set; }
     public DbSet<UnitConfiguration> UnitConfigurations { get; set; }
     public DbSet<DataRemovalLog> DataRemovalLogs { get; set; }
+    public DbSet<Account> Accounts { get; set; }
+    public DbSet<Transaction> Transactions { get; set; }
+    public DbSet<TransactionLine> TransactionLines { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -143,6 +146,54 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
             entity.HasIndex(drl => drl.RemovalDate);
 
             entity.Property(drl => drl.RemovalDate).HasDefaultValueSql("datetime('now')");
+        });
+
+        // Account configuration (Chart of Accounts)
+        modelBuilder.Entity<Account>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+            entity.HasIndex(a => a.Code).IsUnique();
+            entity.HasIndex(a => a.Type);
+
+            entity.Property(a => a.Code).IsRequired();
+            entity.Property(a => a.Name).IsRequired();
+            entity.Property(a => a.Balance).HasPrecision(18, 2);
+        });
+
+        // Transaction configuration (Journal entries)
+        modelBuilder.Entity<Transaction>(entity =>
+        {
+            entity.HasKey(t => t.Id);
+            entity.HasIndex(t => t.Date);
+            entity.HasIndex(t => t.PaymentId);
+
+            entity.Property(t => t.Description).IsRequired();
+
+            entity.HasOne(t => t.Payment)
+                .WithMany()
+                .HasForeignKey(t => t.PaymentId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasMany(t => t.Lines)
+                .WithOne(tl => tl.Transaction)
+                .HasForeignKey(tl => tl.TransactionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // TransactionLine configuration (Debit/Credit entries)
+        modelBuilder.Entity<TransactionLine>(entity =>
+        {
+            entity.HasKey(tl => tl.Id);
+            entity.HasIndex(tl => tl.TransactionId);
+            entity.HasIndex(tl => tl.AccountId);
+
+            entity.Property(tl => tl.Debit).HasPrecision(18, 2);
+            entity.Property(tl => tl.Credit).HasPrecision(18, 2);
+
+            entity.HasOne(tl => tl.Account)
+                .WithMany(a => a.TransactionLines)
+                .HasForeignKey(tl => tl.AccountId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

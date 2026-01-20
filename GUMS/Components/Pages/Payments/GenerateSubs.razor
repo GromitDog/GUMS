@@ -1,0 +1,195 @@
+@page "/Payments/GenerateSubs"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Generate Termly Subs - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Generate Termly Subscriptions</h2>
+        <a href="/Payments" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Payments
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading terms...</p>
+        </div>
+    }
+    else if (!_availableTerms.Any())
+    {
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i> No terms available. Please create a term first in
+            <a href="/Configuration/Terms">Term Configuration</a>.
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                        <h5 class="mb-0">
+                            <i class="bi bi-calendar-check"></i> Select Term
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Term <span class="text-danger">*</span></label>
+                            <select class="form-select" @onchange="OnTermSelected">
+                                <option value="">-- Select a Term --</option>
+                                @foreach (var term in _availableTerms)
+                                {
+                                    <option value="@term.Id">
+                                        @term.Name (@term.StartDate.ToString("dd MMM") - @term.EndDate.ToString("dd MMM yyyy"))
+                                    </option>
+                                }
+                            </select>
+                        </div>
+
+                        @if (_selectedTerm != null)
+                        {
+                            <hr />
+
+                            @if (_hasExistingSubs)
+                            {
+                                <div class="alert alert-warning mb-3">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    <strong>Subscriptions already generated</strong><br />
+                                    Termly subscriptions have already been generated for this term.
+                                    Running again will only create payments for new members who don't have one yet.
+                                </div>
+                            }
+
+                            <dl class="row mb-3">
+                                <dt class="col-sm-6">Term Period</dt>
+                                <dd class="col-sm-6">
+                                    @_selectedTerm.StartDate.ToString("dd MMM") - @_selectedTerm.EndDate.ToString("dd MMM yyyy")
+                                </dd>
+
+                                <dt class="col-sm-6">Subscription Amount</dt>
+                                <dd class="col-sm-6">
+                                    <strong class="text-success">@_selectedTerm.SubsAmount.ToString("C")</strong>
+                                </dd>
+
+                                <dt class="col-sm-6">Due Date</dt>
+                                <dd class="col-sm-6">
+                                    @_dueDate?.ToString("dd MMM yyyy")
+                                    <small class="text-muted">(14 days after term start)</small>
+                                </dd>
+
+                                <dt class="col-sm-6">Eligible Members</dt>
+                                <dd class="col-sm-6">
+                                    <strong>@_eligibleCount</strong> active girls
+                                </dd>
+                            </dl>
+
+                            @if (_eligibleCount == 0)
+                            {
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i>
+                                    No eligible members to generate subscriptions for. Either all members already have
+                                    payments for this term, or there are no active girls in the register.
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="d-grid">
+                                    <button class="btn btn-primary" @onclick="ShowConfirmation" disabled="@_isGenerating">
+                                        <i class="bi bi-plus-circle"></i> Generate @_eligibleCount Payment(s)
+                                    </button>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-info-circle"></i> How It Works
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <ol class="mb-0">
+                            <li class="mb-2">Select a term from the dropdown</li>
+                            <li class="mb-2">Review the subscription amount and due date</li>
+                            <li class="mb-2">Click "Generate Payments" to create payment records for all active girls</li>
+                            <li class="mb-2">Each girl will have a pending payment record created</li>
+                            <li class="mb-2">As payments come in, record them from the Payments page</li>
+                        </ol>
+
+                        <hr />
+
+                        <p class="text-muted mb-0">
+                            <strong>Note:</strong> Leaders are not included in subscription generation.
+                            Only active girls in the register will have payments created.
+                            Members who already have a subscription payment for the selected term will be skipped.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Confirmation Modal -->
+    @if (_showConfirmation && _selectedTerm != null)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header" style="background-color: var(--gg-primary-blue); color: white;">
+                        <h5 class="modal-title">
+                            <i class="bi bi-question-circle"></i> Confirm Generation
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CancelConfirmation"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>This will create <strong>@_eligibleCount payment record(s)</strong> for <strong>@_selectedTerm.Name</strong>.</p>
+                        <p>Each payment will be:</p>
+                        <ul>
+                            <li>Amount: @_selectedTerm.SubsAmount.ToString("C")</li>
+                            <li>Due: @_dueDate?.ToString("dd MMM yyyy")</li>
+                            <li>Status: Pending</li>
+                        </ul>
+                        <p class="mb-0">Continue?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelConfirmation">Cancel</button>
+                        <button type="button" class="btn btn-primary" @onclick="GenerateSubscriptions" disabled="@_isGenerating">
+                            @if (_isGenerating)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            <i class="bi bi-check-circle"></i> Generate
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

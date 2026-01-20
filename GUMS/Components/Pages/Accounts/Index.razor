@@ -1,0 +1,207 @@
+@page "/Accounts"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Accounts - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Accounts</h2>
+        <div>
+            <a href="/Accounts/Transactions" class="btn btn-outline-primary me-2">
+                <i class="bi bi-list-ul"></i> Transaction History
+            </a>
+            <a href="/Accounts/BankDeposit" class="btn btn-primary">
+                <i class="bi bi-bank"></i> Bank Deposit
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading accounts...</p>
+        </div>
+    }
+    else
+    {
+        <!-- Asset Accounts -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h4 class="mb-3">
+                    <i class="bi bi-wallet2"></i> Asset Accounts
+                </h4>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Cash on Hand</h6>
+                        <h2 class="mb-0 @(_dashboardStats.CashOnHand >= 0 ? "text-success" : "text-danger")">
+                            @_dashboardStats.CashOnHand.ToString("C")
+                        </h2>
+                        <small class="text-muted">Physical cash collected</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Cheques Pending</h6>
+                        <h2 class="mb-0 @(_dashboardStats.ChequesPending >= 0 ? "text-warning" : "text-danger")">
+                            @_dashboardStats.ChequesPending.ToString("C")
+                        </h2>
+                        <small class="text-muted">Cheques to be banked</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Bank Account</h6>
+                        <h2 class="mb-0 text-primary">
+                            @_dashboardStats.BankBalance.ToString("C")
+                        </h2>
+                        <small class="text-muted">Deposited funds</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Assets -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card" style="background-color: var(--gg-primary-blue); color: white;">
+                    <div class="card-body text-center py-4">
+                        <h5 class="mb-2">Total Assets</h5>
+                        <h1 class="mb-0">@_dashboardStats.TotalAssets.ToString("C")</h1>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Income This Term -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h4 class="mb-3">
+                    <i class="bi bi-graph-up-arrow"></i> Income This Term
+                </h4>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Subscription Income</h6>
+                        <h2 class="mb-0 text-success">@_dashboardStats.SubsIncomeThisTerm.ToString("C")</h2>
+                        <small class="text-muted">From termly subs</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Activity Income</h6>
+                        <h2 class="mb-0 text-success">@_dashboardStats.ActivityIncomeThisTerm.ToString("C")</h2>
+                        <small class="text-muted">From special events</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 bg-success text-white">
+                    <div class="card-body text-center">
+                        <h6 class="mb-2">Total Income</h6>
+                        <h2 class="mb-0">@_dashboardStats.TotalIncomeThisTerm.ToString("C")</h2>
+                        <small>This term</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        @if (_dashboardStats.CashOnHand > 0 || _dashboardStats.ChequesPending > 0)
+        {
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightning"></i> Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (_dashboardStats.CashOnHand > 0 || _dashboardStats.ChequesPending > 0)
+                    {
+                        <p>You have funds ready to be deposited to the bank.</p>
+                        <a href="/Accounts/BankDeposit" class="btn btn-primary">
+                            <i class="bi bi-bank"></i> Make a Bank Deposit
+                        </a>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- All Accounts Table -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-check"></i> Chart of Accounts
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th class="text-end">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var account in _accounts)
+                            {
+                                <tr>
+                                    <td><code>@account.Code</code></td>
+                                    <td>@account.Name</td>
+                                    <td>
+                                        @if (account.Type == AccountType.Asset)
+                                        {
+                                            <span class="badge bg-info">Asset</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">Income</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <strong class="@(account.Balance >= 0 ? "" : "text-danger")">
+                                            @account.Balance.ToString("C")
+                                        </strong>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>

@@ -30,22 +30,42 @@
             </NavLink>
         </div>
 
+        <!-- Finance Section (Expandable) -->
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="Meetings/Alerts">
-                <span class="bi bi-exclamation-triangle" aria-hidden="true"></span> Attendance Alerts
-            </NavLink>
+            <div class="nav-link nav-group-toggle @(_financeExpanded ? "expanded" : "")" @onclick="ToggleFinance" @onclick:stopPropagation="true">
+                <span class="bi bi-currency-pound" aria-hidden="true"></span> Finance
+                <span class="bi @(_financeExpanded ? "bi-chevron-down" : "bi-chevron-right") nav-chevron" aria-hidden="true"></span>
+            </div>
+            @if (_financeExpanded)
+            {
+                <div class="nav-group-items">
+                    <NavLink class="nav-link nav-link-sub" href="Payments">
+                        <span class="bi bi-cash-coin" aria-hidden="true"></span> Payments
+                    </NavLink>
+                    <NavLink class="nav-link nav-link-sub" href="Accounts">
+                        <span class="bi bi-wallet2" aria-hidden="true"></span> Accounts
+                    </NavLink>
+                </div>
+            }
         </div>
 
+        <!-- Configuration Section (Expandable) -->
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="Configuration/Terms">
-                <span class="bi bi-calendar-event" aria-hidden="true"></span> Term Dates
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="Configuration/Settings">
-                <span class="bi bi-gear" aria-hidden="true"></span> Unit Settings
-            </NavLink>
+            <div class="nav-link nav-group-toggle @(_configExpanded ? "expanded" : "")" @onclick="ToggleConfig" @onclick:stopPropagation="true">
+                <span class="bi bi-gear" aria-hidden="true"></span> Configuration
+                <span class="bi @(_configExpanded ? "bi-chevron-down" : "bi-chevron-right") nav-chevron" aria-hidden="true"></span>
+            </div>
+            @if (_configExpanded)
+            {
+                <div class="nav-group-items">
+                    <NavLink class="nav-link nav-link-sub" href="Configuration/Terms">
+                        <span class="bi bi-calendar-event" aria-hidden="true"></span> Term Dates
+                    </NavLink>
+                    <NavLink class="nav-link nav-link-sub" href="Configuration/Settings">
+                        <span class="bi bi-sliders" aria-hidden="true"></span> Unit Settings
+                    </NavLink>
+                </div>
+            }
         </div>
 
         <AuthorizeView>
@@ -59,3 +79,18 @@
         </AuthorizeView>
     </nav>
 </div>
+
+@code {
+    private bool _financeExpanded = false;
+    private bool _configExpanded = false;
+
+    private void ToggleFinance()
+    {
+        _financeExpanded = !_financeExpanded;
+    }
+
+    private void ToggleConfig()
+    {
+        _configExpanded = !_configExpanded;
+    }
+}

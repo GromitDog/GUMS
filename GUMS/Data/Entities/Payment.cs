@@ -41,6 +41,12 @@ public class Payment
 
     public string? Notes { get; set; }
 
+    /// <summary>
+    /// How the payment was received (Cash, Cheque, Bank Transfer)
+    /// Only set when payment is recorded
+    /// </summary>
+    public PaymentMethod? PaymentMethod { get; set; }
+
     // Computed property
     public decimal OutstandingBalance => Amount - AmountPaid;
 

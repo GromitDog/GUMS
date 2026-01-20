@@ -1,0 +1,179 @@
+@page "/Payments/Overdue"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Overdue Payments - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-exclamation-triangle text-warning"></i> Overdue Payments
+        </h2>
+        <a href="/Payments" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Payments
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading overdue payments...</p>
+        </div>
+    }
+    else if (!_overduePayments.Any())
+    {
+        <div class="alert alert-success">
+            <i class="bi bi-check-circle"></i>
+            <strong>Great news!</strong> There are no overdue payments at this time.
+        </div>
+    }
+    else
+    {
+        <!-- Summary -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card border-danger">
+                    <div class="card-body text-center">
+                        <h3 class="mb-0 text-danger">@_overduePayments.Count</h3>
+                        <p class="text-muted mb-0">Overdue Payments</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-danger">
+                    <div class="card-body text-center">
+                        <h3 class="mb-0 text-danger">@_totalOverdueAmount.ToString("C")</h3>
+                        <p class="text-muted mb-0">Total Outstanding</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <h3 class="mb-0 text-warning">@_membersWithOverdue</h3>
+                        <p class="text-muted mb-0">Members Affected</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tips Card -->
+        <div class="alert alert-info mb-4">
+            <h6><i class="bi bi-lightbulb"></i> Tips for Following Up</h6>
+            <ul class="mb-0">
+                <li>Send a friendly reminder via email or text to the family</li>
+                <li>Mention the payment at the next meeting</li>
+                <li>For persistent issues, speak privately with parents</li>
+                <li>Consider offering payment plans for families in difficulty</li>
+                <li>Record partial payments to track progress</li>
+            </ul>
+        </div>
+
+        <!-- Overdue Payments by Member -->
+        @foreach (var group in _paymentsByMember)
+        {
+            var memberName = _memberNames.GetValueOrDefault(group.Key, group.Key);
+            var memberTotal = group.Value.Sum(p => p.OutstandingBalance);
+            var oldestOverdue = group.Value.Min(p => (DateTime.Today - p.DueDate).Days);
+
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #fff3cd;">
+                    <div>
+                        <h5 class="mb-0">
+                            <a href="/Payments/MemberHistory/@group.Key" class="text-decoration-none">
+                                @memberName
+                            </a>
+                            <small class="text-muted ms-2">(@group.Key)</small>
+                        </h5>
+                    </div>
+                    <div>
+                        <span class="badge bg-danger me-2">@memberTotal.ToString("C") outstanding</span>
+                        <span class="badge bg-warning text-dark">@oldestOverdue+ days overdue</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Reference</th>
+                                    <th>Type</th>
+                                    <th>Due Date</th>
+                                    <th>Days Overdue</th>
+                                    <th class="text-end">Amount</th>
+                                    <th class="text-end">Outstanding</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var payment in group.Value)
+                                {
+                                    var daysOverdue = (DateTime.Today - payment.DueDate).Days;
+
+                                    <tr>
+                                        <td>@payment.Reference</td>
+                                        <td>
+                                            @if (payment.PaymentType == PaymentType.Subs)
+                                            {
+                                                <span class="badge bg-info">Subs</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Activity</span>
+                                            }
+                                        </td>
+                                        <td>@payment.DueDate.ToString("dd MMM yyyy")</td>
+                                        <td>
+                                            @if (daysOverdue > 30)
+                                            {
+                                                <span class="text-danger fw-bold">@daysOverdue days</span>
+                                            }
+                                            else if (daysOverdue > 14)
+                                            {
+                                                <span class="text-warning fw-bold">@daysOverdue days</span>
+                                            }
+                                            else
+                                            {
+                                                <span>@daysOverdue days</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">@payment.Amount.ToString("C")</td>
+                                        <td class="text-end">
+                                            <strong class="text-danger">@payment.OutstandingBalance.ToString("C")</strong>
+                                        </td>
+                                        <td>
+                                            <a href="/Payments/RecordPayment/@payment.Id" class="btn btn-sm btn-success">
+                                                <i class="bi bi-cash"></i> Record Payment
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>

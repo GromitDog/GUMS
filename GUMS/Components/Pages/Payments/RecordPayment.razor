@@ -1,0 +1,182 @@
+@page "/Payments/RecordPayment/{PaymentId:int}"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Record Payment - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Record Payment</h2>
+        <a href="/Payments" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Payments
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading _payment details...</p>
+        </div>
+    }
+    else if (_payment == null)
+    {
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i> Payment not found.
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <!-- Payment Details Card -->
+            <div class="col-md-5">
+                <div class="card mb-4">
+                    <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                        <h5 class="mb-0">
+                            <i class="bi bi-info-circle"></i> Payment Details
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5">Member</dt>
+                            <dd class="col-sm-7">
+                                <a href="/Payments/MemberHistory/@_payment.MembershipNumber">
+                                    @_memberName
+                                </a>
+                            </dd>
+
+                            <dt class="col-sm-5">Reference</dt>
+                            <dd class="col-sm-7">@_payment.Reference</dd>
+
+                            <dt class="col-sm-5">Type</dt>
+                            <dd class="col-sm-7">
+                                @if (_payment.PaymentType == PaymentType.Subs)
+                                {
+                                    <span class="badge bg-info">Subscription</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Activity</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-5">Due Date</dt>
+                            <dd class="col-sm-7">
+                                @_payment.DueDate.ToString("dd MMM yyyy")
+                                @if (_payment.DueDate < DateTime.Today)
+                                {
+                                    <span class="badge bg-danger">Overdue</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-5">Total Amount</dt>
+                            <dd class="col-sm-7"><strong>@_payment.Amount.ToString("C")</strong></dd>
+
+                            <dt class="col-sm-5">Already Paid</dt>
+                            <dd class="col-sm-7 text-success">@_payment.AmountPaid.ToString("C")</dd>
+
+                            <dt class="col-sm-5">Outstanding</dt>
+                            <dd class="col-sm-7">
+                                <strong class="text-danger fs-5">@_payment.OutstandingBalance.ToString("C")</strong>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Record Payment Form -->
+            <div class="col-md-7">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-cash"></i> Record Payment
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <EditForm Model="_formModel" OnValidSubmit="SubmitPayment" FormName="RecordPaymentForm">
+                            <DataAnnotationsValidator />
+
+                            <div class="mb-3">
+                                <label class="form-label">Payment Method <span class="text-danger">*</span></label>
+                                <InputSelect class="form-select" @bind-Value="_formModel.PaymentMethod">
+                                    <option value="">-- Select Method --</option>
+                                    <option value="@PaymentMethod.Cash">Cash</option>
+                                    <option value="@PaymentMethod.Cheque">Cheque</option>
+                                    <option value="@PaymentMethod.BankTransfer">Bank Transfer</option>
+                                </InputSelect>
+                                <ValidationMessage For="() => _formModel.PaymentMethod" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Amount <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">£</span>
+                                    <InputNumber class="form-control" @bind-Value="_formModel.Amount" step="0.01" />
+                                </div>
+                                <ValidationMessage For="() => _formModel.Amount" />
+                                @if (_formModel.Amount > _payment.OutstandingBalance)
+                                {
+                                    <div class="text-danger small mt-1">
+                                        Amount exceeds outstanding balance of @_payment.OutstandingBalance.ToString("C")
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Quick Actions</label>
+                                <div>
+                                    <button type="button" class="btn btn-outline-success me-2"
+                                            @onclick="() => SetAmount(_payment.OutstandingBalance)">
+                                        Pay Full Amount (@_payment.OutstandingBalance.ToString("C"))
+                                    </button>
+                                    @if (_payment.OutstandingBalance >= 2)
+                                    {
+                                        <button type="button" class="btn btn-outline-secondary"
+                                                @onclick="() => SetAmount(Math.Round(_payment.OutstandingBalance / 2, 2))">
+                                            Pay Half (@(Math.Round(_payment.OutstandingBalance / 2, 2)).ToString("C"))
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Payment Date</label>
+                                <InputDate class="form-control" @bind-Value="_formModel.PaymentDate" />
+                                <small class="text-muted">Leave as today's date for immediate _payments</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Notes</label>
+                                <InputTextArea class="form-control" @bind-Value="_formModel.Notes" rows="2"
+                                               placeholder="Optional notes about this _payment..." />
+                            </div>
+
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a href="/Payments" class="btn btn-outline-secondary me-2">Cancel</a>
+                                <button type="submit" class="btn btn-success" disabled="@(_isSubmitting || !IsFormValid())">
+                                    @if (_isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    <i class="bi bi-check-circle"></i> Record Payment
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

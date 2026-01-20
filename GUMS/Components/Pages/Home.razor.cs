@@ -27,6 +27,11 @@ public partial class Home
     private int _lowAttendanceCount;
     private int _alertCount;
 
+    // Payment stats
+    private int _pendingPaymentCount;
+    private int _overduePaymentCount;
+    private decimal _totalOutstanding;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadDashboardData();
@@ -69,6 +74,12 @@ public partial class Home
 
                 _alertCount = _fullTermAbsenceCount + _lowAttendanceCount;
             }
+
+            // Load payment stats
+            var paymentStats = await PaymentService.GetDashboardStatsAsync();
+            _pendingPaymentCount = paymentStats.PendingCount;
+            _overduePaymentCount = paymentStats.OverdueCount;
+            _totalOutstanding = paymentStats.TotalOutstanding;
         }
         finally
         {

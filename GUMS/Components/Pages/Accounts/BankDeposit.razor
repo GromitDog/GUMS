@@ -1,0 +1,198 @@
+@page "/Accounts/BankDeposit"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Bank Deposit - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Bank Deposit</h2>
+        <a href="/Accounts" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Accounts
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading balances...</p>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <!-- Current Balances -->
+            <div class="col-md-5">
+                <div class="card mb-4">
+                    <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                        <h5 class="mb-0">
+                            <i class="bi bi-wallet2"></i> Current Balances
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-6">Cash on Hand</dt>
+                            <dd class="col-sm-6 text-end">
+                                <strong class="@(_cashOnHand > 0 ? "text-success" : "")">
+                                    @_cashOnHand.ToString("C")
+                                </strong>
+                            </dd>
+
+                            <dt class="col-sm-6">Cheques Pending</dt>
+                            <dd class="col-sm-6 text-end">
+                                <strong class="@(_chequesPending > 0 ? "text-warning" : "")">
+                                    @_chequesPending.ToString("C")
+                                </strong>
+                            </dd>
+
+                            <dt class="col-sm-6">Bank Account</dt>
+                            <dd class="col-sm-6 text-end">
+                                <strong class="text-primary">@_bankBalance.ToString("C")</strong>
+                            </dd>
+                        </dl>
+
+                        <hr />
+
+                        <dl class="row mb-0">
+                            <dt class="col-sm-6">Available to Deposit</dt>
+                            <dd class="col-sm-6 text-end">
+                                <strong class="fs-5">@((_cashOnHand + _chequesPending).ToString("C"))</strong>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+
+                @if (_cashOnHand == 0 && _chequesPending == 0)
+                {
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> There are no funds available to deposit at this time.
+                    </div>
+                }
+            </div>
+
+            <!-- Deposit Form -->
+            <div class="col-md-7">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-bank"></i> Make Deposit
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (_cashOnHand == 0 && _chequesPending == 0)
+                        {
+                            <p class="text-muted">No funds available to deposit.</p>
+                        }
+                        else
+                        {
+                            <EditForm Model="_formModel" OnValidSubmit="SubmitDeposit" FormName="BankDepositForm">
+                                <DataAnnotationsValidator />
+
+                                @if (_cashOnHand > 0)
+                                {
+                                    <div class="mb-3">
+                                        <label class="form-label">Cash Amount to Deposit</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">£</span>
+                                            <InputNumber class="form-control" @bind-Value="_formModel.CashAmount" step="0.01" />
+                                        </div>
+                                        <small class="text-muted">Available: @_cashOnHand.ToString("C")</small>
+                                        @if (_formModel.CashAmount > _cashOnHand)
+                                        {
+                                            <div class="text-danger small mt-1">
+                                                Amount exceeds available cash
+                                            </div>
+                                        }
+                                        <div class="mt-2">
+                                            <button type="button" class="btn btn-sm btn-outline-success"
+                                                    @onclick="() => _formModel.CashAmount = _cashOnHand">
+                                                Deposit All Cash
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+
+                                @if (_chequesPending > 0)
+                                {
+                                    <div class="mb-3">
+                                        <label class="form-label">Cheques Amount to Deposit</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">£</span>
+                                            <InputNumber class="form-control" @bind-Value="_formModel.ChequeAmount" step="0.01" />
+                                        </div>
+                                        <small class="text-muted">Available: @_chequesPending.ToString("C")</small>
+                                        @if (_formModel.ChequeAmount > _chequesPending)
+                                        {
+                                            <div class="text-danger small mt-1">
+                                                Amount exceeds available cheques
+                                            </div>
+                                        }
+                                        <div class="mt-2">
+                                            <button type="button" class="btn btn-sm btn-outline-warning"
+                                                    @onclick="() => _formModel.ChequeAmount = _chequesPending">
+                                                Deposit All Cheques
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+
+                                <div class="mb-3">
+                                    <label class="form-label">Deposit Date</label>
+                                    <InputDate class="form-control" @bind-Value="_formModel.DepositDate" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Notes</label>
+                                    <InputTextArea class="form-control" @bind-Value="_formModel.Notes" rows="2"
+                                                   placeholder="Optional notes about this deposit..." />
+                                </div>
+
+                                <!-- Deposit Preview -->
+                                @if (_formModel.CashAmount > 0 || _formModel.ChequeAmount > 0)
+                                {
+                                    <div class="alert alert-info mb-3">
+                                        <h6><i class="bi bi-calculator"></i> Deposit Preview</h6>
+                                        <ul class="mb-0">
+                                            @if (_formModel.CashAmount > 0)
+                                            {
+                                                <li>Cash: @_formModel.CashAmount.ToString("C")</li>
+                                            }
+                                            @if (_formModel.ChequeAmount > 0)
+                                            {
+                                                <li>Cheques: @_formModel.ChequeAmount.ToString("C")</li>
+                                            }
+                                            <li><strong>Total: @((_formModel.CashAmount + _formModel.ChequeAmount).ToString("C"))</strong></li>
+                                        </ul>
+                                    </div>
+                                }
+
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <a href="/Accounts" class="btn btn-outline-secondary me-2">Cancel</a>
+                                    <button type="submit" class="btn btn-success" disabled="@(_isSubmitting || !IsFormValid())">
+                                        @if (_isSubmitting)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                        }
+                                        <i class="bi bi-bank"></i> Record Deposit
+                                    </button>
+                                </div>
+                            </EditForm>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

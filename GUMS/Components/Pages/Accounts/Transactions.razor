@@ -1,0 +1,156 @@
+@page "/Accounts/Transactions"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Transaction History - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Transaction History</h2>
+        <a href="/Accounts" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Accounts
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
+        </div>
+    }
+
+    <!-- Date Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">From Date</label>
+                    <input type="date" class="form-control" @bind="_dateFrom" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">To Date</label>
+                    <input type="date" class="form-control" @bind="_dateTo" />
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary me-2" @onclick="ApplyFilter">
+                        <i class="bi bi-funnel"></i> Filter
+                    </button>
+                    <button class="btn btn-outline-secondary" @onclick="ClearFilter">
+                        <i class="bi bi-x-circle"></i> Clear
+                    </button>
+                </div>
+                <div class="col-md-3 text-end">
+                    <span class="text-muted">@_transactions.Count transaction(s)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading _transactions...</p>
+        </div>
+    }
+    else if (!_transactions.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No _transactions found for the selected date range.
+        </div>
+    }
+    else
+    {
+        <!-- Transactions Table -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th style="width: 100px;">Date</th>
+                                <th>Description</th>
+                                <th>Account</th>
+                                <th class="text-end">Debit</th>
+                                <th class="text-end">Credit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var transaction in _transactions)
+                            {
+                                var isFirst = true;
+                                var rowCount = transaction.Lines.Count;
+
+                                @foreach (var line in transaction.Lines)
+                                {
+                                    <tr>
+                                        @if (isFirst)
+                                        {
+                                            <td rowspan="@rowCount">
+                                                @transaction.Date.ToString("dd MMM yyyy")
+                                            </td>
+                                            <td rowspan="@rowCount">
+                                                @transaction.Description
+                                                @if (transaction.PaymentId.HasValue)
+                                                {
+                                                    <br />
+                                                    <small class="text-muted">
+                                                        <i class="bi bi-link-45deg"></i> Linked to payment
+                                                    </small>
+                                                }
+                                            </td>
+                                            isFirst = false;
+                                        }
+                                        <td>
+                                            <code>@line.Account.Code</code> @line.Account.Name
+                                        </td>
+                                        <td class="text-end">
+                                            @if (line.Debit > 0)
+                                            {
+                                                <span class="text-success">@line.Debit.ToString("C")</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            @if (line.Credit > 0)
+                                            {
+                                                <span class="text-danger">@line.Credit.ToString("C")</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                                <!-- Separator row between _transactions -->
+                                <tr class="table-light">
+                                    <td colspan="5" style="height: 5px; padding: 0;"></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <h5 class="text-muted">Transactions</h5>
+                        <h3>@_transactions.Count</h3>
+                    </div>
+                    <div class="col-md-4">
+                        <h5 class="text-muted">Total Debits</h5>
+                        <h3 class="text-success">@_transactions.Sum(t => t.TotalDebits).ToString("C")</h3>
+                    </div>
+                    <div class="col-md-4">
+                        <h5 class="text-muted">Total Credits</h5>
+                        <h3 class="text-danger">@_transactions.Sum(t => t.TotalCredits).ToString("C")</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

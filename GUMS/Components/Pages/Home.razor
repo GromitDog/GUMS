@@ -9,6 +9,7 @@
 @inject ITermService TermService
 @inject IMeetingService MeetingService
 @inject IConfigurationService ConfigService
+@inject IPaymentService PaymentService
 
 <PageTitle>Home - GUMS</PageTitle>
 
@@ -167,6 +168,55 @@
                                 <span>View Details</span>
                             }
                         </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Second row -->
+    <div class="row mt-4">
+        <!-- Payments Card -->
+        <div class="col-md-4">
+            <div class="card @(_overduePaymentCount > 0 ? "border-danger" : "")">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        Payments
+                        @if (_overduePaymentCount > 0)
+                        {
+                            <span class="badge bg-danger ms-2">@_overduePaymentCount overdue</span>
+                        }
+                    </h5>
+                    @if (_isLoading)
+                    {
+                        <div class="text-center py-2">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <p class="card-text mb-1">
+                                <strong>@_pendingPaymentCount</strong> pending @(_pendingPaymentCount == 1 ? "payment" : "payments")
+                            </p>
+                            <p class="card-text mb-1">
+                                Outstanding: <strong class="@(_totalOutstanding > 0 ? "text-danger" : "text-success")">@_totalOutstanding.ToString("C")</strong>
+                            </p>
+                        </div>
+                        <div>
+                            <a href="/Payments" class="btn @(_overduePaymentCount > 0 ? "btn-danger" : "btn-primary") me-2">
+                                @if (_overduePaymentCount > 0)
+                                {
+                                    <span>View Overdue</span>
+                                }
+                                else
+                                {
+                                    <span>Manage Payments</span>
+                                }
+                            </a>
+                        </div>
                     }
                 </div>
             </div>

@@ -1,0 +1,280 @@
+@page "/Payments"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Payments - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Payments</h2>
+        <div>
+            <a href="/Payments/Overdue" class="btn btn-outline-warning me-2">
+                <i class="bi bi-exclamation-triangle"></i> Overdue Payments
+            </a>
+            <a href="/Payments/GenerateSubs" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Generate Termly Subs
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
+        </div>
+    }
+
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="mb-0" style="color: var(--gg-primary-blue);">@_dashboardStats.TotalOutstanding.ToString("C")</h3>
+                    <p class="text-muted mb-0">Total Outstanding</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="mb-0 @(_dashboardStats.OverdueCount > 0 ? "text-danger" : "")" style="@(_dashboardStats.OverdueCount == 0 ? "color: var(--gg-bright-cyan);" : "")">
+                        @_dashboardStats.OverdueCount
+                    </h3>
+                    <p class="text-muted mb-0">Overdue Payments</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="mb-0" style="color: var(--gg-dark-navy);">@_dashboardStats.PendingCount</h3>
+                    <p class="text-muted mb-0">Pending Payments</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" @onchange="OnStatusFilterChange">
+                        <option value="">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Paid">Paid</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Term</label>
+                    <select class="form-select" @bind="_selectedTermId" @bind:after="ApplyFilters">
+                        <option value="0">All Terms</option>
+                        @foreach (var term in _terms)
+                        {
+                            <option value="@term.Id">@term.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Search Member</label>
+                    <input type="text" class="form-control" placeholder="Search by name or membership number..."
+                           @bind="_searchTerm" @bind:event="oninput" @bind:after="ApplyFilters" />
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-outline-secondary w-100" @onclick="ClearFilters">
+                        <i class="bi bi-x-circle"></i> Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading payments...</p>
+        </div>
+    }
+    else if (!_filteredPayments.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            @if (_allPayments.Any())
+            {
+                <span>No payments match your current filters.</span>
+            }
+            else
+            {
+                <span>No payments yet. Generate termly subs to get started!</span>
+            }
+        </div>
+    }
+    else
+    {
+        <!-- Payments Table -->
+        <div class="card">
+            <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                <h5 class="mb-0">
+                    <i class="bi bi-currency-pound"></i> Payments (@_filteredPayments.Count)
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Member</th>
+                                <th>Type</th>
+                                <th>Reference</th>
+                                <th class="text-end">Amount</th>
+                                <th class="text-end">Paid</th>
+                                <th class="text-end">Outstanding</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var payment in _filteredPayments)
+                            {
+                                var memberName = _memberNames.GetValueOrDefault(payment.MembershipNumber, payment.MembershipNumber);
+                                var isOverdue = payment.Status == PaymentStatus.Pending && payment.DueDate < DateTime.Today;
+
+                                <tr class="@(isOverdue ? "table-warning" : "")">
+                                    <td>
+                                        <a href="/Payments/MemberHistory/@payment.MembershipNumber">
+                                            @memberName
+                                        </a>
+                                    </td>
+                                    <td>
+                                        @if (payment.PaymentType == PaymentType.Subs)
+                                        {
+                                            <span class="badge bg-info">Subs</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Activity</span>
+                                        }
+                                    </td>
+                                    <td>@payment.Reference</td>
+                                    <td class="text-end">@payment.Amount.ToString("C")</td>
+                                    <td class="text-end">@payment.AmountPaid.ToString("C")</td>
+                                    <td class="text-end">
+                                        @if (payment.OutstandingBalance > 0)
+                                        {
+                                            <strong class="text-danger">@payment.OutstandingBalance.ToString("C")</strong>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-success">@payment.OutstandingBalance.ToString("C")</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @payment.DueDate.ToString("dd MMM yyyy")
+                                        @if (isOverdue)
+                                        {
+                                            <br />
+                                            <small class="text-danger">
+                                                @((DateTime.Today - payment.DueDate).Days) days overdue
+                                            </small>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (isOverdue)
+                                        {
+                                            <span class="badge bg-danger">Overdue</span>
+                                        }
+                                        else if (payment.Status == PaymentStatus.Pending)
+                                        {
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                        }
+                                        else if (payment.Status == PaymentStatus.Paid)
+                                        {
+                                            <span class="badge bg-success">Paid</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Cancelled</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            @if (payment.Status == PaymentStatus.Pending)
+                                            {
+                                                <a href="/Payments/RecordPayment/@payment.Id" class="btn btn-success">
+                                                    <i class="bi bi-cash"></i> Pay
+                                                </a>
+                                                <button class="btn btn-outline-danger" @onclick="() => ShowCancelConfirm(payment)"
+                                                        title="Cancel payment">
+                                                    <i class="bi bi-x-circle"></i> Cancel
+                                                </button>
+                                            }
+                                            else if (payment.Status == PaymentStatus.Paid)
+                                            {
+                                                <span class="btn btn-outline-success disabled">
+                                                    <i class="bi bi-check-circle"></i> Paid
+                                                </span>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Cancel Confirmation Modal -->
+    @if (_showCancelConfirm && _paymentToCancel != null)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning">
+                        <h5 class="modal-title">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Cancel Payment
+                        </h5>
+                        <button type="button" class="btn-close" @onclick="CancelCancelConfirm"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to cancel the payment for <strong>@_paymentToCancel.Reference</strong>?</p>
+                        <div class="mb-3">
+                            <label class="form-label">Reason for cancellation <span class="text-danger">*</span></label>
+                            <textarea class="form-control" rows="2" @bind="_cancelReason"
+                                      placeholder="e.g., Family moved away, Duplicate payment..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelCancelConfirm">Close</button>
+                        <button type="button" class="btn btn-warning" @onclick="CancelPayment"
+                                disabled="@(_isCancelling || string.IsNullOrWhiteSpace(_cancelReason))">
+                            @if (_isCancelling)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            <i class="bi bi-x-circle"></i> Cancel Payment
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

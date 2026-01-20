@@ -66,6 +66,8 @@ builder.Services.AddScoped<IPersonService, PersonService>();
 builder.Services.AddScoped<ITermService, TermService>();
 builder.Services.AddScoped<IMeetingService, MeetingService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
+builder.Services.AddScoped<IAccountingService, AccountingService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 // Add services to the container.
 builder.Services.AddRazorPages();
@@ -88,6 +90,10 @@ using (var scope = app.Services.CreateScope())
         // Ensure default configuration exists
         var configService = services.GetRequiredService<IConfigurationService>();
         await configService.EnsureDefaultConfigurationAsync();
+
+        // Ensure default accounting accounts exist
+        var accountingService = services.GetRequiredService<IAccountingService>();
+        await accountingService.EnsureDefaultAccountsAsync();
     }
     catch (Exception ex)
     {

@@ -11,6 +11,7 @@ namespace GUMS.Components.Pages.Register;
 public partial class ViewMember
 {
     [Inject] public required IPersonService PersonService { get; set; }
+    [Inject] public required IPaymentService PaymentService { get; set; }
     [Inject] public required UserManager<IdentityUser> UserManager { get; set; }
     [Inject] public required AuthenticationStateProvider AuthenticationStateProvider { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
@@ -20,6 +21,7 @@ public partial class ViewMember
     public int Id { get; set; }
 
     private Person? _person;
+    private MemberPaymentSummary? _paymentSummary;
     private string? _errorMessage;
     private string? _successMessage;
     private bool _isLoading = true;
@@ -33,6 +35,12 @@ public partial class ViewMember
         try
         {
             _person = await PersonService.GetByIdAsync(Id);
+
+            // Load payment summary if person exists
+            if (_person != null)
+            {
+                _paymentSummary = await PaymentService.GetMemberPaymentSummaryAsync(_person.MembershipNumber);
+            }
         }
         catch
         {
