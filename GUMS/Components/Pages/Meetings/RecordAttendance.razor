@@ -280,6 +280,70 @@
                         </div>
                     </div>
                 }
+
+                <!-- Nights Away Tracking (for multi-day meetings) -->
+                @if (isMultiDayMeeting)
+                {
+                    <div class="card mt-4">
+                        <div class="card-header" style="background-color: #198754; color: white;">
+                            <h5 class="mb-0">
+                                <i class="bi bi-moon-stars"></i> Nights Away Tracking
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-3">
+                                This is a multi-day event (@defaultNightsAway night@(defaultNightsAway != 1 ? "s" : "")).
+                                Nights away are auto-calculated when marking attendance, but you can adjust if someone left early.
+                            </p>
+
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Member</th>
+                                            <th class="text-center" style="width: 120px;">Nights Away</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var record in attendanceRecords.Where(a => a.Attended && memberLookup.ContainsKey(a.MembershipNumber)).OrderBy(a => memberLookup[a.MembershipNumber].FullName))
+                                        {
+                                            var member = memberLookup[record.MembershipNumber];
+                                            <tr>
+                                                <td>
+                                                    @member.FullName
+                                                    <small class="text-muted d-block">@(member.PersonType == PersonType.Leader ? "Leader" : member.Section?.ToString())</small>
+                                                </td>
+                                                <td class="text-center">
+                                                    <input type="number" class="form-control form-control-sm text-center"
+                                                           min="0" max="@defaultNightsAway"
+                                                           value="@(record.NightsAway ?? defaultNightsAway)"
+                                                           @onchange="@(e => UpdateNightsAway(record, int.TryParse(e.Value?.ToString(), out var n) ? n : null))"
+                                                           style="width: 80px; display: inline-block;" />
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            @if (!attendanceRecords.Any(a => a.Attended))
+                            {
+                                <div class="alert alert-info mb-0">
+                                    <i class="bi bi-info-circle"></i> Mark members as present above to track their nights away.
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-light rounded">
+                                    <div>
+                                        <strong>Total:</strong>
+                                        <span class="ms-2">@attendanceRecords.Where(a => a.Attended).Sum(a => a.NightsAway ?? 0) nights across @attendanceRecords.Count(a => a.Attended) attendees</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
             </div>
 
             <div class="col-lg-4">
@@ -291,7 +355,16 @@
                     <div class="card-body">
                         <p class="mb-2">
                             <strong>Date:</strong><br />
-                            @meeting.Date.ToString("dddd, dd MMMM yyyy")
+                            @if (isMultiDayMeeting)
+                            {
+                                @meeting.Date.ToString("ddd, dd MMM")@: - @meeting.EndDate!.Value.ToString("ddd, dd MMM yyyy")
+                                <br />
+                                <span class="badge bg-info">@defaultNightsAway night@(defaultNightsAway != 1 ? "s" : "") away</span>
+                            }
+                            else
+                            {
+                                @meeting.Date.ToString("dddd, dd MMMM yyyy")
+                            }
                         </p>
                         <p class="mb-2">
                             <strong>Time:</strong><br />

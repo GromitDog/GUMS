@@ -62,7 +62,7 @@
 
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="form-label">Date</label>
+                                    <label class="form-label">Start Date</label>
                                     <InputDate class="form-control" @bind-Value="_meeting.Date" />
                                     <ValidationMessage For="@(() => _meeting.Date)" />
                                 </div>
@@ -74,6 +74,22 @@
                                         <option value="@MeetingType.Extra">Special Event</option>
                                     </InputSelect>
                                 </div>
+
+                                @if (_meeting.MeetingType == MeetingType.Extra)
+                                {
+                                    <div class="col-md-6">
+                                        <label class="form-label">End Date (for multi-day events)</label>
+                                        <InputDate class="form-control" @bind-Value="_meeting.EndDate" />
+                                        <small class="form-text text-muted">
+                                            Leave blank for single-day events.
+                                            @if (_meeting.EndDate.HasValue && _meeting.EndDate.Value >= _meeting.Date)
+                                            {
+                                                var nights = MeetingService.CalculateNightsForMeeting(_meeting.Date, _meeting.EndDate);
+                                                @:@(nights > 0 ? $" ({nights} night{(nights != 1 ? "s" : "")} away)" : "")
+                                            }
+                                        </small>
+                                    </div>
+                                }
 
                                 <div class="col-md-12">
                                     <label class="form-label">Title</label>

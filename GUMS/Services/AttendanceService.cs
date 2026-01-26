@@ -12,11 +12,13 @@ public class AttendanceService : IAttendanceService
 {
     private readonly ApplicationDbContext _context;
     private readonly ITermService _termService;
+    private readonly IMeetingService _meetingService;
 
-    public AttendanceService(ApplicationDbContext context, ITermService termService)
+    public AttendanceService(ApplicationDbContext context, ITermService termService, IMeetingService meetingService)
     {
         _context = context;
         _termService = termService;
+        _meetingService = meetingService;
     }
 
     // ===== Attendance CRUD Operations =====
@@ -61,9 +63,9 @@ public class AttendanceService : IAttendanceService
 
     public async Task<(bool Success, string ErrorMessage, Attendance? Attendance)> SaveAttendanceRecordAsync(Attendance attendance)
     {
-        // Validate meeting exists
-        var meetingExists = await _context.Meetings.AnyAsync(m => m.Id == attendance.MeetingId);
-        if (!meetingExists)
+        // Validate meeting exists and get meeting details for nights away calculation
+        var meeting = await _context.Meetings.FindAsync(attendance.MeetingId);
+        if (meeting == null)
         {
             return (false, "Meeting not found.", null);
         }
@@ -72,6 +74,17 @@ public class AttendanceService : IAttendanceService
         if (string.IsNullOrWhiteSpace(attendance.MembershipNumber))
         {
             return (false, "Membership number is required.", null);
+        }
+
+        // Auto-calculate NightsAway for multi-day meetings if not already set
+        if (attendance.Attended && meeting.EndDate.HasValue && !attendance.NightsAway.HasValue)
+        {
+            attendance.NightsAway = _meetingService.CalculateNightsForMeeting(meeting.Date, meeting.EndDate);
+        }
+        else if (!attendance.Attended)
+        {
+            // If not attended, clear nights away
+            attendance.NightsAway = null;
         }
 
         // Check if record already exists
@@ -89,6 +102,7 @@ public class AttendanceService : IAttendanceService
             existingRecord.ConsentFormReceived = attendance.ConsentFormReceived;
             existingRecord.ConsentFormDate = attendance.ConsentFormDate;
             existingRecord.Notes = attendance.Notes;
+            existingRecord.NightsAway = attendance.NightsAway;
 
             await _context.SaveChangesAsync();
             return (true, string.Empty, existingRecord);
@@ -104,9 +118,9 @@ public class AttendanceService : IAttendanceService
 
     public async Task<(bool Success, string ErrorMessage, int RecordsSaved)> SaveBulkAttendanceAsync(int meetingId, List<Attendance> attendanceRecords)
     {
-        // Validate meeting exists
-        var meetingExists = await _context.Meetings.AnyAsync(m => m.Id == meetingId);
-        if (!meetingExists)
+        // Validate meeting exists and get meeting details for nights away calculation
+        var meeting = await _context.Meetings.FindAsync(meetingId);
+        if (meeting == null)
         {
             return (false, "Meeting not found.", 0);
         }
@@ -115,6 +129,11 @@ public class AttendanceService : IAttendanceService
         {
             return (false, "No attendance records provided.", 0);
         }
+
+        // Calculate default nights for multi-day meetings
+        var defaultNights = meeting.EndDate.HasValue
+            ? _meetingService.CalculateNightsForMeeting(meeting.Date, meeting.EndDate)
+            : (int?)null;
 
         // Get all existing records for this meeting
         var existingRecords = await _context.Attendances
@@ -132,6 +151,16 @@ public class AttendanceService : IAttendanceService
 
             record.MeetingId = meetingId; // Ensure meeting ID is set
 
+            // Auto-calculate NightsAway for multi-day meetings if not already set
+            if (record.Attended && defaultNights.HasValue && !record.NightsAway.HasValue)
+            {
+                record.NightsAway = defaultNights;
+            }
+            else if (!record.Attended)
+            {
+                record.NightsAway = null;
+            }
+
             if (existingRecords.TryGetValue(record.MembershipNumber, out var existing))
             {
                 // Update existing record
@@ -142,6 +171,7 @@ public class AttendanceService : IAttendanceService
                 existing.ConsentFormReceived = record.ConsentFormReceived;
                 existing.ConsentFormDate = record.ConsentFormDate;
                 existing.Notes = record.Notes;
+                existing.NightsAway = record.NightsAway;
             }
             else
             {
@@ -525,6 +555,96 @@ public class AttendanceService : IAttendanceService
         }
 
         return alerts.OrderBy(a => a.AttendancePercent).ToList();
+    }
+
+    // ===== Nights Away Tracking =====
+
+    public async Task<int> GetTotalNightsAwayAsync(string membershipNumber)
+    {
+        return await _context.Attendances
+            .Where(a => a.MembershipNumber == membershipNumber && a.Attended && a.NightsAway.HasValue)
+            .SumAsync(a => a.NightsAway ?? 0);
+    }
+
+    public async Task<int> GetNightsAwayInRangeAsync(string membershipNumber, DateTime startDate, DateTime endDate)
+    {
+        return await _context.Attendances
+            .Include(a => a.Meeting)
+            .Where(a => a.MembershipNumber == membershipNumber
+                && a.Attended
+                && a.NightsAway.HasValue
+                && a.Meeting.Date >= startDate
+                && a.Meeting.Date <= endDate)
+            .SumAsync(a => a.NightsAway ?? 0);
+    }
+
+    public async Task<(bool Success, string ErrorMessage)> UpdateNightsAwayAsync(int attendanceId, int? nightsAway)
+    {
+        var record = await _context.Attendances.FindAsync(attendanceId);
+        if (record == null)
+        {
+            return (false, "Attendance record not found.");
+        }
+
+        if (nightsAway.HasValue && nightsAway.Value < 0)
+        {
+            return (false, "Nights away cannot be negative.");
+        }
+
+        record.NightsAway = nightsAway;
+        await _context.SaveChangesAsync();
+
+        return (true, string.Empty);
+    }
+
+    public async Task<List<MemberNightsAwaySummary>> GetNightsAwaySummaryAsync(DateTime? fromDate = null, DateTime? toDate = null)
+    {
+        var query = _context.Attendances
+            .Include(a => a.Meeting)
+            .Where(a => a.Attended && a.NightsAway.HasValue && a.NightsAway > 0);
+
+        if (fromDate.HasValue)
+        {
+            query = query.Where(a => a.Meeting.Date >= fromDate.Value);
+        }
+
+        if (toDate.HasValue)
+        {
+            query = query.Where(a => a.Meeting.Date <= toDate.Value);
+        }
+
+        // Group by membership number and calculate totals
+        var grouped = await query
+            .GroupBy(a => a.MembershipNumber)
+            .Select(g => new
+            {
+                MembershipNumber = g.Key,
+                TotalNightsAway = g.Sum(a => a.NightsAway ?? 0),
+                MultiDayEventsAttended = g.Count()
+            })
+            .ToListAsync();
+
+        // Get member details
+        var membershipNumbers = grouped.Select(g => g.MembershipNumber).ToList();
+        var members = await _context.Persons
+            .AsNoTracking()
+            .Where(p => membershipNumbers.Contains(p.MembershipNumber) && !p.IsDataRemoved)
+            .ToDictionaryAsync(p => p.MembershipNumber);
+
+        return grouped.Select(g =>
+        {
+            members.TryGetValue(g.MembershipNumber, out var person);
+            return new MemberNightsAwaySummary
+            {
+                MembershipNumber = g.MembershipNumber,
+                MemberName = person?.FullName,
+                PersonType = person?.PersonType.ToString(),
+                TotalNightsAway = g.TotalNightsAway,
+                MultiDayEventsAttended = g.MultiDayEventsAttended
+            };
+        })
+        .OrderByDescending(s => s.TotalNightsAway)
+        .ToList();
     }
 
     // ===== Query Helpers =====

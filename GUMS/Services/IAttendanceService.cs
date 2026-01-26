@@ -117,6 +117,28 @@ public interface IAttendanceService
     /// </summary>
     Task<List<MemberAttendanceAlert>> GetLowAttendanceAlertsAsync(int termId, int thresholdPercent = 25);
 
+    // ===== Nights Away Tracking =====
+
+    /// <summary>
+    /// Gets the cumulative nights away for a member across all attended multi-day meetings.
+    /// </summary>
+    Task<int> GetTotalNightsAwayAsync(string membershipNumber);
+
+    /// <summary>
+    /// Gets the cumulative nights away for a member within a date range.
+    /// </summary>
+    Task<int> GetNightsAwayInRangeAsync(string membershipNumber, DateTime startDate, DateTime endDate);
+
+    /// <summary>
+    /// Updates the nights away for a specific attendance record (manual override).
+    /// </summary>
+    Task<(bool Success, string ErrorMessage)> UpdateNightsAwayAsync(int attendanceId, int? nightsAway);
+
+    /// <summary>
+    /// Gets nights away summary for all members.
+    /// </summary>
+    Task<List<MemberNightsAwaySummary>> GetNightsAwaySummaryAsync(DateTime? fromDate = null, DateTime? toDate = null);
+
     // ===== Query Helpers =====
 
     /// <summary>
@@ -189,4 +211,16 @@ public class MemberAttendanceAlert
     public string AlertType { get; set; } = string.Empty; // "FullTermAbsence" or "LowAttendance"
     public string? Notes { get; set; }
     public bool IsAcknowledged { get; set; }
+}
+
+/// <summary>
+/// Nights away summary for a member.
+/// </summary>
+public class MemberNightsAwaySummary
+{
+    public string MembershipNumber { get; set; } = string.Empty;
+    public string? MemberName { get; set; }
+    public string? PersonType { get; set; }
+    public int TotalNightsAway { get; set; }
+    public int MultiDayEventsAttended { get; set; }
 }

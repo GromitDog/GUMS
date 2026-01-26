@@ -68,9 +68,23 @@
                         <div class="row g-4">
                             <div class="col-md-6">
                                 <h6 class="text-muted mb-2">Date & Time</h6>
-                                <p class="mb-1">
-                                    <strong>@meeting.Date.ToString("dddd, dd MMMM yyyy")</strong>
-                                </p>
+                                @if (meeting.EndDate.HasValue && meeting.EndDate.Value > meeting.Date)
+                                {
+                                    var nights = MeetingService.CalculateNightsForMeeting(meeting.Date, meeting.EndDate);
+                                    var days = (meeting.EndDate.Value - meeting.Date).Days + 1;
+                                    <p class="mb-1">
+                                        <strong>@meeting.Date.ToString("ddd, dd MMM") - @meeting.EndDate.Value.ToString("ddd, dd MMM yyyy")</strong>
+                                    </p>
+                                    <p class="mb-1">
+                                        <span class="badge bg-info">@days day@(days != 1 ? "s" : "") / @nights night@(nights != 1 ? "s" : "") away</span>
+                                    </p>
+                                }
+                                else
+                                {
+                                    <p class="mb-1">
+                                        <strong>@meeting.Date.ToString("dddd, dd MMMM yyyy")</strong>
+                                    </p>
+                                }
                                 <p class="mb-0">
                                     @meeting.StartTime.ToString("HH:mm") - @meeting.EndTime.ToString("HH:mm")
                                     <span class="text-muted">
@@ -266,7 +280,7 @@
                 <!-- Quick Actions -->
                 <div class="card mb-3">
                     <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
-                        <h6 class="mb-0">Quick Actions</h6>
+                        <h6 class="mb-0 text-white">Quick Actions</h6>
                     </div>
                     <div class="card-body">
                         <div class="d-grid gap-2">

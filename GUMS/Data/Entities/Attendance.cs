@@ -29,6 +29,14 @@ public class Attendance
 
     public string? Notes { get; set; }
 
+    /// <summary>
+    /// Number of nights stayed for multi-day events.
+    /// Auto-calculated from meeting dates but manually editable.
+    /// Null for single-day meetings.
+    /// </summary>
+    [Range(0, 365)]
+    public int? NightsAway { get; set; }
+
     // Navigation property
     public Meeting Meeting { get; set; } = null!;
 }

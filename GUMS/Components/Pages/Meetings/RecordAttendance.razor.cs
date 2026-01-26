@@ -19,6 +19,8 @@ public partial class RecordAttendance
     private List<Attendance> attendanceRecords = new();
     private Dictionary<string, Person> memberLookup = new();
     private bool requiresConsent = false;
+    private bool isMultiDayMeeting = false;
+    private int defaultNightsAway = 0;
 
     private bool isLoading = true;
     private bool isSaving = false;
@@ -46,6 +48,13 @@ public partial class RecordAttendance
 
             // Check if meeting requires consent
             requiresConsent = await AttendanceService.MeetingRequiresConsentAsync(MeetingId);
+
+            // Check if this is a multi-day meeting
+            isMultiDayMeeting = meeting.EndDate.HasValue && meeting.EndDate.Value > meeting.Date;
+            if (isMultiDayMeeting)
+            {
+                defaultNightsAway = MeetingService.CalculateNightsForMeeting(meeting.Date, meeting.EndDate);
+            }
 
             // Load all active members
             var activeMembers = await PersonService.GetActiveAsync();
@@ -79,6 +88,24 @@ public partial class RecordAttendance
     private void ToggleAttendance(Attendance record, bool attended)
     {
         record.Attended = attended;
+
+        // Auto-set NightsAway for multi-day meetings
+        if (isMultiDayMeeting)
+        {
+            if (attended && !record.NightsAway.HasValue)
+            {
+                record.NightsAway = defaultNightsAway;
+            }
+            else if (!attended)
+            {
+                record.NightsAway = null;
+            }
+        }
+    }
+
+    private void UpdateNightsAway(Attendance record, int? nights)
+    {
+        record.NightsAway = nights;
     }
 
     private void ToggleConsentEmail(Attendance record, bool received)
@@ -112,6 +139,10 @@ public partial class RecordAttendance
         foreach (var record in attendanceRecords)
         {
             record.Attended = true;
+            if (isMultiDayMeeting && !record.NightsAway.HasValue)
+            {
+                record.NightsAway = defaultNightsAway;
+            }
         }
     }
 
@@ -120,6 +151,10 @@ public partial class RecordAttendance
         foreach (var record in attendanceRecords)
         {
             record.Attended = false;
+            if (isMultiDayMeeting)
+            {
+                record.NightsAway = null;
+            }
         }
     }
 

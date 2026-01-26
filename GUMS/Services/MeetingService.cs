@@ -105,6 +105,12 @@ public class MeetingService : IMeetingService
             return (false, "Payment deadline is required when meeting has a cost.", null);
         }
 
+        // Validate EndDate for multi-day meetings
+        if (meeting.EndDate.HasValue && meeting.EndDate.Value.Date < meeting.Date.Date)
+        {
+            return (false, "End date must be on or after the start date.", null);
+        }
+
         // Set sort order for activities
         for (int i = 0; i < meeting.Activities.Count; i++)
         {
@@ -144,6 +150,12 @@ public class MeetingService : IMeetingService
             return (false, "Payment deadline is required when meeting has a cost.");
         }
 
+        // Validate EndDate for multi-day meetings
+        if (meeting.EndDate.HasValue && meeting.EndDate.Value.Date < meeting.Date.Date)
+        {
+            return (false, "End date must be on or after the start date.");
+        }
+
         // Update properties
         existingMeeting.Date = meeting.Date;
         existingMeeting.StartTime = meeting.StartTime;
@@ -155,6 +167,7 @@ public class MeetingService : IMeetingService
         existingMeeting.LocationAddress = meeting.LocationAddress;
         existingMeeting.CostPerAttendee = meeting.CostPerAttendee;
         existingMeeting.PaymentDeadline = meeting.PaymentDeadline;
+        existingMeeting.EndDate = meeting.EndDate;
 
         // Note: Activities are managed separately via Activity methods
         // This keeps the logic cleaner and more explicit
@@ -356,6 +369,36 @@ public class MeetingService : IMeetingService
         }
 
         return (true, string.Empty, meetingsCreated);
+    }
+
+    // ===== Multi-Day Meeting Support =====
+
+    public int CalculateNightsForMeeting(DateTime startDate, DateTime? endDate)
+    {
+        if (!endDate.HasValue)
+        {
+            return 0;
+        }
+
+        // Calculate nights: Jan 5-7 = 2 nights (nights of 5th and 6th)
+        var nights = (endDate.Value.Date - startDate.Date).Days;
+        return nights > 0 ? nights : 0;
+    }
+
+    public async Task<List<Meeting>> GetMultiDayMeetingsAsync(int? limit = null)
+    {
+        var query = _context.Meetings
+            .Include(m => m.Activities.OrderBy(a => a.SortOrder))
+            .AsNoTracking()
+            .Where(m => m.EndDate != null)
+            .OrderByDescending(m => m.Date);
+
+        if (limit.HasValue)
+        {
+            return await query.Take(limit.Value).ToListAsync();
+        }
+
+        return await query.ToListAsync();
     }
 
     // ===== Query Helpers =====

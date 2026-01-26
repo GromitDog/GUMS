@@ -847,6 +847,155 @@ public class MeetingServiceTests : IDisposable
 
     #endregion
 
+    #region Multi-Day Meeting Tests
+
+    [Fact]
+    public void CalculateNightsForMeeting_ShouldReturnZero_WhenEndDateIsNull()
+    {
+        // Act
+        var result = _sut.CalculateNightsForMeeting(new DateTime(2026, 1, 5), null);
+
+        // Assert
+        result.Should().Be(0);
+    }
+
+    [Fact]
+    public void CalculateNightsForMeeting_ShouldReturnZero_WhenSameDay()
+    {
+        // Act
+        var result = _sut.CalculateNightsForMeeting(
+            new DateTime(2026, 1, 5),
+            new DateTime(2026, 1, 5));
+
+        // Assert
+        result.Should().Be(0);
+    }
+
+    [Fact]
+    public void CalculateNightsForMeeting_ShouldReturnCorrectNights_ForMultiDayMeeting()
+    {
+        // Arrange - Jan 5-7 = 2 nights (nights of 5th and 6th)
+        var startDate = new DateTime(2026, 1, 5);
+        var endDate = new DateTime(2026, 1, 7);
+
+        // Act
+        var result = _sut.CalculateNightsForMeeting(startDate, endDate);
+
+        // Assert
+        result.Should().Be(2);
+    }
+
+    [Fact]
+    public void CalculateNightsForMeeting_ShouldReturnOneNight_ForTwoDayMeeting()
+    {
+        // Arrange - Jan 5-6 = 1 night (night of 5th)
+        var startDate = new DateTime(2026, 1, 5);
+        var endDate = new DateTime(2026, 1, 6);
+
+        // Act
+        var result = _sut.CalculateNightsForMeeting(startDate, endDate);
+
+        // Assert
+        result.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ShouldFail_WhenEndDateBeforeStartDate()
+    {
+        // Arrange
+        var meeting = new Meeting
+        {
+            Date = new DateTime(2026, 1, 10),
+            EndDate = new DateTime(2026, 1, 5), // Before start date
+            StartTime = new TimeOnly(18, 30),
+            EndTime = new TimeOnly(19, 30),
+            MeetingType = MeetingType.Extra,
+            Title = "Invalid Camp",
+            LocationName = "Camp Site"
+        };
+
+        // Act
+        var result = await _sut.CreateAsync(meeting);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("End date must be on or after the start date");
+    }
+
+    [Fact]
+    public async Task CreateAsync_ShouldSucceed_WithValidEndDate()
+    {
+        // Arrange
+        var meeting = new Meeting
+        {
+            Date = new DateTime(2026, 1, 5),
+            EndDate = new DateTime(2026, 1, 7),
+            StartTime = new TimeOnly(10, 00),
+            EndTime = new TimeOnly(16, 00),
+            MeetingType = MeetingType.Extra,
+            Title = "Weekend Camp",
+            LocationName = "Camp Site"
+        };
+
+        // Act
+        var result = await _sut.CreateAsync(meeting);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Meeting.Should().NotBeNull();
+        result.Meeting!.EndDate.Should().Be(new DateTime(2026, 1, 7));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldUpdateEndDate()
+    {
+        // Arrange
+        var meeting = CreateMeeting("Camp", DateTime.Today);
+        meeting.MeetingType = MeetingType.Extra;
+        _context.Meetings.Add(meeting);
+        await _context.SaveChangesAsync();
+
+        meeting.EndDate = DateTime.Today.AddDays(2);
+
+        // Act
+        var result = await _sut.UpdateAsync(meeting);
+
+        // Assert
+        result.Success.Should().BeTrue();
+
+        var updated = await _context.Meetings.FindAsync(meeting.Id);
+        updated!.EndDate.Should().Be(DateTime.Today.AddDays(2));
+    }
+
+    [Fact]
+    public async Task GetMultiDayMeetingsAsync_ShouldReturnOnlyMultiDayMeetings()
+    {
+        // Arrange
+        var singleDayMeeting = CreateMeeting("Regular Meeting", DateTime.Today);
+        var multiDayMeeting = new Meeting
+        {
+            Date = DateTime.Today.AddDays(7),
+            EndDate = DateTime.Today.AddDays(9),
+            StartTime = new TimeOnly(10, 00),
+            EndTime = new TimeOnly(16, 00),
+            MeetingType = MeetingType.Extra,
+            Title = "Weekend Camp",
+            LocationName = "Camp Site"
+        };
+
+        _context.Meetings.AddRange(singleDayMeeting, multiDayMeeting);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _sut.GetMultiDayMeetingsAsync();
+
+        // Assert
+        result.Should().HaveCount(1);
+        result[0].Title.Should().Be("Weekend Camp");
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private Meeting CreateMeeting(string title, DateTime date)

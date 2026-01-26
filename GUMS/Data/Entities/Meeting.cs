@@ -36,6 +36,12 @@ public class Meeting
 
     public DateTime? PaymentDeadline { get; set; }
 
+    /// <summary>
+    /// End date for multi-day events (camps, sleepovers).
+    /// Null indicates a single-day meeting.
+    /// </summary>
+    public DateTime? EndDate { get; set; }
+
     // Navigation properties
     public List<Activity> Activities { get; set; } = new();
     public List<Attendance> Attendances { get; set; } = new();

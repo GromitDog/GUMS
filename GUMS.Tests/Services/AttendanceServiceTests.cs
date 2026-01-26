@@ -12,6 +12,7 @@ public class AttendanceServiceTests : IDisposable
 {
     private readonly ApplicationDbContext _context;
     private readonly Mock<ITermService> _mockTermService;
+    private readonly Mock<IMeetingService> _mockMeetingService;
     private readonly AttendanceService _sut; // System Under Test
 
     public AttendanceServiceTests()
@@ -28,7 +29,12 @@ public class AttendanceServiceTests : IDisposable
         // Mock term service
         _mockTermService = new Mock<ITermService>();
 
-        _sut = new AttendanceService(_context, _mockTermService.Object);
+        // Mock meeting service
+        _mockMeetingService = new Mock<IMeetingService>();
+        _mockMeetingService.Setup(x => x.CalculateNightsForMeeting(It.IsAny<DateTime>(), It.IsAny<DateTime?>()))
+            .Returns((DateTime start, DateTime? end) => end.HasValue ? (end.Value.Date - start.Date).Days : 0);
+
+        _sut = new AttendanceService(_context, _mockTermService.Object, _mockMeetingService.Object);
     }
 
     public void Dispose()
@@ -1066,6 +1072,288 @@ public class AttendanceServiceTests : IDisposable
         // Assert
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("Meeting not found");
+    }
+
+    #endregion
+
+    #region Nights Away Tracking Tests
+
+    [Fact]
+    public async Task SaveAttendanceRecordAsync_ShouldAutoCalculateNightsAway_ForMultiDayMeeting()
+    {
+        // Arrange
+        var meeting = new Meeting
+        {
+            Date = new DateTime(2026, 1, 5),
+            EndDate = new DateTime(2026, 1, 7), // 2 nights
+            StartTime = new TimeOnly(10, 00),
+            EndTime = new TimeOnly(16, 00),
+            MeetingType = MeetingType.Extra,
+            Title = "Camp",
+            LocationName = "Camp Site"
+        };
+        _context.Meetings.Add(meeting);
+        await _context.SaveChangesAsync();
+
+        var attendance = new Attendance
+        {
+            MeetingId = meeting.Id,
+            MembershipNumber = "M001",
+            Attended = true
+        };
+
+        // Act
+        var result = await _sut.SaveAttendanceRecordAsync(attendance);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Attendance!.NightsAway.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task SaveAttendanceRecordAsync_ShouldNotSetNightsAway_ForSingleDayMeeting()
+    {
+        // Arrange
+        var meeting = await CreateTestMeetingAsync();
+
+        var attendance = new Attendance
+        {
+            MeetingId = meeting.Id,
+            MembershipNumber = "M001",
+            Attended = true
+        };
+
+        // Act
+        var result = await _sut.SaveAttendanceRecordAsync(attendance);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Attendance!.NightsAway.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SaveAttendanceRecordAsync_ShouldClearNightsAway_WhenNotAttended()
+    {
+        // Arrange
+        var meeting = new Meeting
+        {
+            Date = new DateTime(2026, 1, 5),
+            EndDate = new DateTime(2026, 1, 7),
+            StartTime = new TimeOnly(10, 00),
+            EndTime = new TimeOnly(16, 00),
+            MeetingType = MeetingType.Extra,
+            Title = "Camp",
+            LocationName = "Camp Site"
+        };
+        _context.Meetings.Add(meeting);
+        await _context.SaveChangesAsync();
+
+        _context.Attendances.Add(new Attendance
+        {
+            MeetingId = meeting.Id,
+            MembershipNumber = "M001",
+            Attended = true,
+            NightsAway = 2
+        });
+        await _context.SaveChangesAsync();
+
+        var attendance = new Attendance
+        {
+            MeetingId = meeting.Id,
+            MembershipNumber = "M001",
+            Attended = false // Now not attending
+        };
+
+        // Act
+        var result = await _sut.SaveAttendanceRecordAsync(attendance);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Attendance!.NightsAway.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateNightsAwayAsync_ShouldAllowManualOverride()
+    {
+        // Arrange
+        var meeting = new Meeting
+        {
+            Date = new DateTime(2026, 1, 5),
+            EndDate = new DateTime(2026, 1, 7),
+            StartTime = new TimeOnly(10, 00),
+            EndTime = new TimeOnly(16, 00),
+            MeetingType = MeetingType.Extra,
+            Title = "Camp",
+            LocationName = "Camp Site"
+        };
+        _context.Meetings.Add(meeting);
+        await _context.SaveChangesAsync();
+
+        var attendance = new Attendance
+        {
+            MeetingId = meeting.Id,
+            MembershipNumber = "M001",
+            Attended = true,
+            NightsAway = 2
+        };
+        _context.Attendances.Add(attendance);
+        await _context.SaveChangesAsync();
+
+        // Act - Member left early, only stayed 1 night
+        var result = await _sut.UpdateNightsAwayAsync(attendance.Id, 1);
+
+        // Assert
+        result.Success.Should().BeTrue();
+
+        var updated = await _context.Attendances.FindAsync(attendance.Id);
+        updated!.NightsAway.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task UpdateNightsAwayAsync_ShouldFail_WhenNegativeNights()
+    {
+        // Arrange
+        var meeting = await CreateTestMeetingAsync();
+        var attendance = new Attendance
+        {
+            MeetingId = meeting.Id,
+            MembershipNumber = "M001",
+            Attended = true
+        };
+        _context.Attendances.Add(attendance);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _sut.UpdateNightsAwayAsync(attendance.Id, -1);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("cannot be negative");
+    }
+
+    [Fact]
+    public async Task GetTotalNightsAwayAsync_ShouldSumAllAttendedMeetings()
+    {
+        // Arrange
+        var meeting1 = new Meeting
+        {
+            Date = new DateTime(2026, 1, 5),
+            EndDate = new DateTime(2026, 1, 7),
+            StartTime = new TimeOnly(10, 00),
+            EndTime = new TimeOnly(16, 00),
+            MeetingType = MeetingType.Extra,
+            Title = "Camp 1",
+            LocationName = "Camp Site"
+        };
+        var meeting2 = new Meeting
+        {
+            Date = new DateTime(2026, 2, 10),
+            EndDate = new DateTime(2026, 2, 11),
+            StartTime = new TimeOnly(10, 00),
+            EndTime = new TimeOnly(16, 00),
+            MeetingType = MeetingType.Extra,
+            Title = "Camp 2",
+            LocationName = "Camp Site"
+        };
+        _context.Meetings.AddRange(meeting1, meeting2);
+        await _context.SaveChangesAsync();
+
+        _context.Attendances.AddRange(
+            new Attendance { MeetingId = meeting1.Id, MembershipNumber = "M001", Attended = true, NightsAway = 2 },
+            new Attendance { MeetingId = meeting2.Id, MembershipNumber = "M001", Attended = true, NightsAway = 1 }
+        );
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _sut.GetTotalNightsAwayAsync("M001");
+
+        // Assert
+        result.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task GetTotalNightsAwayAsync_ShouldReturnZero_WhenNoAttendance()
+    {
+        // Act
+        var result = await _sut.GetTotalNightsAwayAsync("M001");
+
+        // Assert
+        result.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetNightsAwayInRangeAsync_ShouldFilterByDateRange()
+    {
+        // Arrange
+        var meeting1 = new Meeting
+        {
+            Date = new DateTime(2026, 1, 5),
+            EndDate = new DateTime(2026, 1, 7),
+            StartTime = new TimeOnly(10, 00),
+            EndTime = new TimeOnly(16, 00),
+            MeetingType = MeetingType.Extra,
+            Title = "Camp 1",
+            LocationName = "Camp Site"
+        };
+        var meeting2 = new Meeting
+        {
+            Date = new DateTime(2026, 3, 10),
+            EndDate = new DateTime(2026, 3, 11),
+            StartTime = new TimeOnly(10, 00),
+            EndTime = new TimeOnly(16, 00),
+            MeetingType = MeetingType.Extra,
+            Title = "Camp 2",
+            LocationName = "Camp Site"
+        };
+        _context.Meetings.AddRange(meeting1, meeting2);
+        await _context.SaveChangesAsync();
+
+        _context.Attendances.AddRange(
+            new Attendance { MeetingId = meeting1.Id, MembershipNumber = "M001", Attended = true, NightsAway = 2 },
+            new Attendance { MeetingId = meeting2.Id, MembershipNumber = "M001", Attended = true, NightsAway = 1 }
+        );
+        await _context.SaveChangesAsync();
+
+        // Act - Only get January
+        var result = await _sut.GetNightsAwayInRangeAsync("M001", new DateTime(2026, 1, 1), new DateTime(2026, 1, 31));
+
+        // Assert
+        result.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetNightsAwaySummaryAsync_ShouldIncludeAllMemberTypes()
+    {
+        // Arrange
+        var meeting = new Meeting
+        {
+            Date = new DateTime(2026, 1, 5),
+            EndDate = new DateTime(2026, 1, 7),
+            StartTime = new TimeOnly(10, 00),
+            EndTime = new TimeOnly(16, 00),
+            MeetingType = MeetingType.Extra,
+            Title = "Camp",
+            LocationName = "Camp Site"
+        };
+        _context.Meetings.Add(meeting);
+        await _context.SaveChangesAsync();
+
+        await CreateTestPersonAsync("M001", PersonType.Girl);
+        await CreateTestPersonAsync("L001", PersonType.Leader);
+
+        _context.Attendances.AddRange(
+            new Attendance { MeetingId = meeting.Id, MembershipNumber = "M001", Attended = true, NightsAway = 2 },
+            new Attendance { MeetingId = meeting.Id, MembershipNumber = "L001", Attended = true, NightsAway = 2 }
+        );
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _sut.GetNightsAwaySummaryAsync();
+
+        // Assert
+        result.Should().HaveCount(2);
+        result.Should().Contain(s => s.PersonType == "Girl");
+        result.Should().Contain(s => s.PersonType == "Leader");
     }
 
     #endregion

@@ -96,6 +96,20 @@ public interface IMeetingService
     /// <returns>Number of meetings created.</returns>
     Task<(bool Success, string ErrorMessage, int MeetingsCreated)> GenerateRegularMeetingsForTermAsync(int termId, string? title = null);
 
+    // ===== Multi-Day Meeting Support =====
+
+    /// <summary>
+    /// Calculates the number of nights for a meeting.
+    /// For a meeting from Jan 5-7, returns 2 (nights of 5th and 6th).
+    /// Returns 0 for single-day meetings.
+    /// </summary>
+    int CalculateNightsForMeeting(DateTime startDate, DateTime? endDate);
+
+    /// <summary>
+    /// Gets all multi-day meetings (camps, sleepovers) where EndDate is set.
+    /// </summary>
+    Task<List<Meeting>> GetMultiDayMeetingsAsync(int? limit = null);
+
     // ===== Query Helpers =====
 
     /// <summary>
