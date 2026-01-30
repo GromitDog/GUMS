@@ -1,11 +1,60 @@
 # GUMS Implementation Progress
 
-**Last Updated:** 2026-01-17 (PHASE 2 COMPLETE ✅)
-**Current Phase:** Phase 3 - Payments (Ready to Begin)
+**Last Updated:** 2026-01-30
+**Current Phase:** Phase 3 Complete - Event Budgeting Added
 
 ---
 
-## ✅ Completed Tasks
+## ✅ Phase 3 Complete: Payments, Accounting & Event Budgeting
+
+### Payments
+- **IPaymentService / PaymentService** — Full payment tracking with partial payments, termly sub generation, overdue detection
+- **5 Payments UI pages:** Index, RecordPayment, GenerateSubs, MemberHistory, Overdue
+- **PaymentServiceTests** — Comprehensive test coverage
+- Navigation: Finance > Payments menu item
+- Dashboard: Payments card with outstanding/overdue counts
+
+### Accounting
+- **IAccountingService / AccountingService** — Double-entry accounting, chart of accounts, bank deposits, expense recording, expense claims, event financial summaries
+- **11 Accounts UI pages:** Index, Transactions, BankDeposit, ManageExpenseAccounts, RecordExpense, ExpenseList, ExpenseClaims, ViewExpenseClaim, EventAccounts, EventBudget, BudgetComparison
+- **AccountingServiceTests** — Comprehensive test coverage
+- Navigation: Finance > Accounts, Expenses, Claims menu items
+- New enums: AccountType, PaymentMethod, ExpenseClaimStatus
+- New entities: Account, Transaction, TransactionLine, Expense, ExpenseClaim
+
+### Event Budgeting
+- **IBudgetService / BudgetService** — Per-event budget planning with line items
+- Budget items support three cost types: Per Girl, Per Adult, Fixed Total
+- Items can be marked as Estimate or Confirmed
+- High/mid/low attendance scenario estimates (100%/75%/50%)
+- Budget vs actual comparison grouped by expense account category
+- Optional linking of budget items to expense accounts for category matching
+- **EventBudget page** — Budget editor with inline add/edit, estimate summary card, notes
+- **BudgetComparison page** — Budget vs actual table with variance highlighting
+- Navigation links from ViewMeeting (Budget button for Extra meetings) and EventAccounts
+- New enums: BudgetCostType, BudgetCostStatus
+- New entities: EventBudget, EventBudgetItem
+
+### Reports
+- **Nights Away page** — Track nights away from multi-day meetings
+
+### Migrations Added (Phase 3)
+- `AddAccounting` — Accounts, Transactions, TransactionLines
+- `AddMultiDayMeetingsAndNightsAway` — Meeting.EndDate for camps
+- `AddExpenseManagement` — Expenses, ExpenseClaims
+- `AddEventBudget` — EventBudgets, EventBudgetItems
+
+### Current Totals
+- **Entities:** 16 (Person, EmergencyContact, Meeting, Activity, Attendance, Payment, Term, UnitConfiguration, DataRemovalLog, Account, Transaction, TransactionLine, Expense, ExpenseClaim, EventBudget, EventBudgetItem)
+- **Enums:** 11 (PersonType, Section, MeetingType, PhotoPermission, PaymentType, PaymentStatus, PaymentMethod, AccountType, ExpenseClaimStatus, BudgetCostType, BudgetCostStatus)
+- **Services:** 8 (Configuration, Person, Term, Meeting, Attendance, Payment, Accounting, Budget)
+- **UI Pages:** 32+ across Register, Meetings, Payments, Accounts, Reports, Configuration
+- **Test classes:** 7 (ConfigurationService, PersonService, TermService, MeetingService, AttendanceService, PaymentService, AccountingService)
+- **Migrations:** 6
+
+---
+
+## ✅ Phase 1 & 2 History
 
 ### 1. NuGet Packages Added
 - Microsoft.EntityFrameworkCore.Sqlite (9.0.0)
@@ -168,26 +217,25 @@
 **Can currently do:**
 - ✅ Build the project successfully (0 errors, 0 warnings)
 - ✅ Run migrations automatically on startup
-- ✅ First-run setup (create admin user)
-- ✅ Login and logout
-- ✅ Add girls and leaders with emergency contacts
-- ✅ Edit member details
-- ✅ View member information
-- ✅ View grouped member list (Girls/Leaders separated)
-- ✅ Mark members as left with data removal workflow
-- ✅ Export member data before removal
-- ✅ Search and filter members
-- ✅ Full data removal process (GDPR right to be forgotten)
+- ✅ First-run setup, login, and logout
+- ✅ Add/edit/view/search girls and leaders with emergency contacts
+- ✅ GDPR data removal with export
 - ✅ Windows file-level database security
-- ✅ **Add and manage terms** (school terms with dates and subscription amounts)
-- ✅ **Plan regular meetings** with suggested dates from terms
-- ✅ **Add special events** with costs and payment deadlines
-- ✅ **Manage activities** within meetings
-- ✅ **Mark activities requiring consent**
-- ✅ **Edit and delete meetings** (with protection for meetings with attendance)
-- ✅ **View meeting details** with status indicators
-- ✅ **See upcoming and past meetings** organized and filterable
-- ✅ **Auto-generate regular meetings** for an entire term
+- ✅ Term management with date validation
+- ✅ Regular and special meeting planning with auto-generation
+- ✅ Multi-day events (camps) with nights away tracking
+- ✅ Activity and consent tracking
+- ✅ Quick attendance recording with bulk actions
+- ✅ Attendance alerts (full-term absences, low attendance)
+- ✅ Termly subscription generation and payment tracking
+- ✅ Activity payment tracking with partial payments
+- ✅ Overdue payment monitoring
+- ✅ Double-entry accounting with chart of accounts
+- ✅ Bank deposits and transaction journal
+- ✅ Expense recording and expense claims
+- ✅ Event financial summaries (P&L per meeting)
+- ✅ Event budgeting with cost estimates and budget vs actual comparison
+- ✅ Nights away reporting
 
 **Phase 2 - Meetings Management:**
 - ✅ **Step 1: Term configuration and management** (COMPLETE)
@@ -231,31 +279,13 @@
 
 ## 🎯 Next Steps (When Resuming)
 
-### Phase 2 Complete - Ready for Phase 3: Payments
+### Phase 3 Complete - Ready for Phase 4: Communications
 
-**Test the complete Phase 2 workflow:**
-1. **Run tests**: `dotnet test GUMS.Tests/GUMS.Tests.csproj --verbosity minimal`
-   - Expected: 119 tests passing
-2. **Start app**: `dotnet run --project GUMS/GUMS.csproj`
-3. **Test complete workflow**:
-   - Add members to register
-   - Create terms
-   - Generate meetings for a term
-   - Record attendance for a meeting
-   - View attendance alerts on dashboard and alerts page
-
-### Start Phase 3: Payments
-According to SPECIFICATION.md, Phase 3 involves:
-1. **Payment tracking for termly subscriptions**
-   - Track who has paid subs for each term
-   - Support partial payments
-   - Payment status dashboard
-2. **Payment tracking for meeting costs**
-   - Link payments to specific meetings with costs
-   - Track who has paid for events/trips
-3. **Payment reminders and overdue tracking**
-   - Identify overdue payments
-   - Generate payment reminder lists
+**Possible next work:**
+1. **Phase 4: Communications** — Email list generation for various groups (all members, by section, by meeting, outstanding consents/payments)
+2. **Additional reports** — Attendance reports, financial reports, member demographics
+3. **Export capabilities** — Excel/PDF exports
+4. **Badge tracking** — Progress and badge management
 
 ### Phase 1 Testing Checklist
 - [ ] First-run setup creates admin user
@@ -301,51 +331,47 @@ The `PersonService.RemoveMemberDataAsync()` method implements GDPR "right to be 
 
 ---
 
-## 📁 File Structure Created
+## 📁 File Structure
 
 ```
 GUMS/
 ├── Data/
 │   ├── Enums/
-│   │   ├── PersonType.cs
-│   │   ├── Section.cs
-│   │   ├── MeetingType.cs
-│   │   ├── PhotoPermission.cs
-│   │   ├── PaymentType.cs
-│   │   └── PaymentStatus.cs
+│   │   ├── PersonType.cs, Section.cs, MeetingType.cs, PhotoPermission.cs
+│   │   ├── PaymentType.cs, PaymentStatus.cs, PaymentMethod.cs
+│   │   ├── AccountType.cs, ExpenseClaimStatus.cs
+│   │   └── BudgetCostType.cs, BudgetCostStatus.cs
 │   ├── Entities/
-│   │   ├── Person.cs
-│   │   ├── EmergencyContact.cs
-│   │   ├── Meeting.cs
-│   │   ├── Activity.cs
-│   │   ├── Attendance.cs
-│   │   ├── Payment.cs
-│   │   ├── Term.cs
-│   │   ├── UnitConfiguration.cs
-│   │   └── DataRemovalLog.cs
+│   │   ├── Person.cs, EmergencyContact.cs, Meeting.cs, Activity.cs
+│   │   ├── Attendance.cs, Payment.cs, Term.cs
+│   │   ├── UnitConfiguration.cs, DataRemovalLog.cs
+│   │   ├── Account.cs, Transaction.cs, TransactionLine.cs
+│   │   ├── Expense.cs, ExpenseClaim.cs
+│   │   └── EventBudget.cs, EventBudgetItem.cs
 │   └── ApplicationDbContext.cs
 ├── Services/
-│   ├── IConfigurationService.cs
-│   ├── ConfigurationService.cs
-│   ├── IPersonService.cs
-│   ├── PersonService.cs
-│   ├── ITermService.cs
-│   ├── TermService.cs
-│   ├── IMeetingService.cs
-│   └── MeetingService.cs
-├── Migrations/
-│   ├── 20260103223055_InitialCreate.cs
-│   ├── 20260103223055_InitialCreate.Designer.cs
-│   └── ApplicationDbContextModelSnapshot.cs
+│   ├── IConfigurationService.cs / ConfigurationService.cs
+│   ├── IPersonService.cs / PersonService.cs
+│   ├── ITermService.cs / TermService.cs
+│   ├── IMeetingService.cs / MeetingService.cs
+│   ├── IAttendanceService.cs / AttendanceService.cs
+│   ├── IPaymentService.cs / PaymentService.cs
+│   ├── IAccountingService.cs / AccountingService.cs
+│   ├── IBudgetService.cs / BudgetService.cs
+│   └── DatabaseSecurityService.cs
 ├── Components/Pages/
-│   ├── Register/ (5 pages - Index, AddGirl, AddLeader, EditMember, ViewMember)
-│   ├── Configuration/ (1 page - TermManagement)
-│   └── Meetings/ (5 pages - Index, AddRegular, AddExtra, Edit, View)
+│   ├── Register/ (5 pages)
+│   ├── Meetings/ (8 pages incl. attendance)
+│   ├── Payments/ (5 pages)
+│   ├── Accounts/ (11 pages incl. budgeting)
+│   ├── Reports/ (1 page)
+│   └── Configuration/ (2 pages)
 ├── Components/Shared/
 │   └── EmergencyContactEditor.razor
-├── Program.cs (updated)
-├── GUMS.csproj (updated with NuGet packages)
-└── SPECIFICATION.md (original requirements)
+├── Pages/Account/ (Login, Setup, Logout - Razor Pages)
+├── Migrations/ (6 migrations)
+├── Program.cs
+└── GUMS.csproj
 ```
 
 ---
@@ -385,9 +411,9 @@ dotnet ef database update --project GUMS/GUMS.csproj
 
 ---
 
-**Status:** ✅ Phase 1 COMPLETE + Phase 2 Steps 1-2 COMPLETE (33% of Phase 2)
-**Current Progress:** Member management + Terms + Meetings fully functional
-**Next Milestone:** Phase 2 Step 3 - Attendance Tracking
+**Status:** ✅ Phase 1 + Phase 2 + Phase 3 COMPLETE
+**Current Progress:** Members, Meetings, Attendance, Payments, Accounting, Budgeting all functional
+**Next Milestone:** Phase 4 - Communications
 
 ---
 
@@ -434,29 +460,18 @@ Phase 1 delivered a complete, working member management system with:
 - Search and filters work in real-time
 
 ### What's NOT Yet Implemented
-- Attendance tracking (Phase 2 Step 3)
-- Consent form tracking (Phase 2 Step 4)
-- Attendance monitoring and alerts (Phase 2 Step 5)
-- Payments (Phase 3)
 - Communications/Email lists (Phase 4)
+- Badge tracking and progress
+- Export to Excel/PDF
+- Multi-user roles
 
 ---
 
-**🎉 Phase 1 + Phase 2 Steps 1-2 Achievement: Core Features Complete!**
+**Phases 1-3 Complete!**
 
-We now have a comprehensive Girl Guide unit management system that can:
-- ✅ Authenticate users securely
-- ✅ Manage members (girls and leaders) with emergency contacts
-- ✅ Comply with GDPR data removal requirements
-- ✅ Search and filter members
-- ✅ **Manage school terms** with dates and subscription amounts
-- ✅ **Plan regular meetings** with smart date suggestions
-- ✅ **Add special events** with costs and payment deadlines
-- ✅ **Track activities** requiring consent forms
-- ✅ **Edit and delete meetings** with data protection
-- ✅ **View upcoming and past meetings** beautifully organized
+The application provides end-to-end unit management: members, meetings, attendance, payments, accounting, and event budgeting.
 
-**Ready for Phase 2 Step 3: Attendance Tracking!**
+**Ready for Phase 4: Communications!**
 
 ---
 
@@ -853,11 +868,10 @@ According to PHASE2_PLAN.md, Step 2 involves:
 - **119 unit tests** all passing
 - Comprehensive coverage of all services
 
-### Ready for Phase 3: Payments
-The app now has complete meeting and attendance tracking. Next phase will add:
-- Termly subscription payment tracking
-- Meeting cost payment tracking
-- Payment reminders and overdue tracking
+### Ready for Phase 4: Communications
+The app now has complete member management, meeting/attendance tracking, payments, accounting, and event budgeting. Next phase will add:
+- Email list generation for various groups
+- BCC-ready contact lists for parents
 
 ---
 

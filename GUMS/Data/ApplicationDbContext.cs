@@ -27,6 +27,8 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     public DbSet<TransactionLine> TransactionLines { get; set; }
     public DbSet<Expense> Expenses { get; set; }
     public DbSet<ExpenseClaim> ExpenseClaims { get; set; }
+    public DbSet<EventBudget> EventBudgets { get; set; }
+    public DbSet<EventBudgetItem> EventBudgetItems { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -252,6 +254,37 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
             entity.HasOne(ec => ec.Transaction)
                 .WithMany()
                 .HasForeignKey(ec => ec.TransactionId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+        // EventBudget configuration
+        modelBuilder.Entity<EventBudget>(entity =>
+        {
+            entity.HasKey(eb => eb.Id);
+            entity.HasIndex(eb => eb.MeetingId).IsUnique();
+
+            entity.HasOne(eb => eb.Meeting)
+                .WithMany()
+                .HasForeignKey(eb => eb.MeetingId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(eb => eb.Items)
+                .WithOne(i => i.EventBudget)
+                .HasForeignKey(i => i.EventBudgetId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // EventBudgetItem configuration
+        modelBuilder.Entity<EventBudgetItem>(entity =>
+        {
+            entity.HasKey(i => i.Id);
+            entity.HasIndex(i => i.EventBudgetId);
+
+            entity.Property(i => i.Amount).HasPrecision(18, 2);
+            entity.Property(i => i.Description).IsRequired();
+
+            entity.HasOne(i => i.ExpenseAccount)
+                .WithMany()
+                .HasForeignKey(i => i.ExpenseAccountId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
     }

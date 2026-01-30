@@ -68,6 +68,7 @@ builder.Services.AddScoped<IMeetingService, MeetingService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 builder.Services.AddScoped<IAccountingService, AccountingService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IBudgetService, BudgetService>();
 
 // Add services to the container.
 builder.Services.AddRazorPages();

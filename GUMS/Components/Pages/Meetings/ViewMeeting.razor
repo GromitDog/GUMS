@@ -296,6 +296,12 @@
                                     <i class="bi bi-currency-pound"></i> View Event Accounts
                                 </a>
                             }
+                            @if (meeting.MeetingType == MeetingType.Extra)
+                            {
+                                <a href="/Accounts/EventBudget/@MeetingId" class="btn btn-outline-info">
+                                    <i class="bi bi-calculator"></i> Budget
+                                </a>
+                            }
                             <button class="btn btn-outline-danger" @onclick="ShowDeleteConfirm">
                                 <i class="bi bi-trash"></i> Delete Meeting
                             </button>

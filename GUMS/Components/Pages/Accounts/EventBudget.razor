@@ -1,0 +1,249 @@
+@page "/Accounts/EventBudget/{MeetingId:int}"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Event Budget - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/Accounts">Accounts</a></li>
+            <li class="breadcrumb-item active">Event Budget</li>
+        </ol>
+    </nav>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="() => _successMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (_meeting == null)
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle-fill"></i> Meeting not found.
+        </div>
+    }
+    else
+    {
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>@_meeting.Title - Budget</h2>
+            <div>
+                <a href="/Accounts/BudgetComparison/@MeetingId" class="btn btn-outline-primary me-2">
+                    <i class="bi bi-bar-chart"></i> Budget vs Actual
+                </a>
+                <a href="/Meetings/View/@MeetingId" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Meeting
+                </a>
+            </div>
+        </div>
+
+        @if (_budget == null)
+        {
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-calculator" style="font-size: 3rem; color: #6c757d;"></i>
+                    <p class="text-muted mt-3 mb-3">No budget has been created for this event yet.</p>
+                    <button class="btn btn-primary" @onclick="CreateBudget">
+                        <i class="bi bi-plus-circle"></i> Create Budget
+                    </button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Budget Items -->
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background-color: var(--gg-primary-blue); color: white;">
+                            <h5 class="mb-0">
+                                <i class="bi bi-list-ul"></i> Budget Items
+                            </h5>
+                            <button class="btn btn-sm btn-light" @onclick="ShowAddItem">
+                                <i class="bi bi-plus-circle"></i> Add Item
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            @if (!_budget.Items.Any())
+                            {
+                                <p class="text-muted text-center py-3">No budget items yet. Add items to start planning costs.</p>
+                            }
+                            else
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Description</th>
+                                                <th>Type</th>
+                                                <th class="text-end">Amount</th>
+                                                <th>Status</th>
+                                                <th>Category</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var item in _budget.Items)
+                                            {
+                                                <tr>
+                                                    <td>@item.Description</td>
+                                                    <td>
+                                                        <span class="badge @GetCostTypeBadgeClass(item.CostType)">
+                                                            @GetCostTypeLabel(item.CostType)
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-end">@item.Amount.ToString("C")</td>
+                                                    <td>
+                                                        <span class="badge @(item.CostStatus == BudgetCostStatus.Confirmed ? "bg-success" : "bg-warning text-dark")">
+                                                            @item.CostStatus
+                                                        </span>
+                                                    </td>
+                                                    <td>@(item.ExpenseAccount?.Name ?? "-")</td>
+                                                    <td class="text-end">
+                                                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditItem(item)">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteItem(item.Id)">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+
+                            @if (_showItemForm)
+                            {
+                                <hr />
+                                <h6>@(_editingItemId.HasValue ? "Edit" : "Add") Budget Item</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Description</label>
+                                        <input type="text" class="form-control" @bind="_itemDescription" maxlength="200" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Cost Type</label>
+                                        <select class="form-select" @bind="_itemCostType">
+                                            <option value="@BudgetCostType.PerGirl">Per Girl</option>
+                                            <option value="@BudgetCostType.PerAdult">Per Adult</option>
+                                            <option value="@BudgetCostType.FixedTotal">Fixed Total</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Amount</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">£</span>
+                                            <input type="number" class="form-control" @bind="_itemAmount" step="0.01" min="0" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Status</label>
+                                        <select class="form-select" @bind="_itemCostStatus">
+                                            <option value="@BudgetCostStatus.Estimate">Estimate</option>
+                                            <option value="@BudgetCostStatus.Confirmed">Confirmed</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Expense Category</label>
+                                        <select class="form-select" @bind="_itemExpenseAccountId">
+                                            <option value="">-- None --</option>
+                                            @foreach (var account in _expenseAccounts)
+                                            {
+                                                <option value="@account.Id">@account.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 d-flex align-items-end gap-2">
+                                        <button class="btn btn-primary" @onclick="SaveItem">
+                                            <i class="bi bi-check-lg"></i> Save
+                                        </button>
+                                        <button class="btn btn-secondary" @onclick="CancelItemForm">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <!-- Estimate Summary -->
+                    @if (_estimate != null)
+                    {
+                        <div class="card mb-4">
+                            <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
+                                <h6 class="mb-0 text-white">
+                                    <i class="bi bi-graph-up"></i> Cost Estimates
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted small mb-3">
+                                    Based on @_estimate.GirlCount girl(s) and @_estimate.AdultCount adult(s)
+                                </p>
+
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between">
+                                        <strong>High (100%)</strong>
+                                        <span>@_estimate.HighTotal.ToString("C")</span>
+                                    </div>
+                                    <small class="text-muted">@_estimate.HighPerPerson.ToString("C") per person</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between">
+                                        <strong>Mid (75%)</strong>
+                                        <span>@_estimate.MidTotal.ToString("C")</span>
+                                    </div>
+                                    <small class="text-muted">@_estimate.MidPerPerson.ToString("C") per person</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between">
+                                        <strong>Low (50%)</strong>
+                                        <span>@_estimate.LowTotal.ToString("C")</span>
+                                    </div>
+                                    <small class="text-muted">@_estimate.LowPerPerson.ToString("C") per person</small>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Notes -->
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title"><i class="bi bi-sticky"></i> Notes</h6>
+                            <textarea class="form-control" rows="3" @bind="_budgetNotes" placeholder="Budget notes..."></textarea>
+                            <button class="btn btn-sm btn-outline-primary mt-2" @onclick="SaveNotes">
+                                Save Notes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>

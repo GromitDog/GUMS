@@ -365,8 +365,6 @@ For activities requiring consent:
 
 ### Phase 2 - Advanced Features
 - Badge tracking and progress
-- Leader expense management
-- Event budgeting and financial reporting
 - Multi-user access with roles
 - Document storage (consent forms, policies)
 - Integrated email sending (currently external)
@@ -476,9 +474,9 @@ For activities requiring consent:
 
 ---
 
-*Document Version: 1.2*
-*Last Updated: 2026-01-05*
-*Status: Phase 1 Implementation Complete - See PROGRESS.md and PHASE1_AUDIT.md*
+*Document Version: 1.3*
+*Last Updated: 2026-01-30*
+*Status: Phase 1-3 Implementation Complete, Event Budgeting Added - See PROGRESS.md*
 
 ---
 

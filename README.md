@@ -14,14 +14,30 @@ A desktop application for managing Girlguiding units, built with ASP.NET Core Bl
 ### Phase 2: Meetings & Attendance
 - Configure school terms with dates and subscription amounts
 - Plan regular weekly meetings with smart date suggestions
-- Create special events with costs and payment deadlines
+- Create special events (including multi-day camps) with costs and payment deadlines
 - Track activities and consent requirements
 - Quick attendance recording with bulk actions
 - Attendance alerts for full-term absences and low attendance
 
+### Phase 3: Payments & Accounts
+- Termly subscription generation and tracking
+- Activity payment tracking with partial payment support
+- Overdue payment monitoring
+- Double-entry accounting with chart of accounts
+- Bank deposits and transaction journal
+- Expense recording (direct and via expense claims)
+- Expense claim workflow (submit, approve, reimburse)
+- Expense account/category management
+- Event financial summaries (income vs expenses per meeting)
+- Event budgeting with per-girl, per-adult, and fixed cost types
+- High/mid/low attendance scenario cost estimates
+- Budget vs actual comparison with variance highlighting
+
+### Reports
+- Nights away tracking
+
 ### Coming Soon
-- Phase 3: Payment tracking
-- Phase 4: Communications and reports
+- Phase 4: Communications and email list generation
 
 ## Requirements
 
@@ -63,34 +79,43 @@ dotnet test GUMS.Tests/GUMS.Tests.csproj
 dotnet test GUMS.Tests/GUMS.Tests.csproj --verbosity normal
 ```
 
-Current test count: **119 tests** covering all services.
+Test suites cover: ConfigurationService, PersonService, TermService, MeetingService, AttendanceService, PaymentService, AccountingService.
 
 ## Project Structure
 
 ```
 GUMS/
 ├── Data/
-│   ├── Entities/          # Entity classes (Person, Meeting, etc.)
-│   ├── Enums/             # Enumerations (PersonType, Section, etc.)
+│   ├── Entities/          # Entity classes (16 entities)
+│   ├── Enums/             # Enumerations (11 enums)
 │   └── ApplicationDbContext.cs
 ├── Services/              # Business logic layer
 │   ├── IConfigurationService.cs / ConfigurationService.cs
 │   ├── IPersonService.cs / PersonService.cs
 │   ├── ITermService.cs / TermService.cs
 │   ├── IMeetingService.cs / MeetingService.cs
-│   └── IAttendanceService.cs / AttendanceService.cs
+│   ├── IAttendanceService.cs / AttendanceService.cs
+│   ├── IPaymentService.cs / PaymentService.cs
+│   ├── IAccountingService.cs / AccountingService.cs
+│   ├── IBudgetService.cs / BudgetService.cs
+│   └── DatabaseSecurityService.cs
 ├── Components/
 │   ├── Pages/             # Blazor pages
-│   │   ├── Register/      # Member management pages
-│   │   ├── Meetings/      # Meeting and attendance pages
-│   │   └── Configuration/ # Settings pages
+│   │   ├── Register/      # Member management (5 pages)
+│   │   ├── Meetings/      # Meeting and attendance (8 pages)
+│   │   ├── Payments/      # Payment tracking (5 pages)
+│   │   ├── Accounts/      # Accounting and budgeting (11 pages)
+│   │   ├── Reports/       # Nights away (1 page)
+│   │   └── Configuration/ # Settings (2 pages)
 │   ├── Layout/            # MainLayout, NavMenu
-│   └── Shared/            # Reusable components
-├── Migrations/            # EF Core migrations
+│   └── Shared/            # Reusable components (EmergencyContactEditor)
+├── Pages/
+│   └── Account/           # Razor Pages for auth (Login, Setup, Logout)
+├── Migrations/            # EF Core migrations (6 migrations)
 └── wwwroot/               # Static files, CSS, logo
 
 GUMS.Tests/
-└── Services/              # Unit tests for all services
+└── Services/              # Unit tests for all services (7 test classes)
 ```
 
 ## Database
