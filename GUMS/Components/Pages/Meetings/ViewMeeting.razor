@@ -292,10 +292,9 @@
                             </a>
                             @if (meeting.CostPerAttendee.HasValue && meeting.CostPerAttendee.Value > 0)
                             {
-                                <button class="btn btn-outline-secondary" disabled>
-                                    <i class="bi bi-currency-pound"></i> View Payments
-                                    <small class="d-block">Coming Soon</small>
-                                </button>
+                                <a href="/Accounts/EventAccounts/@MeetingId" class="btn btn-outline-success">
+                                    <i class="bi bi-currency-pound"></i> View Event Accounts
+                                </a>
                             }
                             <button class="btn btn-outline-danger" @onclick="ShowDeleteConfirm">
                                 <i class="bi bi-trash"></i> Delete Meeting

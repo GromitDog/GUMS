@@ -13,5 +13,10 @@ public enum AccountType
     /// <summary>
     /// Income accounts (Subscription Income, Activity Income)
     /// </summary>
-    Income
+    Income,
+
+    /// <summary>
+    /// Expense accounts (Supplies, Equipment, etc.) - Debit increases balance (same as Asset)
+    /// </summary>
+    Expense
 }

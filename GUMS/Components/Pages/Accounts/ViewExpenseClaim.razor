@@ -1,0 +1,247 @@
+@page "/Accounts/Claims/{ClaimId:int}"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>View Expense Claim - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/Accounts/Claims">Expense Claims</a></li>
+            <li class="breadcrumb-item active">Claim Details</li>
+        </ol>
+    </nav>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="() => _successMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (_claim == null)
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle-fill"></i> Expense claim not found.
+        </div>
+    }
+    else
+    {
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Expense Claim - @_claim.ClaimedBy</h2>
+            <div>
+                @switch (_claim.Status)
+                {
+                    case ExpenseClaimStatus.Draft:
+                        <span class="badge bg-secondary fs-6">Draft</span>
+                        break;
+                    case ExpenseClaimStatus.Submitted:
+                        <span class="badge bg-warning text-dark fs-6">Submitted</span>
+                        break;
+                    case ExpenseClaimStatus.Settled:
+                        <span class="badge bg-success fs-6">Settled</span>
+                        break;
+                }
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Claim Details -->
+                <div class="card mb-4">
+                    <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                        <h5 class="mb-0"><i class="bi bi-receipt"></i> Claim Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Claimed By</dt>
+                            <dd class="col-sm-8">@_claim.ClaimedBy</dd>
+                            <dt class="col-sm-4">Submitted Date</dt>
+                            <dd class="col-sm-8">@_claim.SubmittedDate.ToString("dd MMMM yyyy")</dd>
+                            @if (!string.IsNullOrEmpty(_claim.Notes))
+                            {
+                                <dt class="col-sm-4">Notes</dt>
+                                <dd class="col-sm-8">@_claim.Notes</dd>
+                            }
+                            @if (_claim.Status == ExpenseClaimStatus.Settled)
+                            {
+                                <dt class="col-sm-4">Settled Date</dt>
+                                <dd class="col-sm-8">@_claim.SettledDate?.ToString("dd MMMM yyyy")</dd>
+                                <dt class="col-sm-4">Payment Method</dt>
+                                <dd class="col-sm-8">@_claim.PaymentMethod</dd>
+                                <dt class="col-sm-4">Paid From</dt>
+                                <dd class="col-sm-8">@_claim.PaidFromAccount?.Name</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+
+                <!-- Expense Items -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-list-check"></i> Expense Items (@_claim.Expenses.Count)</h5>
+                        @if (_claim.Status == ExpenseClaimStatus.Draft)
+                        {
+                            <a href="/Accounts/RecordExpense" class="btn btn-sm btn-primary">
+                                <i class="bi bi-plus-circle"></i> Add Item
+                            </a>
+                        }
+                    </div>
+                    <div class="card-body">
+                        @if (!_claim.Expenses.Any())
+                        {
+                            <p class="text-muted text-center py-3">No expense items yet.</p>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Description</th>
+                                            <th>Category</th>
+                                            <th class="text-end">Amount</th>
+                                            <th>Event</th>
+                                            @if (_claim.Status == ExpenseClaimStatus.Draft)
+                                            {
+                                                <th>Actions</th>
+                                            }
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var expense in _claim.Expenses)
+                                        {
+                                            <tr>
+                                                <td>@expense.Date.ToString("dd MMM yyyy")</td>
+                                                <td>
+                                                    @expense.Description
+                                                    @if (!string.IsNullOrEmpty(expense.Reference))
+                                                    {
+                                                        <br /><small class="text-muted">Ref: @expense.Reference</small>
+                                                    }
+                                                </td>
+                                                <td>@expense.ExpenseAccount?.Name</td>
+                                                <td class="text-end">@expense.Amount.ToString("C")</td>
+                                                <td>
+                                                    @if (expense.Meeting != null)
+                                                    {
+                                                        <text>@expense.Meeting.Title</text>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">-</span>
+                                                    }
+                                                </td>
+                                                @if (_claim.Status == ExpenseClaimStatus.Draft)
+                                                {
+                                                    <td>
+                                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveExpense(expense.Id)">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </td>
+                                                }
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="table-active">
+                                            <td colspan="3"><strong>Total</strong></td>
+                                            <td class="text-end"><strong>@_claim.TotalAmount.ToString("C")</strong></td>
+                                            <td colspan="@(_claim.Status == ExpenseClaimStatus.Draft ? 2 : 1)"></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <!-- Total -->
+                <div class="card mb-3">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Total Claim Amount</h6>
+                        <h2 class="text-danger">@_claim.TotalAmount.ToString("C")</h2>
+                    </div>
+                </div>
+
+                <!-- Settle Claim -->
+                @if (_claim.Status != ExpenseClaimStatus.Settled && _claim.Expenses.Any())
+                {
+                    <div class="card mb-3">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0 text-white"><i class="bi bi-check-circle"></i> Settle Claim</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Pay From</label>
+                                <select class="form-select" @bind="_settlePaidFromId">
+                                    <option value="0">-- Select Account --</option>
+                                    @foreach (var account in _assetAccounts)
+                                    {
+                                        <option value="@account.Id">@account.Name (@account.Balance.ToString("C"))</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Payment Method</label>
+                                <select class="form-select" @bind="_settlePaymentMethod">
+                                    <option value="@PaymentMethod.Cash">Cash</option>
+                                    <option value="@PaymentMethod.Cheque">Cheque</option>
+                                    <option value="@PaymentMethod.BankTransfer">Bank Transfer</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Settlement Date</label>
+                                <input type="date" class="form-control" @bind="_settleDate" />
+                            </div>
+                            <div class="d-grid">
+                                <button class="btn btn-success" @onclick="SettleClaim" disabled="@(_isSettling || _settlePaidFromId == 0)">
+                                    @if (_isSettling)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    <i class="bi bi-check-circle"></i> Settle @_claim.TotalAmount.ToString("C")
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @if (_claim.Status == ExpenseClaimStatus.Draft)
+                {
+                    <div class="card">
+                        <div class="card-body">
+                            <h6><i class="bi bi-info-circle"></i> Status: Draft</h6>
+                            <p class="text-muted small mb-2">This claim is still being prepared. Add expense items, then settle when ready.</p>
+                            <button class="btn btn-sm btn-outline-primary w-100" @onclick="SubmitClaim">
+                                <i class="bi bi-send"></i> Mark as Submitted
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

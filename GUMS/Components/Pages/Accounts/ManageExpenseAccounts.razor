@@ -1,0 +1,131 @@
+@page "/Accounts/ExpenseCategories"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Expense Categories - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Expense Categories</h2>
+        <a href="/Accounts" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Accounts
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="() => _successMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Add New Category -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add New Category</h5>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-end">
+                    <div class="col-md-8">
+                        <label class="form-label">Category Name</label>
+                        <input type="text" class="form-control" @bind="_newCategoryName" placeholder="e.g. Transport, Printing..." />
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-success w-100" @onclick="CreateCategory" disabled="@(string.IsNullOrWhiteSpace(_newCategoryName) || _isSubmitting)">
+                            @if (_isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            <i class="bi bi-plus-circle"></i> Add Category
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Existing Categories -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-list-check"></i> Expense Categories</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Name</th>
+                                <th class="text-end">Balance</th>
+                                <th class="text-end">Transactions</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var account in _expenseAccounts)
+                            {
+                                <tr>
+                                    <td><code>@account.Code</code></td>
+                                    <td>
+                                        @if (_editingAccountId == account.Id)
+                                        {
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" @bind="_editingName" />
+                                                <button class="btn btn-sm btn-success" @onclick="SaveEdit">
+                                                    <i class="bi bi-check"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">
+                                                    <i class="bi bi-x"></i>
+                                                </button>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            @account.Name
+                                        }
+                                    </td>
+                                    <td class="text-end">@account.Balance.ToString("C")</td>
+                                    <td class="text-end">@account.TransactionLines.Count</td>
+                                    <td>
+                                        @if (_editingAccountId != account.Id)
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => StartEdit(account)">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            @if (account.TransactionLines.Count == 0)
+                                            {
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteCategory(account.Id)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            }
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>

@@ -1,0 +1,167 @@
+@page "/Accounts/Expenses"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Expenses - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Expenses</h2>
+        <div>
+            <a href="/Accounts/ExpenseCategories" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-gear"></i> Categories
+            </a>
+            <a href="/Accounts/RecordExpense" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Record Expense
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="() => _successMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">From</label>
+                    <input type="date" class="form-control" @bind="_dateFrom" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">To</label>
+                    <input type="date" class="form-control" @bind="_dateTo" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Category</label>
+                    <select class="form-select" @bind="_filterCategoryId">
+                        <option value="0">All Categories</option>
+                        @foreach (var account in _expenseAccounts)
+                        {
+                            <option value="@account.Id">@account.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary w-100" @onclick="ApplyFilters">
+                        <i class="bi bi-funnel"></i> Apply Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body">
+                @if (!_expenses.Any())
+                {
+                    <div class="text-center py-4">
+                        <i class="bi bi-receipt" style="font-size: 2rem; color: #6c757d;"></i>
+                        <p class="text-muted mt-2">No expenses found.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Category</th>
+                                    <th class="text-end">Amount</th>
+                                    <th>Event</th>
+                                    <th>Type</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var expense in _expenses)
+                                {
+                                    <tr>
+                                        <td>@expense.Date.ToString("dd MMM yyyy")</td>
+                                        <td>
+                                            @expense.Description
+                                            @if (!string.IsNullOrEmpty(expense.Reference))
+                                            {
+                                                <br /><small class="text-muted">Ref: @expense.Reference</small>
+                                            }
+                                        </td>
+                                        <td>@expense.ExpenseAccount?.Name</td>
+                                        <td class="text-end"><strong>@expense.Amount.ToString("C")</strong></td>
+                                        <td>
+                                            @if (expense.Meeting != null)
+                                            {
+                                                <a href="/Meetings/View/@expense.MeetingId">@expense.Meeting.Title</a>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (expense.ExpenseClaimId.HasValue)
+                                            {
+                                                <span class="badge bg-warning text-dark">Claim</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-info">Direct</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!expense.ExpenseClaimId.HasValue)
+                                            {
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteExpense(expense.Id)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <a href="/Accounts/Claims/@expense.ExpenseClaimId" class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-active">
+                                    <td colspan="3"><strong>Total</strong></td>
+                                    <td class="text-end"><strong>@_expenses.Sum(e => e.Amount).ToString("C")</strong></td>
+                                    <td colspan="3"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

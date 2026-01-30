@@ -69,12 +69,6 @@ public interface IAccountingService
     /// Records the accounting entries for a payment.
     /// Creates debit to asset account, credit to income account.
     /// </summary>
-    /// <param name="paymentId">The payment ID.</param>
-    /// <param name="amount">The amount being paid.</param>
-    /// <param name="paymentMethod">How the payment was received.</param>
-    /// <param name="paymentType">Type of payment (Subs or Activity).</param>
-    /// <param name="description">Description for the journal entry.</param>
-    /// <param name="date">Date of the transaction.</param>
     Task<(bool Success, string ErrorMessage)> RecordPaymentEntryAsync(
         int paymentId,
         decimal amount,
@@ -88,15 +82,101 @@ public interface IAccountingService
     /// <summary>
     /// Records a bank deposit (moving cash and/or cheques to the bank account).
     /// </summary>
-    /// <param name="cashAmount">Amount of cash to deposit.</param>
-    /// <param name="chequeAmount">Amount of cheques to deposit.</param>
-    /// <param name="date">Date of deposit.</param>
-    /// <param name="notes">Optional notes about the deposit.</param>
     Task<(bool Success, string ErrorMessage)> BankDepositAsync(
         decimal cashAmount,
         decimal chequeAmount,
         DateTime date,
         string? notes = null);
+
+    // ===== Expense Account Management =====
+
+    /// <summary>
+    /// Gets all expense accounts.
+    /// </summary>
+    Task<List<Account>> GetExpenseAccountsAsync();
+
+    /// <summary>
+    /// Creates a new expense account with auto-assigned code.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage, Account? Account)> CreateExpenseAccountAsync(string name);
+
+    /// <summary>
+    /// Updates the name of an expense account.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage)> UpdateExpenseAccountAsync(int accountId, string name);
+
+    /// <summary>
+    /// Deletes an expense account (only if no transactions exist).
+    /// </summary>
+    Task<(bool Success, string ErrorMessage)> DeleteExpenseAccountAsync(int accountId);
+
+    // ===== Direct Expense Recording =====
+
+    /// <summary>
+    /// Records a direct expense paid from unit funds.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage, Expense? Expense)> RecordDirectExpenseAsync(Expense expense);
+
+    /// <summary>
+    /// Deletes a direct expense and reverses its transaction.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage)> DeleteDirectExpenseAsync(int expenseId);
+
+    // ===== Expense Queries =====
+
+    /// <summary>
+    /// Gets expenses with optional filters.
+    /// </summary>
+    Task<List<Expense>> GetExpensesAsync(DateTime? dateFrom = null, DateTime? dateTo = null, int? expenseAccountId = null, int? meetingId = null);
+
+    /// <summary>
+    /// Gets an expense by its ID.
+    /// </summary>
+    Task<Expense?> GetExpenseByIdAsync(int id);
+
+    // ===== Reimbursement Claims =====
+
+    /// <summary>
+    /// Creates a new expense claim in Draft status.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage, ExpenseClaim? Claim)> CreateExpenseClaimAsync(ExpenseClaim claim);
+
+    /// <summary>
+    /// Adds an expense to an existing draft claim.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage)> AddExpenseToClaimAsync(int claimId, Expense expense);
+
+    /// <summary>
+    /// Removes an expense from a draft claim.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage)> RemoveExpenseFromClaimAsync(int expenseId);
+
+    /// <summary>
+    /// Settles an expense claim, creating accounting entries.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage)> SettleExpenseClaimAsync(int claimId, int paidFromAccountId, PaymentMethod paymentMethod, DateTime settledDate);
+
+    /// <summary>
+    /// Gets expense claims with optional status filter.
+    /// </summary>
+    Task<List<ExpenseClaim>> GetExpenseClaimsAsync(ExpenseClaimStatus? status = null);
+
+    /// <summary>
+    /// Gets an expense claim by its ID.
+    /// </summary>
+    Task<ExpenseClaim?> GetExpenseClaimByIdAsync(int id);
+
+    /// <summary>
+    /// Deletes an expense claim (only if not settled).
+    /// </summary>
+    Task<(bool Success, string ErrorMessage)> DeleteExpenseClaimAsync(int claimId);
+
+    // ===== Event-Level Reporting =====
+
+    /// <summary>
+    /// Gets the financial summary for a specific event/meeting.
+    /// </summary>
+    Task<EventFinancialSummary> GetEventFinancialSummaryAsync(int meetingId);
 
     // ===== Reporting =====
 
@@ -104,6 +184,11 @@ public interface IAccountingService
     /// Gets an income report for a date range.
     /// </summary>
     Task<IncomeReport> GetIncomeReportAsync(DateTime dateFrom, DateTime dateTo);
+
+    /// <summary>
+    /// Gets an expense report for a date range.
+    /// </summary>
+    Task<ExpenseReport> GetExpenseReportAsync(DateTime dateFrom, DateTime dateTo);
 
     /// <summary>
     /// Gets accounting dashboard statistics.
@@ -153,4 +238,56 @@ public class AccountingDashboardStats
     public decimal SubsIncomeThisTerm { get; set; }
     public decimal ActivityIncomeThisTerm { get; set; }
     public decimal TotalIncomeThisTerm => SubsIncomeThisTerm + ActivityIncomeThisTerm;
+    public decimal TotalExpensesThisTerm { get; set; }
+    public decimal NetIncomeThisTerm => TotalIncomeThisTerm - TotalExpensesThisTerm;
+    public int PendingClaimsCount { get; set; }
+    public decimal PendingClaimsAmount { get; set; }
+}
+
+/// <summary>
+/// Financial summary for a specific event/meeting.
+/// </summary>
+public class EventFinancialSummary
+{
+    public int MeetingId { get; set; }
+    public string MeetingTitle { get; set; } = string.Empty;
+    public decimal TotalIncome { get; set; }
+    public decimal TotalExpenses { get; set; }
+    public decimal NetPosition => TotalIncome - TotalExpenses;
+    public List<EventIncomeBreakdown> IncomeBreakdown { get; set; } = new();
+    public List<EventExpenseBreakdown> ExpenseBreakdown { get; set; } = new();
+}
+
+public class EventIncomeBreakdown
+{
+    public string Description { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+}
+
+public class EventExpenseBreakdown
+{
+    public string CategoryName { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+}
+
+/// <summary>
+/// Expense report showing expenses by category for a date range.
+/// </summary>
+public class ExpenseReport
+{
+    public DateTime DateFrom { get; set; }
+    public DateTime DateTo { get; set; }
+    public decimal TotalExpenses { get; set; }
+    public List<ExpenseReportLine> Lines { get; set; } = new();
+}
+
+/// <summary>
+/// Line item in an expense report.
+/// </summary>
+public class ExpenseReportLine
+{
+    public string AccountName { get; set; } = string.Empty;
+    public string AccountCode { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public int TransactionCount { get; set; }
 }

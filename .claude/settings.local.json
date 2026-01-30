@@ -27,7 +27,11 @@
       "Bash(del \"C:\\\\Users\\\\amyjm\\\\RiderProjects\\\\GUMS\\\\GUMS\\\\Data\\\\SqlCipherConnectionInterceptor.cs\")",
       "Bash(dotnet run:*)",
       "Bash(mkdir:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(dotnet ef database:*)",
+      "Bash(git status:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd multi-day meetings and nights away tracking\n\n- Add EndDate field to Meeting entity for multi-day events \\(camps, sleepovers\\)\n- Add NightsAway field to Attendance entity, auto-calculated but editable\n- Update MeetingService with CalculateNightsForMeeting\\(\\) and validation\n- Extend AttendanceService with nights away tracking methods:\n  - GetTotalNightsAwayAsync\\(\\) - cumulative total for a member\n  - GetNightsAwayInRangeAsync\\(\\) - filtered by date range\n  - UpdateNightsAwayAsync\\(\\) - manual override for early departures\n  - GetNightsAwaySummaryAsync\\(\\) - summary for all members\n- Update EditMeeting and AddExtraMeeting UI with EndDate picker\n- Update ViewMeeting to show date range and nights for multi-day events\n- Update RecordAttendance with editable NightsAway column for multi-day meetings\n- Add Reports/NightsAway page showing cumulative nights away per member\n- Add Reports section to navigation menu\n- Add 16 new unit tests for multi-day meetings and nights away\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)"
     ]
   }
 }

@@ -1,0 +1,121 @@
+@page "/Accounts/Claims"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Expense Claims - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Expense Claims</h2>
+        <a href="/Accounts/RecordExpense" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> New Claim
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="() => _successMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    <!-- Status Filter -->
+    <div class="btn-group mb-4" role="group">
+        <button type="button" class="btn @(_filterStatus == null ? "btn-primary" : "btn-outline-primary")" @onclick="() => FilterByStatus(null)">
+            All
+        </button>
+        <button type="button" class="btn @(_filterStatus == ExpenseClaimStatus.Draft ? "btn-primary" : "btn-outline-primary")" @onclick="() => FilterByStatus(ExpenseClaimStatus.Draft)">
+            Draft
+        </button>
+        <button type="button" class="btn @(_filterStatus == ExpenseClaimStatus.Submitted ? "btn-primary" : "btn-outline-primary")" @onclick="() => FilterByStatus(ExpenseClaimStatus.Submitted)">
+            Submitted
+        </button>
+        <button type="button" class="btn @(_filterStatus == ExpenseClaimStatus.Settled ? "btn-primary" : "btn-outline-primary")" @onclick="() => FilterByStatus(ExpenseClaimStatus.Settled)">
+            Settled
+        </button>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (!_claims.Any())
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-receipt" style="font-size: 2rem; color: #6c757d;"></i>
+            <p class="text-muted mt-2">No expense claims found.</p>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Claimed By</th>
+                                <th>Items</th>
+                                <th class="text-end">Amount</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var claim in _claims)
+                            {
+                                <tr>
+                                    <td>@claim.SubmittedDate.ToString("dd MMM yyyy")</td>
+                                    <td>@claim.ClaimedBy</td>
+                                    <td>@claim.Expenses.Count item(s)</td>
+                                    <td class="text-end"><strong>@claim.TotalAmount.ToString("C")</strong></td>
+                                    <td>
+                                        @switch (claim.Status)
+                                        {
+                                            case ExpenseClaimStatus.Draft:
+                                                <span class="badge bg-secondary">Draft</span>
+                                                break;
+                                            case ExpenseClaimStatus.Submitted:
+                                                <span class="badge bg-warning text-dark">Submitted</span>
+                                                break;
+                                            case ExpenseClaimStatus.Settled:
+                                                <span class="badge bg-success">Settled</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        <a href="/Accounts/Claims/@claim.Id" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> View
+                                        </a>
+                                        @if (claim.Status != ExpenseClaimStatus.Settled)
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteClaim(claim.Id)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>

@@ -25,6 +25,8 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     public DbSet<Account> Accounts { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<TransactionLine> TransactionLines { get; set; }
+    public DbSet<Expense> Expenses { get; set; }
+    public DbSet<ExpenseClaim> ExpenseClaims { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -194,6 +196,63 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
                 .WithMany(a => a.TransactionLines)
                 .HasForeignKey(tl => tl.AccountId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Expense configuration
+        modelBuilder.Entity<Expense>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Date);
+            entity.HasIndex(e => e.ExpenseAccountId);
+            entity.HasIndex(e => e.MeetingId);
+            entity.HasIndex(e => e.ExpenseClaimId);
+
+            entity.Property(e => e.Amount).HasPrecision(18, 2);
+            entity.Property(e => e.Description).IsRequired();
+
+            entity.HasOne(e => e.ExpenseAccount)
+                .WithMany()
+                .HasForeignKey(e => e.ExpenseAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.PaidFromAccount)
+                .WithMany()
+                .HasForeignKey(e => e.PaidFromAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Meeting)
+                .WithMany()
+                .HasForeignKey(e => e.MeetingId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Transaction)
+                .WithMany()
+                .HasForeignKey(e => e.TransactionId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.ExpenseClaim)
+                .WithMany(ec => ec.Expenses)
+                .HasForeignKey(e => e.ExpenseClaimId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // ExpenseClaim configuration
+        modelBuilder.Entity<ExpenseClaim>(entity =>
+        {
+            entity.HasKey(ec => ec.Id);
+            entity.HasIndex(ec => ec.Status);
+
+            entity.Property(ec => ec.ClaimedBy).IsRequired();
+
+            entity.HasOne(ec => ec.PaidFromAccount)
+                .WithMany()
+                .HasForeignKey(ec => ec.PaidFromAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(ec => ec.Transaction)
+                .WithMany()
+                .HasForeignKey(ec => ec.TransactionId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

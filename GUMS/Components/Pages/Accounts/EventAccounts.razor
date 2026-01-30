@@ -1,0 +1,153 @@
+@page "/Accounts/EventAccounts/{MeetingId:int}"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Event Accounts - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/Accounts">Accounts</a></li>
+            <li class="breadcrumb-item active">Event Accounts</li>
+        </ol>
+    </nav>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (_summary == null)
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle-fill"></i> Event not found.
+        </div>
+    }
+    else
+    {
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>@_summary.MeetingTitle - Financial Summary</h2>
+            <a href="/Meetings/View/@MeetingId" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Meeting
+            </a>
+        </div>
+
+        <!-- Net Position -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Total Income</h6>
+                        <h2 class="text-success">@_summary.TotalIncome.ToString("C")</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Total Expenses</h6>
+                        <h2 class="text-danger">@_summary.TotalExpenses.ToString("C")</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 @(_summary.NetPosition >= 0 ? "border-success" : "border-danger")">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Net Position</h6>
+                        <h2 class="@(_summary.NetPosition >= 0 ? "text-success" : "text-danger")">
+                            @_summary.NetPosition.ToString("C")
+                        </h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Income Breakdown -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-graph-up-arrow"></i> Income</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (!_summary.IncomeBreakdown.Any())
+                        {
+                            <p class="text-muted text-center py-3">No income recorded for this event.</p>
+                        }
+                        else
+                        {
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Description</th>
+                                        <th class="text-end">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in _summary.IncomeBreakdown)
+                                    {
+                                        <tr>
+                                            <td>@item.Description</td>
+                                            <td class="text-end">@item.Amount.ToString("C")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr class="table-success">
+                                        <td><strong>Total</strong></td>
+                                        <td class="text-end"><strong>@_summary.TotalIncome.ToString("C")</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expense Breakdown -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0"><i class="bi bi-graph-down-arrow"></i> Expenses</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (!_summary.ExpenseBreakdown.Any())
+                        {
+                            <p class="text-muted text-center py-3">No expenses recorded for this event.</p>
+                        }
+                        else
+                        {
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Category</th>
+                                        <th class="text-end">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in _summary.ExpenseBreakdown)
+                                    {
+                                        <tr>
+                                            <td>@item.CategoryName</td>
+                                            <td class="text-end">@item.Amount.ToString("C")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr class="table-danger">
+                                        <td><strong>Total</strong></td>
+                                        <td class="text-end"><strong>@_summary.TotalExpenses.ToString("C")</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
