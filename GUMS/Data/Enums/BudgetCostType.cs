@@ -4,5 +4,6 @@ public enum BudgetCostType
 {
     PerGirl,
     PerAdult,
+    PerPerson,
     FixedTotal
 }

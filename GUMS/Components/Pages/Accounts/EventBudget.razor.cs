@@ -193,6 +193,7 @@ public partial class EventBudget
     {
         BudgetCostType.PerGirl => "bg-info",
         BudgetCostType.PerAdult => "bg-primary",
+        BudgetCostType.PerPerson => "bg-success",
         BudgetCostType.FixedTotal => "bg-secondary",
         _ => "bg-secondary"
     };
@@ -201,6 +202,7 @@ public partial class EventBudget
     {
         BudgetCostType.PerGirl => "Per Girl",
         BudgetCostType.PerAdult => "Per Adult",
+        BudgetCostType.PerPerson => "Per Person",
         BudgetCostType.FixedTotal => "Fixed",
         _ => costType.ToString()
     };

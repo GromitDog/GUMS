@@ -149,6 +149,7 @@
                                         <select class="form-select" @bind="_itemCostType">
                                             <option value="@BudgetCostType.PerGirl">Per Girl</option>
                                             <option value="@BudgetCostType.PerAdult">Per Adult</option>
+                                            <option value="@BudgetCostType.PerPerson">Per Person (all)</option>
                                             <option value="@BudgetCostType.FixedTotal">Fixed Total</option>
                                         </select>
                                     </div>
@@ -210,7 +211,10 @@
                                         <strong>High (100%)</strong>
                                         <span>@_estimate.HighTotal.ToString("C")</span>
                                     </div>
-                                    <small class="text-muted">@_estimate.HighPerPerson.ToString("C") per person</small>
+                                    <small class="text-muted">
+                                        @_estimate.HighPerGirl.ToString("C") per girl
+                                        &middot; @_estimate.HighPerPerson.ToString("C") per head
+                                    </small>
                                 </div>
 
                                 <div class="mb-3">
@@ -218,7 +222,10 @@
                                         <strong>Mid (75%)</strong>
                                         <span>@_estimate.MidTotal.ToString("C")</span>
                                     </div>
-                                    <small class="text-muted">@_estimate.MidPerPerson.ToString("C") per person</small>
+                                    <small class="text-muted">
+                                        @_estimate.MidPerGirl.ToString("C") per girl
+                                        &middot; @_estimate.MidPerPerson.ToString("C") per head
+                                    </small>
                                 </div>
 
                                 <div class="mb-3">
@@ -226,7 +233,10 @@
                                         <strong>Low (50%)</strong>
                                         <span>@_estimate.LowTotal.ToString("C")</span>
                                     </div>
-                                    <small class="text-muted">@_estimate.LowPerPerson.ToString("C") per person</small>
+                                    <small class="text-muted">
+                                        @_estimate.LowPerGirl.ToString("C") per girl
+                                        &middot; @_estimate.LowPerPerson.ToString("C") per head
+                                    </small>
                                 </div>
                             </div>
                         </div>

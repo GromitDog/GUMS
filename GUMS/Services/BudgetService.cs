@@ -144,6 +144,14 @@ public class BudgetService : IBudgetService
         estimate.MidPerPerson = midHeadcount > 0 ? estimate.MidTotal / midHeadcount : 0;
         estimate.LowPerPerson = lowHeadcount > 0 ? estimate.LowTotal / lowHeadcount : 0;
 
+        var highGirls = girlCount * 1.0m;
+        var midGirls = girlCount * 0.75m;
+        var lowGirls = girlCount * 0.5m;
+
+        estimate.HighPerGirl = highGirls > 0 ? estimate.HighTotal / highGirls : 0;
+        estimate.MidPerGirl = midGirls > 0 ? estimate.MidTotal / midGirls : 0;
+        estimate.LowPerGirl = lowGirls > 0 ? estimate.LowTotal / lowGirls : 0;
+
         return estimate;
     }
 
@@ -231,6 +239,7 @@ public class BudgetService : IBudgetService
             {
                 BudgetCostType.PerGirl => item.Amount * girlCount * attendancePct,
                 BudgetCostType.PerAdult => item.Amount * adultCount * attendancePct,
+                BudgetCostType.PerPerson => item.Amount * (girlCount + adultCount) * attendancePct,
                 BudgetCostType.FixedTotal => item.Amount,
                 _ => 0
             };

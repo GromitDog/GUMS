@@ -25,6 +25,9 @@ public class BudgetEstimate
     public decimal HighPerPerson { get; set; }
     public decimal MidPerPerson { get; set; }
     public decimal LowPerPerson { get; set; }
+    public decimal HighPerGirl { get; set; }
+    public decimal MidPerGirl { get; set; }
+    public decimal LowPerGirl { get; set; }
 }
 
 public class BudgetVsActual
