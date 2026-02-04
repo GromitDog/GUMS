@@ -1,4 +1,5 @@
 using GUMS.Data.Entities;
+using GUMS.Data.Enums;
 using GUMS.Services;
 using Microsoft.AspNetCore.Components;
 
@@ -7,18 +8,22 @@ namespace GUMS.Components.Pages.Meetings;
 public partial class EditMeeting
 {
     [Inject] public required IMeetingService MeetingService { get; set; }
+    [Inject] public required IBadgeService BadgeService { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
 
     [Parameter]
     public int MeetingId { get; set; }
 
     private Meeting? _meeting;
-    private List<Activity> _activities = [];
+    private List<MeetingActivity> _activities = [];
+    private List<BadgeClause> _availableClauses = [];
+    private List<UmaDefinition> _availableUmas = [];
+    private List<BadgeDefinition> _availableFunBadges = [];
     private DateTime _startTime;
     private DateTime _endTime;
 
     private bool _isLoading = true;
-    private bool _isSaving ;
+    private bool _isSaving;
     private bool _showDeleteConfirm;
     private bool _isDeleting;
     private string _errorMessage = string.Empty;
@@ -41,6 +46,10 @@ public partial class EditMeeting
                 _endTime = DateTime.Today.Add(_meeting.EndTime.ToTimeSpan());
                 _activities = await MeetingService.GetActivitiesForMeetingAsync(MeetingId);
             }
+
+            _availableClauses = await BadgeService.SearchClausesAsync(string.Empty);
+            _availableUmas = await BadgeService.SearchUmasAsync(string.Empty);
+            _availableFunBadges = await BadgeService.GetBadgesByFilterAsync(badgeType: BadgeType.FunBadge);
         }
         catch (Exception ex)
         {
@@ -54,7 +63,7 @@ public partial class EditMeeting
 
     private void AddActivity()
     {
-        _activities.Add(new Activity
+        _activities.Add(new MeetingActivity
         {
             MeetingId = MeetingId,
             Name = string.Empty,
@@ -81,7 +90,16 @@ public partial class EditMeeting
 
         try
         {
-            // Set times
+            // Validate: activities with a linked badge/UMA but no name
+            var unnamed = _activities.Where(a =>
+                string.IsNullOrWhiteSpace(a.Name) &&
+                (a.BadgeClauseId.HasValue || a.UmaDefinitionId.HasValue || a.BadgeDefinitionId.HasValue)).ToList();
+            if (unnamed.Any())
+            {
+                _errorMessage = "All activities must have a name.";
+                return;
+            }
+
             _meeting.StartTime = TimeOnly.FromDateTime(_startTime);
             _meeting.EndTime = TimeOnly.FromDateTime(_endTime);
 
@@ -89,7 +107,6 @@ public partial class EditMeeting
 
             if (result.Success)
             {
-                // Update activities separately
                 await UpdateActivities();
                 NavigationManager.NavigateTo($"/Meetings/View/{MeetingId}?success=updated");
             }
@@ -112,7 +129,6 @@ public partial class EditMeeting
     {
         var existingActivities = await MeetingService.GetActivitiesForMeetingAsync(MeetingId);
 
-        // Delete removed activities
         foreach (var existing in existingActivities)
         {
             if (_activities.All(a => a.Id != existing.Id))
@@ -121,7 +137,6 @@ public partial class EditMeeting
             }
         }
 
-        // Update or add activities
         foreach (var activity in _activities.Where(a => !string.IsNullOrWhiteSpace(a.Name)))
         {
             if (activity.Id > 0)
@@ -174,6 +189,42 @@ public partial class EditMeeting
         finally
         {
             _isDeleting = false;
+        }
+    }
+
+    private void SetBadgeClauseId(int activityIndex, ChangeEventArgs e)
+    {
+        var activity = _activities[activityIndex];
+        activity.BadgeClauseId = int.TryParse(e.Value?.ToString(), out var v) ? v : null;
+        if (activity.BadgeClauseId.HasValue && string.IsNullOrWhiteSpace(activity.Name))
+        {
+            var clause = _availableClauses.FirstOrDefault(c => c.Id == activity.BadgeClauseId.Value);
+            if (clause != null)
+                activity.Name = $"{clause.BadgeDefinition?.Name} - {clause.Name}";
+        }
+    }
+
+    private void SetUmaDefinitionId(int activityIndex, ChangeEventArgs e)
+    {
+        var activity = _activities[activityIndex];
+        activity.UmaDefinitionId = int.TryParse(e.Value?.ToString(), out var v) ? v : null;
+        if (activity.UmaDefinitionId.HasValue && string.IsNullOrWhiteSpace(activity.Name))
+        {
+            var uma = _availableUmas.FirstOrDefault(u => u.Id == activity.UmaDefinitionId.Value);
+            if (uma != null)
+                activity.Name = uma.Name;
+        }
+    }
+
+    private void SetBadgeDefinitionId(int activityIndex, ChangeEventArgs e)
+    {
+        var activity = _activities[activityIndex];
+        activity.BadgeDefinitionId = int.TryParse(e.Value?.ToString(), out var v) ? v : null;
+        if (activity.BadgeDefinitionId.HasValue && string.IsNullOrWhiteSpace(activity.Name))
+        {
+            var badge = _availableFunBadges.FirstOrDefault(b => b.Id == activity.BadgeDefinitionId.Value);
+            if (badge != null)
+                activity.Name = badge.Name;
         }
     }
 

@@ -59,3 +59,8 @@ nunit-*.xml
 
 # bootstrap
 */wwwroot/*
+
+
+# null shit
+*/nul/*
+*/nul

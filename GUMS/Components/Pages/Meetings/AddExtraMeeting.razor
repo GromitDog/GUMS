@@ -162,6 +162,41 @@
                                                 </div>
                                             </div>
                                             <div class="row g-2 mt-2">
+                                                <div class="col-md-4">
+                                                    <label class="form-label form-label-sm text-muted">Link to Badge Clause</label>
+                                                    <select class="form-select form-select-sm"
+                                                            @onchange="@(e => SetBadgeClauseId(index, e))">
+                                                        <option value="" selected="@(!activity.BadgeClauseId.HasValue)">None</option>
+                                                        @foreach (var clause in _availableClauses)
+                                                        {
+                                                            <option value="@clause.Id" selected="@(activity.BadgeClauseId == clause.Id)">@clause.BadgeDefinition?.Name - @clause.Name</option>
+                                                        }
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label form-label-sm text-muted">Link to UMA</label>
+                                                    <select class="form-select form-select-sm"
+                                                            @onchange="@(e => SetUmaDefinitionId(index, e))">
+                                                        <option value="" selected="@(!activity.UmaDefinitionId.HasValue)">None</option>
+                                                        @foreach (var uma in _availableUmas)
+                                                        {
+                                                            <option value="@uma.Id" selected="@(activity.UmaDefinitionId == uma.Id)">@uma.Name (@uma.Minutes min)</option>
+                                                        }
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label form-label-sm text-muted">Link to Fun Badge</label>
+                                                    <select class="form-select form-select-sm"
+                                                            @onchange="@(e => SetBadgeDefinitionId(index, e))">
+                                                        <option value="" selected="@(!activity.BadgeDefinitionId.HasValue)">None</option>
+                                                        @foreach (var badge in _availableFunBadges)
+                                                        {
+                                                            <option value="@badge.Id" selected="@(activity.BadgeDefinitionId == badge.Id)">@badge.Name</option>
+                                                        }
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="row g-2 mt-2">
                                                 <div class="col-12">
                                                     <textarea class="form-control form-control-sm"
                                                               rows="2"

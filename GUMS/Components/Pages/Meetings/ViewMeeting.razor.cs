@@ -14,7 +14,7 @@ public partial class ViewMeeting
     public int MeetingId { get; set; }
 
     private Meeting? meeting;
-    private List<Activity> activities = new();
+    private List<MeetingActivity> activities = new();
     private AttendanceStats? attendanceStats;
     private bool requiresConsent = false;
 

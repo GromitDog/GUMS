@@ -126,7 +126,7 @@ public class MeetingServiceTests : IDisposable
             MeetingType = MeetingType.Regular,
             Title = "Test Meeting",
             LocationName = "Hall",
-            Activities = new List<Activity>
+            MeetingActivities = new List<MeetingActivity>
             {
                 new() { Name = "Activity 1", SortOrder = 0 },
                 new() { Name = "Activity 2", SortOrder = 1 }
@@ -141,8 +141,8 @@ public class MeetingServiceTests : IDisposable
 
         // Assert
         result.Should().HaveCount(1);
-        result[0].Activities.Should().HaveCount(2);
-        result[0].Activities[0].Name.Should().Be("Activity 1");
+        result[0].MeetingActivities.Should().HaveCount(2);
+        result[0].MeetingActivities[0].Name.Should().Be("Activity 1");
     }
 
     #endregion
@@ -321,7 +321,7 @@ public class MeetingServiceTests : IDisposable
             MeetingType = MeetingType.Regular,
             Title = "Meeting with Activities",
             LocationName = "Hall",
-            Activities = new List<Activity>
+            MeetingActivities = new List<MeetingActivity>
             {
                 new() { Name = "Activity 1" },
                 new() { Name = "Activity 2" },
@@ -334,9 +334,9 @@ public class MeetingServiceTests : IDisposable
 
         // Assert
         result.Success.Should().BeTrue();
-        result.Meeting!.Activities[0].SortOrder.Should().Be(0);
-        result.Meeting.Activities[1].SortOrder.Should().Be(1);
-        result.Meeting.Activities[2].SortOrder.Should().Be(2);
+        result.Meeting!.MeetingActivities[0].SortOrder.Should().Be(0);
+        result.Meeting.MeetingActivities[1].SortOrder.Should().Be(1);
+        result.Meeting.MeetingActivities[2].SortOrder.Should().Be(2);
     }
 
     [Fact]
@@ -491,7 +491,7 @@ public class MeetingServiceTests : IDisposable
             MeetingType = MeetingType.Regular,
             Title = "Meeting with Activities",
             LocationName = "Hall",
-            Activities = new List<Activity>
+            MeetingActivities = new List<MeetingActivity>
             {
                 new() { Name = "Activity 1" },
                 new() { Name = "Activity 2" }
@@ -501,7 +501,7 @@ public class MeetingServiceTests : IDisposable
         _context.Meetings.Add(meeting);
         await _context.SaveChangesAsync();
 
-        var activityCount = await _context.Activities.CountAsync();
+        var activityCount = await _context.MeetingActivities.CountAsync();
         activityCount.Should().Be(2);
 
         // Act
@@ -510,7 +510,7 @@ public class MeetingServiceTests : IDisposable
         // Assert
         result.Success.Should().BeTrue();
 
-        var remainingActivities = await _context.Activities.CountAsync();
+        var remainingActivities = await _context.MeetingActivities.CountAsync();
         remainingActivities.Should().Be(0);
     }
 
@@ -555,7 +555,7 @@ public class MeetingServiceTests : IDisposable
             MeetingType = MeetingType.Regular,
             Title = "Meeting",
             LocationName = "Hall",
-            Activities = new List<Activity>
+            MeetingActivities = new List<MeetingActivity>
             {
                 new() { Name = "Activity 2", SortOrder = 1 },
                 new() { Name = "Activity 1", SortOrder = 0 },
@@ -584,8 +584,8 @@ public class MeetingServiceTests : IDisposable
         _context.Meetings.Add(meeting);
         await _context.SaveChangesAsync();
 
-        var activity1 = new Activity { MeetingId = meeting.Id, Name = "First Activity" };
-        var activity2 = new Activity { MeetingId = meeting.Id, Name = "Second Activity" };
+        var activity1 = new MeetingActivity { MeetingId = meeting.Id, Name = "First Activity" };
+        var activity2 = new MeetingActivity { MeetingId = meeting.Id, Name = "Second Activity" };
 
         // Act
         var result1 = await _sut.AddActivityAsync(activity1);
@@ -603,7 +603,7 @@ public class MeetingServiceTests : IDisposable
     public async Task AddActivityAsync_ShouldFail_WhenMeetingNotFound()
     {
         // Arrange
-        var activity = new Activity { MeetingId = 999, Name = "Activity" };
+        var activity = new MeetingActivity { MeetingId = 999, Name = "Activity" };
 
         // Act
         var result = await _sut.AddActivityAsync(activity);
@@ -618,11 +618,11 @@ public class MeetingServiceTests : IDisposable
     {
         // Arrange
         var meeting = CreateMeeting("Meeting", DateTime.Today);
-        meeting.Activities.Add(new Activity { Name = "Original Name" });
+        meeting.MeetingActivities.Add(new MeetingActivity { Name = "Original Name" });
         _context.Meetings.Add(meeting);
         await _context.SaveChangesAsync();
 
-        var activity = meeting.Activities[0];
+        var activity = meeting.MeetingActivities[0];
         activity.Name = "Updated Name";
         activity.RequiresConsent = true;
 
@@ -632,7 +632,7 @@ public class MeetingServiceTests : IDisposable
         // Assert
         result.Success.Should().BeTrue();
 
-        var updated = await _context.Activities.FindAsync(activity.Id);
+        var updated = await _context.MeetingActivities.FindAsync(activity.Id);
         updated!.Name.Should().Be("Updated Name");
         updated.RequiresConsent.Should().BeTrue();
     }
@@ -642,11 +642,11 @@ public class MeetingServiceTests : IDisposable
     {
         // Arrange
         var meeting = CreateMeeting("Meeting", DateTime.Today);
-        meeting.Activities.Add(new Activity { Name = "To Delete" });
+        meeting.MeetingActivities.Add(new MeetingActivity { Name = "To Delete" });
         _context.Meetings.Add(meeting);
         await _context.SaveChangesAsync();
 
-        var activityId = meeting.Activities[0].Id;
+        var activityId = meeting.MeetingActivities[0].Id;
 
         // Act
         var result = await _sut.DeleteActivityAsync(activityId);
@@ -654,7 +654,7 @@ public class MeetingServiceTests : IDisposable
         // Assert
         result.Success.Should().BeTrue();
 
-        var deleted = await _context.Activities.FindAsync(activityId);
+        var deleted = await _context.MeetingActivities.FindAsync(activityId);
         deleted.Should().BeNull();
     }
 

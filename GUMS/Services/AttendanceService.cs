@@ -662,7 +662,7 @@ public class AttendanceService : IAttendanceService
 
     public async Task<bool> MeetingRequiresConsentAsync(int meetingId)
     {
-        return await _context.Activities
+        return await _context.MeetingActivities
             .AnyAsync(a => a.MeetingId == meetingId && a.RequiresConsent);
     }
 

@@ -10,6 +10,7 @@ public partial class RecordAttendance
     [Inject] public required IMeetingService MeetingService { get; set; }
     [Inject] public required IAttendanceService AttendanceService { get; set; }
     [Inject] public required IPersonService PersonService { get; set; }
+    [Inject] public required IProgrammeService ProgrammeService { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
 
     [Parameter]
@@ -18,6 +19,8 @@ public partial class RecordAttendance
     private Meeting? meeting;
     private List<Attendance> attendanceRecords = new();
     private Dictionary<string, Person> memberLookup = new();
+    private List<MeetingActivity> _meetingActivities = new();
+    private Dictionary<(int ActivityId, string MembershipNumber), bool> _completions = new();
     private bool requiresConsent = false;
     private bool isMultiDayMeeting = false;
     private int defaultNightsAway = 0;
@@ -39,41 +42,53 @@ public partial class RecordAttendance
 
         try
         {
-            // Load meeting
             meeting = await MeetingService.GetByIdAsync(MeetingId);
-            if (meeting == null)
-            {
-                return;
-            }
+            if (meeting == null) return;
 
-            // Check if meeting requires consent
             requiresConsent = await AttendanceService.MeetingRequiresConsentAsync(MeetingId);
 
-            // Check if this is a multi-day meeting
             isMultiDayMeeting = meeting.EndDate.HasValue && meeting.EndDate.Value > meeting.Date;
             if (isMultiDayMeeting)
             {
                 defaultNightsAway = MeetingService.CalculateNightsForMeeting(meeting.Date, meeting.EndDate);
             }
 
-            // Load all active members
             var activeMembers = await PersonService.GetActiveAsync();
             memberLookup = activeMembers.ToDictionary(m => m.MembershipNumber);
 
-            // Check if attendance has been initialized for this meeting
             var existingAttendance = await AttendanceService.GetAttendanceForMeetingAsync(MeetingId);
 
             if (!existingAttendance.Any())
             {
-                // Initialize attendance records for all active members
                 await AttendanceService.InitializeAttendanceForMeetingAsync(MeetingId);
                 existingAttendance = await AttendanceService.GetAttendanceForMeetingAsync(MeetingId);
             }
 
-            // Build attendance records list with member info
             attendanceRecords = existingAttendance
                 .Where(a => memberLookup.ContainsKey(a.MembershipNumber))
                 .ToList();
+
+            // Load meeting activities and existing completions
+            _meetingActivities = await MeetingService.GetActivitiesForMeetingAsync(MeetingId);
+            var existingCompletions = await ProgrammeService.GetCompletionsForMeetingAsync(MeetingId);
+
+            _completions.Clear();
+            foreach (var c in existingCompletions)
+            {
+                _completions[(c.MeetingActivityId, c.MembershipNumber)] = c.Completed;
+            }
+
+            // Default: all attendees completed all linked activities (if no existing completions)
+            if (!existingCompletions.Any())
+            {
+                foreach (var activity in _meetingActivities.Where(a => a.BadgeClauseId.HasValue || a.UmaDefinitionId.HasValue))
+                {
+                    foreach (var record in attendanceRecords.Where(a => a.Attended && memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == PersonType.Girl))
+                    {
+                        _completions[(activity.Id, record.MembershipNumber)] = true;
+                    }
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -85,11 +100,20 @@ public partial class RecordAttendance
         }
     }
 
+    private bool GetCompletion(int activityId, string membershipNumber)
+    {
+        return _completions.GetValueOrDefault((activityId, membershipNumber), false);
+    }
+
+    private void SetCompletion(int activityId, string membershipNumber, bool completed)
+    {
+        _completions[(activityId, membershipNumber)] = completed;
+    }
+
     private void ToggleAttendance(Attendance record, bool attended)
     {
         record.Attended = attended;
 
-        // Auto-set NightsAway for multi-day meetings
         if (isMultiDayMeeting)
         {
             if (attended && !record.NightsAway.HasValue)
@@ -99,6 +123,24 @@ public partial class RecordAttendance
             else if (!attended)
             {
                 record.NightsAway = null;
+            }
+        }
+
+        // Default completions for linked activities when marking a girl as attended
+        if (memberLookup.TryGetValue(record.MembershipNumber, out var person) && person.PersonType == PersonType.Girl)
+        {
+            foreach (var activity in _meetingActivities.Where(a => a.BadgeClauseId.HasValue || a.UmaDefinitionId.HasValue))
+            {
+                var key = (activity.Id, record.MembershipNumber);
+                if (attended)
+                {
+                    if (!_completions.ContainsKey(key))
+                        _completions[key] = true;
+                }
+                else
+                {
+                    _completions.Remove(key);
+                }
             }
         }
     }
@@ -138,11 +180,7 @@ public partial class RecordAttendance
     {
         foreach (var record in attendanceRecords)
         {
-            record.Attended = true;
-            if (isMultiDayMeeting && !record.NightsAway.HasValue)
-            {
-                record.NightsAway = defaultNightsAway;
-            }
+            ToggleAttendance(record, true);
         }
     }
 
@@ -150,11 +188,7 @@ public partial class RecordAttendance
     {
         foreach (var record in attendanceRecords)
         {
-            record.Attended = false;
-            if (isMultiDayMeeting)
-            {
-                record.NightsAway = null;
-            }
+            ToggleAttendance(record, false);
         }
     }
 
@@ -170,7 +204,21 @@ public partial class RecordAttendance
 
             if (result.Success)
             {
-                // Navigate back to meeting view with success message
+                // Save activity completions
+                var completionRecords = _completions
+                    .Select(kvp => new CompletionRecord
+                    {
+                        MeetingActivityId = kvp.Key.ActivityId,
+                        MembershipNumber = kvp.Key.MembershipNumber,
+                        Completed = kvp.Value
+                    })
+                    .ToList();
+
+                if (completionRecords.Any())
+                {
+                    await ProgrammeService.SaveCompletionsAsync(MeetingId, completionRecords);
+                }
+
                 NavigationManager.NavigateTo($"/Meetings/View/{MeetingId}?success=attendance");
                 return;
             }

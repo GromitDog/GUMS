@@ -138,10 +138,10 @@
                                         </td>
                                         <td>@meeting.LocationName</td>
                                         <td>
-                                            @if (meeting.Activities.Any())
+                                            @if (meeting.MeetingActivities.Any())
                                             {
-                                                <span class="badge bg-secondary">@meeting.Activities.Count</span>
-                                                @if (meeting.Activities.Any(a => a.RequiresConsent))
+                                                <span class="badge bg-secondary">@meeting.MeetingActivities.Count</span>
+                                                @if (meeting.MeetingActivities.Any(a => a.RequiresConsent))
                                                 {
                                                     <span class="badge bg-warning text-dark">
                                                         <i class="bi bi-exclamation-triangle"></i> Consent

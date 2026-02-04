@@ -2,12 +2,12 @@ using System.ComponentModel.DataAnnotations;
 
 namespace GUMS.Data.Entities;
 
-public class Activity
+public class BadgeClause
 {
     public int Id { get; set; }
 
     [Required]
-    public int MeetingId { get; set; }
+    public int BadgeDefinitionId { get; set; }
 
     [Required]
     [MaxLength(200)]
@@ -15,10 +15,8 @@ public class Activity
 
     public string? Description { get; set; }
 
-    public bool RequiresConsent { get; set; } = false;
+    public int SortOrder { get; set; }
 
-    public int SortOrder { get; set; } = 0;
-
-    // Navigation property
-    public Meeting Meeting { get; set; } = null!;
+    // Navigation properties
+    public BadgeDefinition BadgeDefinition { get; set; } = null!;
 }

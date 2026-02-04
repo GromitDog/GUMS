@@ -43,6 +43,6 @@ public class Meeting
     public DateTime? EndDate { get; set; }
 
     // Navigation properties
-    public List<Activity> Activities { get; set; } = new();
+    public List<MeetingActivity> MeetingActivities { get; set; } = new();
     public List<Attendance> Attendances { get; set; } = new();
 }

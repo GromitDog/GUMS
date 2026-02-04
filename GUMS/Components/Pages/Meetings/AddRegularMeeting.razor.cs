@@ -10,10 +10,14 @@ public partial class AddRegularMeeting
     [Inject] public required IMeetingService MeetingService { get; set; }
     [Inject] public required IConfigurationService ConfigService { get; set; }
     [Inject] public required ITermService TermService { get; set; }
+    [Inject] public required IBadgeService BadgeService { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
 
     private readonly Meeting _meeting = new();
-    private readonly List<Activity> _activities = new();
+    private readonly List<MeetingActivity> _activities = new();
+    private List<BadgeClause> _availableClauses = [];
+    private List<UmaDefinition> _availableUmas = [];
+    private List<BadgeDefinition> _availableFunBadges = [];
     private DateTime _startTime = DateTime.Today;
     private DateTime _endTime = DateTime.Today;
     private List<DateTime> _suggestedDates = [];
@@ -42,6 +46,10 @@ public partial class AddRegularMeeting
         {
             _suggestedDates = await MeetingService.GetSuggestedMeetingDatesForTermAsync(_currentTerm.Id);
         }
+
+        _availableClauses = await BadgeService.SearchClausesAsync(string.Empty);
+        _availableUmas = await BadgeService.SearchUmasAsync(string.Empty);
+        _availableFunBadges = await BadgeService.GetBadgesByFilterAsync(badgeType: BadgeType.FunBadge);
     }
 
     private void UseSuggestedDate(DateTime date)
@@ -52,7 +60,7 @@ public partial class AddRegularMeeting
 
     private void AddActivity()
     {
-        _activities.Add(new Activity
+        _activities.Add(new MeetingActivity
         {
             Name = string.Empty,
             RequiresConsent = false,
@@ -81,8 +89,18 @@ public partial class AddRegularMeeting
             _meeting.StartTime = TimeOnly.FromDateTime(_startTime);
             _meeting.EndTime = TimeOnly.FromDateTime(_endTime);
 
-            // Filter out empty activities
-            _meeting.Activities = _activities
+            // Validate: activities with a linked badge/UMA but no name
+            var unnamed = _activities.Where(a =>
+                string.IsNullOrWhiteSpace(a.Name) &&
+                (a.BadgeClauseId.HasValue || a.UmaDefinitionId.HasValue || a.BadgeDefinitionId.HasValue)).ToList();
+            if (unnamed.Any())
+            {
+                _errorMessage = "All activities must have a name.";
+                return;
+            }
+
+            // Filter out completely empty activities (no name, no links)
+            _meeting.MeetingActivities = _activities
                 .Where(a => !string.IsNullOrWhiteSpace(a.Name))
                 .ToList();
 
@@ -104,6 +122,42 @@ public partial class AddRegularMeeting
         finally
         {
             _isSaving = false;
+        }
+    }
+
+    private void SetBadgeClauseId(int activityIndex, ChangeEventArgs e)
+    {
+        var activity = _activities[activityIndex];
+        activity.BadgeClauseId = int.TryParse(e.Value?.ToString(), out var v) ? v : null;
+        if (activity.BadgeClauseId.HasValue && string.IsNullOrWhiteSpace(activity.Name))
+        {
+            var clause = _availableClauses.FirstOrDefault(c => c.Id == activity.BadgeClauseId.Value);
+            if (clause != null)
+                activity.Name = $"{clause.BadgeDefinition?.Name} - {clause.Name}";
+        }
+    }
+
+    private void SetUmaDefinitionId(int activityIndex, ChangeEventArgs e)
+    {
+        var activity = _activities[activityIndex];
+        activity.UmaDefinitionId = int.TryParse(e.Value?.ToString(), out var v) ? v : null;
+        if (activity.UmaDefinitionId.HasValue && string.IsNullOrWhiteSpace(activity.Name))
+        {
+            var uma = _availableUmas.FirstOrDefault(u => u.Id == activity.UmaDefinitionId.Value);
+            if (uma != null)
+                activity.Name = uma.Name;
+        }
+    }
+
+    private void SetBadgeDefinitionId(int activityIndex, ChangeEventArgs e)
+    {
+        var activity = _activities[activityIndex];
+        activity.BadgeDefinitionId = int.TryParse(e.Value?.ToString(), out var v) ? v : null;
+        if (activity.BadgeDefinitionId.HasValue && string.IsNullOrWhiteSpace(activity.Name))
+        {
+            var badge = _availableFunBadges.FirstOrDefault(b => b.Id == activity.BadgeDefinitionId.Value);
+            if (badge != null)
+                activity.Name = badge.Name;
         }
     }
 

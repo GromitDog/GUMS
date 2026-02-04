@@ -171,12 +171,12 @@
                                             var activity = _activities[i];
                                             <div class="list-group-item">
                                                 <div class="row g-2 align-items-center">
-                                                    <div class="col-md-6">
+                                                    <div class="col-md-5">
                                                         <input type="text" class="form-control form-control-sm"
                                                                placeholder="Activity name"
                                                                @bind="activity.Name" />
                                                     </div>
-                                                    <div class="col-md-4">
+                                                    <div class="col-md-3">
                                                         <div class="form-check">
                                                             <input class="form-check-input" type="checkbox"
                                                                    id="consent-@index"
@@ -187,7 +187,7 @@
                                                         </div>
                                                     </div>
                                                     <div class="col-md-2 text-end">
-                                                        <button type="button" class="btn btn-outline-danger"
+                                                        <button type="button" class="btn btn-outline-danger btn-sm"
                                                                 @onclick="() => RemoveActivity(index)"
                                                                 title="Remove activity">
                                                             <i class="bi bi-x-lg"></i> Remove
@@ -195,6 +195,41 @@
                                                     </div>
                                                 </div>
                                                 <div class="row g-2 mt-2">
+                                                    <div class="col-md-4">
+                                                        <label class="form-label form-label-sm text-muted">Link to Badge Clause</label>
+                                                        <select class="form-select form-select-sm"
+                                                                @onchange="@(e => SetBadgeClauseId(index, e))">
+                                                            <option value="" selected="@(!activity.BadgeClauseId.HasValue)">None</option>
+                                                            @foreach (var clause in _availableClauses)
+                                                            {
+                                                                <option value="@clause.Id" selected="@(activity.BadgeClauseId == clause.Id)">@clause.BadgeDefinition?.Name - @clause.Name</option>
+                                                            }
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label form-label-sm text-muted">Link to UMA</label>
+                                                        <select class="form-select form-select-sm"
+                                                                @onchange="@(e => SetUmaDefinitionId(index, e))">
+                                                            <option value="" selected="@(!activity.UmaDefinitionId.HasValue)">None</option>
+                                                            @foreach (var uma in _availableUmas)
+                                                            {
+                                                                <option value="@uma.Id" selected="@(activity.UmaDefinitionId == uma.Id)">@uma.Name (@uma.Minutes min)</option>
+                                                            }
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label form-label-sm text-muted">Link to Fun Badge</label>
+                                                        <select class="form-select form-select-sm"
+                                                                @onchange="@(e => SetBadgeDefinitionId(index, e))">
+                                                            <option value="" selected="@(!activity.BadgeDefinitionId.HasValue)">None</option>
+                                                            @foreach (var badge in _availableFunBadges)
+                                                            {
+                                                                <option value="@badge.Id" selected="@(activity.BadgeDefinitionId == badge.Id)">@badge.Name</option>
+                                                            }
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="row g-2 mt-1">
                                                     <div class="col-12">
                                                         <textarea class="form-control form-control-sm"
                                                                   rows="2"

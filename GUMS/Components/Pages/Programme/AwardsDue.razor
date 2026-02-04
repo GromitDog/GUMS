@@ -1,0 +1,95 @@
+@page "/Programme/Awards"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Awards Due - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Home</a></li>
+            <li class="breadcrumb-item active">Awards Due</li>
+        </ol>
+    </nav>
+
+    <h2 class="mb-4">Awards Due</h2>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (!_awards.Any())
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-trophy" style="font-size: 3rem; color: #ccc;"></i>
+            <p class="text-muted mt-2">No awards currently due.</p>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Girl</th>
+                                <th>Award</th>
+                                <th>Type</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var award in _awards)
+                            {
+                                <tr>
+                                    <td>
+                                        <a href="/Programme/Progress/@award.MembershipNumber">
+                                            @(award.Name ?? award.MembershipNumber)
+                                        </a>
+                                    </td>
+                                    <td><strong>@award.AwardName</strong></td>
+                                    <td>
+                                        @switch (award.AwardType)
+                                        {
+                                            case "Badge":
+                                                <span class="badge bg-primary">Badge</span>
+                                                break;
+                                            case "ThemeAward":
+                                                <span class="badge bg-success">Theme Award</span>
+                                                break;
+                                            case "Bronze":
+                                                <span class="badge" style="background-color: #CD7F32;">Bronze</span>
+                                                break;
+                                            case "Silver":
+                                                <span class="badge bg-secondary">Silver</span>
+                                                break;
+                                            case "Gold":
+                                                <span class="badge bg-warning text-dark">Gold</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @if (award.BadgeDefinitionId.HasValue)
+                                        {
+                                            <button class="btn btn-sm btn-outline-success"
+                                                    disabled="@_isSaving"
+                                                    @onclick="() => MarkAwarded(award)">
+                                                <i class="bi bi-check-lg"></i> Mark Awarded
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>

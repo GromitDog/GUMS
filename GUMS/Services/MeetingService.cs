@@ -5,9 +5,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GUMS.Services;
 
-/// <summary>
-/// Service for managing meetings and their activities.
-/// </summary>
 public class MeetingService : IMeetingService
 {
     private readonly ApplicationDbContext _context;
@@ -29,7 +26,7 @@ public class MeetingService : IMeetingService
     public async Task<List<Meeting>> GetAllAsync()
     {
         return await _context.Meetings
-            .Include(m => m.Activities.OrderBy(a => a.SortOrder))
+            .Include(m => m.MeetingActivities.OrderBy(a => a.SortOrder))
             .AsNoTracking()
             .OrderByDescending(m => m.Date)
             .ToListAsync();
@@ -38,7 +35,7 @@ public class MeetingService : IMeetingService
     public async Task<Meeting?> GetByIdAsync(int id)
     {
         return await _context.Meetings
-            .Include(m => m.Activities.OrderBy(a => a.SortOrder))
+            .Include(m => m.MeetingActivities.OrderBy(a => a.SortOrder))
             .AsNoTracking()
             .FirstOrDefaultAsync(m => m.Id == id);
     }
@@ -46,7 +43,7 @@ public class MeetingService : IMeetingService
     public async Task<List<Meeting>> GetByDateRangeAsync(DateTime startDate, DateTime endDate)
     {
         return await _context.Meetings
-            .Include(m => m.Activities.OrderBy(a => a.SortOrder))
+            .Include(m => m.MeetingActivities.OrderBy(a => a.SortOrder))
             .AsNoTracking()
             .Where(m => m.Date >= startDate && m.Date <= endDate)
             .OrderBy(m => m.Date)
@@ -57,7 +54,7 @@ public class MeetingService : IMeetingService
     {
         var today = DateTime.Today;
         var query = _context.Meetings
-            .Include(m => m.Activities.OrderBy(a => a.SortOrder))
+            .Include(m => m.MeetingActivities.OrderBy(a => a.SortOrder))
             .AsNoTracking()
             .Where(m => m.Date >= today)
             .OrderBy(m => m.Date);
@@ -74,7 +71,7 @@ public class MeetingService : IMeetingService
     {
         var today = DateTime.Today;
         var query = _context.Meetings
-            .Include(m => m.Activities.OrderBy(a => a.SortOrder))
+            .Include(m => m.MeetingActivities.OrderBy(a => a.SortOrder))
             .AsNoTracking()
             .Where(m => m.Date < today)
             .OrderByDescending(m => m.Date);
@@ -89,7 +86,6 @@ public class MeetingService : IMeetingService
 
     public async Task<(bool Success, string ErrorMessage, Meeting? Meeting)> CreateAsync(Meeting meeting)
     {
-        // Validate basic rules
         if (meeting.EndTime <= meeting.StartTime)
         {
             return (false, "End time must be after start time.", null);
@@ -105,16 +101,14 @@ public class MeetingService : IMeetingService
             return (false, "Payment deadline is required when meeting has a cost.", null);
         }
 
-        // Validate EndDate for multi-day meetings
         if (meeting.EndDate.HasValue && meeting.EndDate.Value.Date < meeting.Date.Date)
         {
             return (false, "End date must be on or after the start date.", null);
         }
 
-        // Set sort order for activities
-        for (int i = 0; i < meeting.Activities.Count; i++)
+        for (int i = 0; i < meeting.MeetingActivities.Count; i++)
         {
-            meeting.Activities[i].SortOrder = i;
+            meeting.MeetingActivities[i].SortOrder = i;
         }
 
         _context.Meetings.Add(meeting);
@@ -126,7 +120,7 @@ public class MeetingService : IMeetingService
     public async Task<(bool Success, string ErrorMessage)> UpdateAsync(Meeting meeting)
     {
         var existingMeeting = await _context.Meetings
-            .Include(m => m.Activities)
+            .Include(m => m.MeetingActivities)
             .FirstOrDefaultAsync(m => m.Id == meeting.Id);
 
         if (existingMeeting == null)
@@ -134,7 +128,6 @@ public class MeetingService : IMeetingService
             return (false, "Meeting not found.");
         }
 
-        // Validate basic rules
         if (meeting.EndTime <= meeting.StartTime)
         {
             return (false, "End time must be after start time.");
@@ -150,13 +143,11 @@ public class MeetingService : IMeetingService
             return (false, "Payment deadline is required when meeting has a cost.");
         }
 
-        // Validate EndDate for multi-day meetings
         if (meeting.EndDate.HasValue && meeting.EndDate.Value.Date < meeting.Date.Date)
         {
             return (false, "End date must be on or after the start date.");
         }
 
-        // Update properties
         existingMeeting.Date = meeting.Date;
         existingMeeting.StartTime = meeting.StartTime;
         existingMeeting.EndTime = meeting.EndTime;
@@ -169,9 +160,6 @@ public class MeetingService : IMeetingService
         existingMeeting.PaymentDeadline = meeting.PaymentDeadline;
         existingMeeting.EndDate = meeting.EndDate;
 
-        // Note: Activities are managed separately via Activity methods
-        // This keeps the logic cleaner and more explicit
-
         await _context.SaveChangesAsync();
 
         return (true, string.Empty);
@@ -181,7 +169,7 @@ public class MeetingService : IMeetingService
     {
         var meeting = await _context.Meetings
             .Include(m => m.Attendances)
-            .Include(m => m.Activities)
+            .Include(m => m.MeetingActivities)
             .FirstOrDefaultAsync(m => m.Id == id);
 
         if (meeting == null)
@@ -189,22 +177,17 @@ public class MeetingService : IMeetingService
             return (false, "Meeting not found.");
         }
 
-        // Check if any attendance has actually been recorded (someone marked as attended)
         if (meeting.Attendances.Any(a => a.Attended))
         {
             return (false, "Cannot delete this meeting because attendance has been recorded. Please remove attendance records first.");
         }
 
-        // Delete any unrecorded attendance records (created by initialization but no one marked as attended)
         if (meeting.Attendances.Any())
         {
             _context.Attendances.RemoveRange(meeting.Attendances);
         }
 
-        // Delete activities first (cascade should handle this, but being explicit)
-        _context.Activities.RemoveRange(meeting.Activities);
-
-        // Delete the meeting
+        _context.MeetingActivities.RemoveRange(meeting.MeetingActivities);
         _context.Meetings.Remove(meeting);
         await _context.SaveChangesAsync();
 
@@ -213,40 +196,38 @@ public class MeetingService : IMeetingService
 
     // ===== Activity Management =====
 
-    public async Task<List<Activity>> GetActivitiesForMeetingAsync(int meetingId)
+    public async Task<List<MeetingActivity>> GetActivitiesForMeetingAsync(int meetingId)
     {
-        return await _context.Activities
+        return await _context.MeetingActivities
             .AsNoTracking()
             .Where(a => a.MeetingId == meetingId)
             .OrderBy(a => a.SortOrder)
             .ToListAsync();
     }
 
-    public async Task<(bool Success, string ErrorMessage, Activity? Activity)> AddActivityAsync(Activity activity)
+    public async Task<(bool Success, string ErrorMessage, MeetingActivity? Activity)> AddActivityAsync(MeetingActivity activity)
     {
-        // Validate meeting exists
         var meetingExists = await _context.Meetings.AnyAsync(m => m.Id == activity.MeetingId);
         if (!meetingExists)
         {
             return (false, "Meeting not found.", null);
         }
 
-        // Set sort order to add at end
-        var maxSortOrder = await _context.Activities
+        var maxSortOrder = await _context.MeetingActivities
             .Where(a => a.MeetingId == activity.MeetingId)
             .MaxAsync(a => (int?)a.SortOrder) ?? -1;
 
         activity.SortOrder = maxSortOrder + 1;
 
-        _context.Activities.Add(activity);
+        _context.MeetingActivities.Add(activity);
         await _context.SaveChangesAsync();
 
         return (true, string.Empty, activity);
     }
 
-    public async Task<(bool Success, string ErrorMessage)> UpdateActivityAsync(Activity activity)
+    public async Task<(bool Success, string ErrorMessage)> UpdateActivityAsync(MeetingActivity activity)
     {
-        var existingActivity = await _context.Activities.FindAsync(activity.Id);
+        var existingActivity = await _context.MeetingActivities.FindAsync(activity.Id);
         if (existingActivity == null)
         {
             return (false, "Activity not found.");
@@ -256,6 +237,8 @@ public class MeetingService : IMeetingService
         existingActivity.Description = activity.Description;
         existingActivity.RequiresConsent = activity.RequiresConsent;
         existingActivity.SortOrder = activity.SortOrder;
+        existingActivity.BadgeClauseId = activity.BadgeClauseId;
+        existingActivity.UmaDefinitionId = activity.UmaDefinitionId;
 
         await _context.SaveChangesAsync();
 
@@ -264,13 +247,13 @@ public class MeetingService : IMeetingService
 
     public async Task<(bool Success, string ErrorMessage)> DeleteActivityAsync(int activityId)
     {
-        var activity = await _context.Activities.FindAsync(activityId);
+        var activity = await _context.MeetingActivities.FindAsync(activityId);
         if (activity == null)
         {
             return (false, "Activity not found.");
         }
 
-        _context.Activities.Remove(activity);
+        _context.MeetingActivities.Remove(activity);
         await _context.SaveChangesAsync();
 
         return (true, string.Empty);
@@ -291,30 +274,25 @@ public class MeetingService : IMeetingService
         var today = DateTime.Today;
 
         var suggestedDates = new List<DateTime>();
-
-        // Start from today or term start date, whichever is later
         var currentDate = term.StartDate < today ? today : term.StartDate;
 
-        // Find the first occurrence of the meeting day
         while (currentDate <= term.EndDate && currentDate.DayOfWeek != meetingDay)
         {
             currentDate = currentDate.AddDays(1);
         }
 
-        // Get existing meeting dates to filter them out
         var existingMeetingDates = await _context.Meetings
             .Where(m => m.Date >= currentDate && m.Date <= term.EndDate)
             .Select(m => m.Date.Date)
             .ToListAsync();
 
-        // Add all meeting days within the term that don't already have meetings
         while (currentDate <= term.EndDate)
         {
             if (!existingMeetingDates.Contains(currentDate.Date))
             {
                 suggestedDates.Add(currentDate);
             }
-            currentDate = currentDate.AddDays(7); // Next week
+            currentDate = currentDate.AddDays(7);
         }
 
         return suggestedDates;
@@ -340,11 +318,10 @@ public class MeetingService : IMeetingService
 
         foreach (var date in suggestedDates)
         {
-            // Check if meeting already exists on this date
             var exists = await MeetingExistsOnDateAsync(date);
             if (exists)
             {
-                continue; // Skip if meeting already exists
+                continue;
             }
 
             var meeting = new Meeting
@@ -380,7 +357,6 @@ public class MeetingService : IMeetingService
             return 0;
         }
 
-        // Calculate nights: Jan 5-7 = 2 nights (nights of 5th and 6th)
         var nights = (endDate.Value.Date - startDate.Date).Days;
         return nights > 0 ? nights : 0;
     }
@@ -388,7 +364,7 @@ public class MeetingService : IMeetingService
     public async Task<List<Meeting>> GetMultiDayMeetingsAsync(int? limit = null)
     {
         var query = _context.Meetings
-            .Include(m => m.Activities.OrderBy(a => a.SortOrder))
+            .Include(m => m.MeetingActivities.OrderBy(a => a.SortOrder))
             .AsNoTracking()
             .Where(m => m.EndDate != null)
             .OrderByDescending(m => m.Date);

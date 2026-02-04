@@ -3,6 +3,7 @@ using System;
 using GUMS.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GUMS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260131200102_AllowStandaloneActivities")]
+    partial class AllowStandaloneActivities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -157,33 +160,6 @@ namespace GUMS.Migrations
                     b.ToTable("AwardTrackings");
                 });
 
-            modelBuilder.Entity("GUMS.Data.Entities.AwardedBadge", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("BadgeDefinitionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("DateAwarded")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("MembershipNumber")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BadgeDefinitionId");
-
-                    b.HasIndex("MembershipNumber", "BadgeDefinitionId")
-                        .IsUnique();
-
-                    b.ToTable("AwardedBadges");
-                });
-
             modelBuilder.Entity("GUMS.Data.Entities.BadgeClause", b =>
                 {
                     b.Property<int>("Id")
@@ -218,9 +194,6 @@ namespace GUMS.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("BadgeType")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("EstimatedMinutes")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
@@ -562,9 +535,6 @@ namespace GUMS.Migrations
                     b.Property<int?>("BadgeClauseId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int?>("BadgeDefinitionId")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
@@ -588,8 +558,6 @@ namespace GUMS.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BadgeClauseId");
-
-                    b.HasIndex("BadgeDefinitionId");
 
                     b.HasIndex("MeetingId");
 
@@ -1098,17 +1066,6 @@ namespace GUMS.Migrations
                     b.Navigation("Meeting");
                 });
 
-            modelBuilder.Entity("GUMS.Data.Entities.AwardedBadge", b =>
-                {
-                    b.HasOne("GUMS.Data.Entities.BadgeDefinition", "BadgeDefinition")
-                        .WithMany()
-                        .HasForeignKey("BadgeDefinitionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("BadgeDefinition");
-                });
-
             modelBuilder.Entity("GUMS.Data.Entities.BadgeClause", b =>
                 {
                     b.HasOne("GUMS.Data.Entities.BadgeDefinition", "BadgeDefinition")
@@ -1223,11 +1180,6 @@ namespace GUMS.Migrations
                         .HasForeignKey("BadgeClauseId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("GUMS.Data.Entities.BadgeDefinition", "BadgeDefinition")
-                        .WithMany()
-                        .HasForeignKey("BadgeDefinitionId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("GUMS.Data.Entities.Meeting", "Meeting")
                         .WithMany("MeetingActivities")
                         .HasForeignKey("MeetingId")
@@ -1239,8 +1191,6 @@ namespace GUMS.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("BadgeClause");
-
-                    b.Navigation("BadgeDefinition");
 
                     b.Navigation("Meeting");
 

@@ -1,0 +1,162 @@
+@page "/Programme/Umas"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>UMA Management - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Home</a></li>
+            <li class="breadcrumb-item active">Unit Meeting Activities</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Unit Meeting Activities (UMAs)</h2>
+        <button class="btn btn-primary" @onclick="ShowAddUma">
+            <i class="bi bi-plus-circle"></i> Add UMA
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="() => _successMessage = string.Empty"></button>
+        </div>
+    }
+
+    <!-- Filter -->
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label form-label-sm">Theme</label>
+                    <select class="form-select form-select-sm" @onchange="OnThemeFilterChanged">
+                        <option value="">All Themes</option>
+                        @foreach (var theme in Enum.GetValues<Theme>())
+                        {
+                            <option value="@theme">@GUMS.Services.ProgrammeService.GetThemeDisplayName(theme)</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (!_umas.Any())
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-clipboard-check" style="font-size: 3rem; color: #ccc;"></i>
+            <p class="text-muted mt-2">No UMAs found. Add your first UMA to get started.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Theme</th>
+                        <th>Minutes</th>
+                        <th>Description</th>
+                        <th style="width: 100px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var uma in _umas)
+                    {
+                        <tr>
+                            <td><strong>@uma.Name</strong></td>
+                            <td>
+                                <span class="badge" style="background-color: @Badges.GetThemeColor(uma.Theme);">
+                                    @GUMS.Services.ProgrammeService.GetThemeDisplayName(uma.Theme)
+                                </span>
+                            </td>
+                            <td>@uma.Minutes min</td>
+                            <td class="text-muted">@(uma.Description ?? "—")</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditUma(uma)">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteUma(uma.Id)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <!-- Add/Edit UMA Modal -->
+    @if (_showUmaModal)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header" style="background-color: var(--gg-primary-blue); color: white;">
+                        <h5 class="modal-title">@(_editingUma.Id > 0 ? "Edit UMA" : "Add UMA")</h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="() => _showUmaModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Name</label>
+                                <input type="text" class="form-control" @bind="_editingUma.Name" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Theme</label>
+                                <select class="form-select" @bind="_editingUma.Theme">
+                                    @foreach (var theme in Enum.GetValues<Theme>())
+                                    {
+                                        <option value="@theme">@GUMS.Services.ProgrammeService.GetThemeDisplayName(theme)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Minutes</label>
+                                <input type="number" class="form-control" @bind="_editingUma.Minutes" min="1" max="600" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Description (optional)</label>
+                                <textarea class="form-control" rows="3" @bind="_editingUma.Description"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="() => _showUmaModal = false">Cancel</button>
+                        <button type="button" class="btn btn-primary" @onclick="SaveUma" disabled="@_isSaving">
+                            @if (_isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            Save UMA
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

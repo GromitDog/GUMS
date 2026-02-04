@@ -970,7 +970,7 @@ public class AttendanceServiceTests : IDisposable
     {
         // Arrange
         var meeting = await CreateTestMeetingAsync();
-        _context.Activities.Add(new Activity
+        _context.MeetingActivities.Add(new MeetingActivity
         {
             MeetingId = meeting.Id,
             Name = "Camping",
@@ -990,7 +990,7 @@ public class AttendanceServiceTests : IDisposable
     {
         // Arrange
         var meeting = await CreateTestMeetingAsync();
-        _context.Activities.Add(new Activity
+        _context.MeetingActivities.Add(new MeetingActivity
         {
             MeetingId = meeting.Id,
             Name = "Badge Work",

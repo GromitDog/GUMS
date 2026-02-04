@@ -1,0 +1,113 @@
+@page "/Programme/TermBalance"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Term Balance - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Home</a></li>
+            <li class="breadcrumb-item active">Term Balance</li>
+        </ol>
+    </nav>
+
+    <h2 class="mb-4">Term Programme Balance</h2>
+
+    <!-- Term Selector -->
+    <div class="mb-3">
+        <select class="form-select form-select-sm" style="width: auto;" @onchange="OnTermChanged">
+            @foreach (var term in _terms)
+            {
+                <option value="@term.Id" selected="@(term.Id == _selectedTermId)">@term.Name</option>
+            }
+        </select>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (_balance == null)
+    {
+        <div class="text-center py-5">
+            <p class="text-muted">Select a term to view programme balance.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <!-- Summary -->
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
+                        <h6 class="mb-0">Summary - @_balance.TermName</h6>
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <h3>@_balance.TotalMinutesPlanned</h3>
+                            <small class="text-muted">Total UMA Minutes Planned</small>
+                        </div>
+                        <div>
+                            <h3>@_balance.TotalBadgesWorkedOn</h3>
+                            <small class="text-muted">Badges Being Worked On</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Theme Breakdown -->
+            <div class="col-md-8 mb-4">
+                <div class="card">
+                    <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                        <h6 class="mb-0">Minutes by Theme</h6>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var theme in Enum.GetValues<Theme>())
+                        {
+                            var tb = _balance.ThemeBalances.GetValueOrDefault(theme);
+                            var minutes = tb?.MinutesPlanned ?? 0;
+                            var badges = tb?.BadgesWorkedOn ?? 0;
+                            var pct = tb?.PercentageOfTotal ?? 0;
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong style="color: @Badges.GetThemeColor(theme);">
+                                        @GUMS.Services.ProgrammeService.GetThemeDisplayName(theme)
+                                    </strong>
+                                    <span>
+                                        <span class="badge bg-secondary">@minutes min</span>
+                                        <span class="badge bg-info">@badges badges</span>
+                                    </span>
+                                </div>
+                                <div class="progress" style="height: 12px;">
+                                    <div class="progress-bar" role="progressbar"
+                                         style="width: @pct%; background-color: @Badges.GetThemeColor(theme);"
+                                         aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100">
+                                        @if (pct > 10)
+                                        {
+                                            <small>@pct.ToString("F0")%</small>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        @if (_balance.TotalMinutesPlanned == 0)
+                        {
+                            <div class="alert alert-info mb-0">
+                                <i class="bi bi-info-circle"></i> No UMA activities planned for this term yet.
+                                Link UMAs to meeting activities to see the balance here.
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

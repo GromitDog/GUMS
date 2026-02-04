@@ -88,6 +88,16 @@
     color: white;
 }
 
+.nav-group-items {
+    padding-left: 1.5rem;
+}
+
+.nav-group-items ::deep .nav-link {
+    height: 2.5rem;
+    line-height: 2.5rem;
+    font-size: 0.85rem;
+}
+
 .nav-scrollable {
     display: none;
 }

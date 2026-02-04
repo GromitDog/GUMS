@@ -16,7 +16,7 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     public DbSet<Person> Persons { get; set; }
     public DbSet<EmergencyContact> EmergencyContacts { get; set; }
     public DbSet<Meeting> Meetings { get; set; }
-    public DbSet<Activity> Activities { get; set; }
+    public DbSet<MeetingActivity> MeetingActivities { get; set; }
     public DbSet<Attendance> Attendances { get; set; }
     public DbSet<Payment> Payments { get; set; }
     public DbSet<Term> Terms { get; set; }
@@ -29,6 +29,14 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     public DbSet<ExpenseClaim> ExpenseClaims { get; set; }
     public DbSet<EventBudget> EventBudgets { get; set; }
     public DbSet<EventBudgetItem> EventBudgetItems { get; set; }
+
+    // Programme management DbSets
+    public DbSet<BadgeDefinition> BadgeDefinitions { get; set; }
+    public DbSet<BadgeClause> BadgeClauses { get; set; }
+    public DbSet<UmaDefinition> UmaDefinitions { get; set; }
+    public DbSet<ActivityCompletion> ActivityCompletions { get; set; }
+    public DbSet<AwardTracking> AwardTrackings { get; set; }
+    public DbSet<AwardedBadge> AwardedBadges { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -65,9 +73,10 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
             entity.HasKey(m => m.Id);
             entity.HasIndex(m => m.Date);
 
-            entity.HasMany(m => m.Activities)
+            entity.HasMany(m => m.MeetingActivities)
                 .WithOne(a => a.Meeting)
                 .HasForeignKey(a => a.MeetingId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasMany(m => m.Attendances)
@@ -76,11 +85,43 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // Activity configuration
-        modelBuilder.Entity<Activity>(entity =>
+        // MeetingActivity configuration (replaces Activity)
+        modelBuilder.Entity<MeetingActivity>(entity =>
         {
+            entity.ToTable("Activities");
             entity.HasKey(a => a.Id);
             entity.HasIndex(a => a.MeetingId);
+
+            entity.HasOne(a => a.BadgeClause)
+                .WithMany()
+                .HasForeignKey(a => a.BadgeClauseId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(a => a.BadgeDefinition)
+                .WithMany()
+                .HasForeignKey(a => a.BadgeDefinitionId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(a => a.UmaDefinition)
+                .WithMany()
+                .HasForeignKey(a => a.UmaDefinitionId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasMany(a => a.Completions)
+                .WithOne(c => c.MeetingActivity)
+                .HasForeignKey(c => c.MeetingActivityId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ActivityCompletion configuration
+        modelBuilder.Entity<ActivityCompletion>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+            entity.HasIndex(c => c.MembershipNumber);
+            entity.HasIndex(c => c.MeetingActivityId);
+            entity.HasIndex(c => new { c.MeetingActivityId, c.MembershipNumber }).IsUnique();
+
+            entity.Property(c => c.MembershipNumber).IsRequired();
         });
 
         // Attendance configuration
@@ -97,6 +138,56 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
             entity.Property(a => a.MembershipNumber).IsRequired();
 
             // NO foreign key to Person table - allows data to persist after Person removal
+        });
+
+        // BadgeDefinition configuration
+        modelBuilder.Entity<BadgeDefinition>(entity =>
+        {
+            entity.HasKey(b => b.Id);
+            entity.HasIndex(b => b.Theme);
+            entity.HasIndex(b => b.Section);
+            entity.HasIndex(b => b.BadgeType);
+
+            entity.HasMany(b => b.Clauses)
+                .WithOne(c => c.BadgeDefinition)
+                .HasForeignKey(c => c.BadgeDefinitionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // BadgeClause configuration
+        modelBuilder.Entity<BadgeClause>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+            entity.HasIndex(c => c.BadgeDefinitionId);
+        });
+
+        // UmaDefinition configuration
+        modelBuilder.Entity<UmaDefinition>(entity =>
+        {
+            entity.HasKey(u => u.Id);
+            entity.HasIndex(u => u.Theme);
+        });
+
+        // AwardTracking configuration
+        modelBuilder.Entity<AwardTracking>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+            entity.HasIndex(a => a.MembershipNumber).IsUnique();
+            entity.Property(a => a.MembershipNumber).IsRequired();
+        });
+
+        // AwardedBadge configuration
+        modelBuilder.Entity<AwardedBadge>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+            entity.HasIndex(a => new { a.MembershipNumber, a.BadgeDefinitionId }).IsUnique();
+
+            entity.Property(a => a.MembershipNumber).IsRequired();
+
+            entity.HasOne(a => a.BadgeDefinition)
+                .WithMany()
+                .HasForeignKey(a => a.BadgeDefinitionId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Payment configuration

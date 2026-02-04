@@ -200,6 +200,53 @@
                     </div>
                 </div>
 
+                <!-- Activity Completions -->
+                @if (_meetingActivities.Any(a => a.BadgeClauseId.HasValue || a.UmaDefinitionId.HasValue))
+                {
+                    <div class="card mt-4">
+                        <div class="card-header" style="background-color: #7B1FA2; color: white;">
+                            <h5 class="mb-0">
+                                <i class="bi bi-check2-square"></i> Record Activity Completions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-3">
+                                Tick which girls completed each linked activity. By default, all attendees are marked as completed.
+                            </p>
+                            @foreach (var activity in _meetingActivities.Where(a => a.BadgeClauseId.HasValue || a.UmaDefinitionId.HasValue))
+                            {
+                                <div class="mb-3">
+                                    <h6>
+                                        @activity.Name
+                                        @if (activity.BadgeClauseId.HasValue)
+                                        {
+                                            <span class="badge bg-primary ms-1">Badge Clause</span>
+                                        }
+                                        @if (activity.UmaDefinitionId.HasValue)
+                                        {
+                                            <span class="badge bg-info ms-1">UMA</span>
+                                        }
+                                    </h6>
+                                    <div class="row">
+                                        @foreach (var record in attendanceRecords.Where(a => a.Attended && memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == Data.Enums.PersonType.Girl))
+                                        {
+                                            var member = memberLookup[record.MembershipNumber];
+                                            <div class="col-md-4 col-lg-3 mb-1">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox"
+                                                           checked="@GetCompletion(activity.Id, record.MembershipNumber)"
+                                                           @onchange="@(e => SetCompletion(activity.Id, record.MembershipNumber, (bool)(e.Value ?? false)))" />
+                                                    <label class="form-check-label small">@member.FullName</label>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
                 <!-- Consent Tracking (if meeting requires consent) -->
                 @if (requiresConsent)
                 {
