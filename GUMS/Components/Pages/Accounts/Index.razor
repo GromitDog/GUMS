@@ -16,11 +16,17 @@
             <a href="/Accounts/Claims" class="btn btn-outline-secondary me-2">
                 <i class="bi bi-file-earmark-text"></i> Claims
             </a>
+            <a href="/Accounts/JournalEntry" class="btn btn-outline-primary me-2">
+                <i class="bi bi-journal-plus"></i> Journal Entry
+            </a>
             <a href="/Accounts/Transactions" class="btn btn-outline-primary me-2">
                 <i class="bi bi-list-ul"></i> Transaction History
             </a>
             <a href="/Accounts/RecordExpense" class="btn btn-warning me-2">
                 <i class="bi bi-plus-circle"></i> Record Expense
+            </a>
+            <a href="/Accounts/Manage" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-gear"></i> Manage Accounts
             </a>
             <a href="/Accounts/BankDeposit" class="btn btn-primary">
                 <i class="bi bi-bank"></i> Bank Deposit
@@ -238,17 +244,23 @@
                                     <td><code>@account.Code</code></td>
                                     <td>@account.Name</td>
                                     <td>
-                                        @if (account.Type == AccountType.Asset)
+                                        @switch (account.Type)
                                         {
-                                            <span class="badge bg-info">Asset</span>
-                                        }
-                                        else if (account.Type == AccountType.Income)
-                                        {
-                                            <span class="badge bg-success">Income</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-danger">Expense</span>
+                                            case AccountType.Asset:
+                                                <span class="badge bg-info">Asset</span>
+                                                break;
+                                            case AccountType.Liability:
+                                                <span class="badge bg-warning text-dark">Liability</span>
+                                                break;
+                                            case AccountType.Equity:
+                                                <span class="badge bg-secondary">Equity</span>
+                                                break;
+                                            case AccountType.Income:
+                                                <span class="badge bg-success">Income</span>
+                                                break;
+                                            case AccountType.Expense:
+                                                <span class="badge bg-danger">Expense</span>
+                                                break;
                                         }
                                     </td>
                                     <td class="text-end">

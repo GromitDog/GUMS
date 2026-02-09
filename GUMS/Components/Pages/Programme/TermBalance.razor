@@ -16,14 +16,39 @@
 
     <h2 class="mb-4">Term Programme Balance</h2>
 
-    <!-- Term Selector -->
-    <div class="mb-3">
-        <select class="form-select form-select-sm" style="width: auto;" @onchange="OnTermChanged">
-            @foreach (var term in _terms)
-            {
-                <option value="@term.Id" selected="@(term.Id == _selectedTermId)">@term.Name</option>
-            }
-        </select>
+    <!-- Filters -->
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label form-label-sm">Term</label>
+                    <select class="form-select form-select-sm" @onchange="OnTermChanged">
+                        @foreach (var term in _terms)
+                        {
+                            <option value="@term.Id" selected="@(term.Id == _selectedTermId)">@term.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label form-label-sm">Theme</label>
+                    <select class="form-select form-select-sm" @onchange="OnThemeFilterChanged">
+                        <option value="">All Themes</option>
+                        @foreach (var theme in Enum.GetValues<Theme>())
+                        {
+                            <option value="@theme">@GUMS.Services.ProgrammeService.GetThemeDisplayName(theme)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label form-label-sm">Type</label>
+                    <select class="form-select form-select-sm" @onchange="OnTypeFilterChanged">
+                        <option value="All">All</option>
+                        <option value="UMAs">UMAs Only</option>
+                        <option value="Badges">Badges Only</option>
+                    </select>
+                </div>
+            </div>
+        </div>
     </div>
 
     @if (_isLoading)
@@ -51,13 +76,16 @@
                     </div>
                     <div class="card-body text-center">
                         <div class="mb-3">
-                            <h3>@_balance.TotalMinutesPlanned</h3>
-                            <small class="text-muted">Total UMA Minutes Planned</small>
+                            <h3>@GetFilteredTotalUmaMinutes()</h3>
+                            <small class="text-muted">UMA Minutes Planned</small>
                         </div>
-                        <div>
-                            <h3>@_balance.TotalBadgesWorkedOn</h3>
-                            <small class="text-muted">Badges Being Worked On</small>
-                        </div>
+                        @if (_filterType != "UMAs")
+                        {
+                            <div>
+                                <h3>@GetFilteredTotalBadges()</h3>
+                                <small class="text-muted">Badges Being Worked On</small>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -69,12 +97,12 @@
                         <h6 class="mb-0">Minutes by Theme</h6>
                     </div>
                     <div class="card-body">
-                        @foreach (var theme in Enum.GetValues<Theme>())
+                        @foreach (var theme in GetFilteredThemes())
                         {
                             var tb = _balance.ThemeBalances.GetValueOrDefault(theme);
-                            var minutes = tb?.MinutesPlanned ?? 0;
-                            var badges = tb?.BadgesWorkedOn ?? 0;
-                            var pct = tb?.PercentageOfTotal ?? 0;
+                            var minutes = GetFilteredMinutes(tb);
+                            var badges = _filterType == "UMAs" ? 0 : (tb?.BadgesWorkedOn ?? 0);
+                            var pct = GetFilteredPercentage(tb);
                             <div class="mb-3">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <strong style="color: @Badges.GetThemeColor(theme);">
@@ -82,7 +110,10 @@
                                     </strong>
                                     <span>
                                         <span class="badge bg-secondary">@minutes min</span>
-                                        <span class="badge bg-info">@badges badges</span>
+                                        @if (_filterType != "UMAs")
+                                        {
+                                            <span class="badge bg-info">@badges badges</span>
+                                        }
                                     </span>
                                 </div>
                                 <div class="progress" style="height: 12px;">
@@ -98,11 +129,10 @@
                             </div>
                         }
 
-                        @if (_balance.TotalMinutesPlanned == 0)
+                        @if (GetFilteredTotalMinutes() == 0)
                         {
                             <div class="alert alert-info mb-0">
-                                <i class="bi bi-info-circle"></i> No UMA activities planned for this term yet.
-                                Link UMAs to meeting activities to see the balance here.
+                                <i class="bi bi-info-circle"></i> No activities planned for this term with the current filters.
                             </div>
                         }
                     </div>

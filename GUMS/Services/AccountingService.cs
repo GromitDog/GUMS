@@ -25,6 +25,7 @@ public class AccountingService : IAccountingService
     public const string ActivitiesEventsExpenseCode = "5004";
     public const string BadgesAwardsExpenseCode = "5005";
     public const string OtherExpensesCode = "5099";
+    public const string OpeningBalancesCode = "3001";
 
     public AccountingService(ApplicationDbContext context, ITermService termService)
     {
@@ -123,13 +124,13 @@ public class AccountingService : IAccountingService
         {
             var account = existingAccounts.First(a => a.Id == line.AccountId);
 
-            // For asset/expense accounts: Debit increases, Credit decreases
-            // For income accounts: Credit increases, Debit decreases
+            // For Asset/Expense accounts: Debit increases, Credit decreases
+            // For Income/Liability/Equity accounts: Credit increases, Debit decreases
             if (account.Type == AccountType.Asset || account.Type == AccountType.Expense)
             {
                 account.Balance += line.Debit - line.Credit;
             }
-            else // Income
+            else // Income, Liability, Equity
             {
                 account.Balance += line.Credit - line.Debit;
             }
@@ -340,6 +341,134 @@ public class AccountingService : IAccountingService
 
         var result = await CreateTransactionAsync(transaction);
         return (result.Success, result.ErrorMessage);
+    }
+
+    // ===== General Account Management =====
+
+    /// <inheritdoc/>
+    public async Task<List<Account>> GetAccountsByTypeAsync(AccountType type)
+    {
+        return await _context.Accounts
+            .AsNoTracking()
+            .Include(a => a.TransactionLines)
+            .Where(a => a.Type == type)
+            .OrderBy(a => a.Code)
+            .ToListAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage, Account? Account)> CreateAccountAsync(string name, AccountType type)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return (false, "Account name is required.", null);
+        }
+
+        var (rangeStart, rangeEnd) = GetCodeRangeForType(type);
+
+        var usedCodes = await _context.Accounts
+            .Where(a => a.Type == type)
+            .Select(a => a.Code)
+            .ToListAsync();
+
+        var nextNumber = rangeStart + 1; // e.g. 1001 for Asset
+        if (usedCodes.Any())
+        {
+            var usedNumbers = usedCodes
+                .Select(c => int.TryParse(c, out var n) ? n : 0)
+                .Where(n => n >= rangeStart && n < rangeEnd)
+                .OrderBy(n => n)
+                .ToList();
+
+            if (usedNumbers.Any())
+            {
+                nextNumber = usedNumbers.Max() + 1;
+            }
+        }
+
+        if (nextNumber >= rangeEnd)
+        {
+            return (false, $"No more account codes available in the {type} range.", null);
+        }
+
+        var account = new Account
+        {
+            Code = nextNumber.ToString(),
+            Name = name,
+            Type = type,
+            IsSystem = false
+        };
+
+        _context.Accounts.Add(account);
+        await _context.SaveChangesAsync();
+
+        return (true, string.Empty, account);
+    }
+
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage)> UpdateAccountAsync(int accountId, string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return (false, "Account name is required.");
+        }
+
+        var account = await _context.Accounts.FindAsync(accountId);
+        if (account == null)
+        {
+            return (false, "Account not found.");
+        }
+
+        if (account.IsSystem)
+        {
+            return (false, "System accounts cannot be modified.");
+        }
+
+        account.Name = name;
+        await _context.SaveChangesAsync();
+
+        return (true, string.Empty);
+    }
+
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage)> DeleteAccountAsync(int accountId)
+    {
+        var account = await _context.Accounts
+            .Include(a => a.TransactionLines)
+            .FirstOrDefaultAsync(a => a.Id == accountId);
+
+        if (account == null)
+        {
+            return (false, "Account not found.");
+        }
+
+        if (account.IsSystem)
+        {
+            return (false, "System accounts cannot be deleted.");
+        }
+
+        if (account.TransactionLines.Any())
+        {
+            return (false, "Cannot delete account with existing transactions.");
+        }
+
+        _context.Accounts.Remove(account);
+        await _context.SaveChangesAsync();
+
+        return (true, string.Empty);
+    }
+
+    private static (int Start, int End) GetCodeRangeForType(AccountType type)
+    {
+        return type switch
+        {
+            AccountType.Asset => (1000, 2000),
+            AccountType.Liability => (2000, 3000),
+            AccountType.Equity => (3000, 4000),
+            AccountType.Income => (4000, 5000),
+            AccountType.Expense => (5000, 6000),
+            _ => throw new ArgumentException($"Unknown account type: {type}")
+        };
     }
 
     // ===== Expense Account Management =====
@@ -561,11 +690,12 @@ public class AccountingService : IAccountingService
                 foreach (var line in transaction.Lines)
                 {
                     var account = accounts.First(a => a.Id == line.AccountId);
+                    // Reverse: Asset/Expense use debit-credit, Income/Liability/Equity use credit-debit
                     if (account.Type == AccountType.Asset || account.Type == AccountType.Expense)
                     {
                         account.Balance -= line.Debit - line.Credit;
                     }
-                    else
+                    else // Income, Liability, Equity
                     {
                         account.Balance -= line.Credit - line.Debit;
                     }
@@ -1043,7 +1173,8 @@ public class AccountingService : IAccountingService
             new Account { Code = VenueHireExpenseCode, Name = "Venue Hire", Type = AccountType.Expense, IsSystem = false },
             new Account { Code = ActivitiesEventsExpenseCode, Name = "Activities & Events", Type = AccountType.Expense, IsSystem = false },
             new Account { Code = BadgesAwardsExpenseCode, Name = "Badges & Awards", Type = AccountType.Expense, IsSystem = false },
-            new Account { Code = OtherExpensesCode, Name = "Other Expenses", Type = AccountType.Expense, IsSystem = false }
+            new Account { Code = OtherExpensesCode, Name = "Other Expenses", Type = AccountType.Expense, IsSystem = false },
+            new Account { Code = OpeningBalancesCode, Name = "Opening Balances", Type = AccountType.Equity, IsSystem = true }
         };
 
         foreach (var account in defaultAccounts)

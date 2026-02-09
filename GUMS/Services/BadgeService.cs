@@ -59,7 +59,15 @@ public class BadgeService : IBadgeService
         if (string.IsNullOrWhiteSpace(badge.Name))
             return (false, "Badge name is required.", null);
 
-        if (badge.BadgeType == BadgeType.SkillsBuilder)
+        if (badge.BadgeType == BadgeType.FunBadge)
+        {
+            badge.RequiredCompletions = 1;
+            badge.Clauses = new List<BadgeClause>
+            {
+                new() { Name = badge.Name, SortOrder = 0 }
+            };
+        }
+        else if (badge.BadgeType == BadgeType.SkillsBuilder)
         {
             badge.RequiredCompletions = badge.RequiredCompletions <= 0 ? 4 : badge.RequiredCompletions;
         }
@@ -157,6 +165,7 @@ public class BadgeService : IBadgeService
         existing.Name = clause.Name;
         existing.Description = clause.Description;
         existing.SortOrder = clause.SortOrder;
+        existing.EstimatedMinutes = clause.EstimatedMinutes;
 
         await _context.SaveChangesAsync();
         return (true, string.Empty);

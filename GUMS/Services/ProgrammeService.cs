@@ -506,23 +506,30 @@ public class ProgrammeService : IProgrammeService
                 if (activity.UmaDefinition != null)
                 {
                     balance.ThemeBalances[activity.UmaDefinition.Theme].MinutesPlanned += activity.UmaDefinition.Minutes;
+                    balance.ThemeBalances[activity.UmaDefinition.Theme].UmaMinutesPlanned += activity.UmaDefinition.Minutes;
                     balance.TotalMinutesPlanned += activity.UmaDefinition.Minutes;
+                    balance.TotalUmaMinutesPlanned += activity.UmaDefinition.Minutes;
                 }
 
                 if (activity.BadgeClause?.BadgeDefinition != null)
                 {
-                    var badge = activity.BadgeClause.BadgeDefinition;
+                    var clause = activity.BadgeClause;
+                    var badge = clause.BadgeDefinition;
 
-                    if (badgesSeen.Add(badge.Id))
+                    // Only count badges with themes (skip fun badges)
+                    if (badge.Theme.HasValue)
                     {
-                        balance.ThemeBalances[badge.Theme].BadgesWorkedOn++;
-                        balance.TotalBadgesWorkedOn++;
-
-                        // Add estimated badge minutes to the theme total
-                        if (badge.EstimatedMinutes > 0)
+                        if (badgesSeen.Add(badge.Id))
                         {
-                            balance.ThemeBalances[badge.Theme].MinutesPlanned += badge.EstimatedMinutes;
-                            balance.TotalMinutesPlanned += badge.EstimatedMinutes;
+                            balance.ThemeBalances[badge.Theme.Value].BadgesWorkedOn++;
+                            balance.TotalBadgesWorkedOn++;
+                        }
+
+                        // Add clause's estimated minutes to the theme total
+                        if (clause.EstimatedMinutes > 0)
+                        {
+                            balance.ThemeBalances[badge.Theme.Value].MinutesPlanned += clause.EstimatedMinutes;
+                            balance.TotalMinutesPlanned += clause.EstimatedMinutes;
                         }
                     }
                 }
@@ -645,6 +652,41 @@ public class ProgrammeService : IProgrammeService
                 UmaDefinitionId = c.MeetingActivity.UmaDefinitionId
             })
             .ToListAsync();
+    }
+
+    public async Task<HashSet<int>> GetAllCompletedUmaIdsAsync(string membershipNumber)
+    {
+        // Get all completed activity IDs for this girl
+        var completedActivityIds = await _context.ActivityCompletions
+            .AsNoTracking()
+            .Where(c => c.MembershipNumber == membershipNumber && c.Completed)
+            .Select(c => c.MeetingActivityId)
+            .ToListAsync();
+
+        // Get UMA definition IDs from all completed activities (meeting-based and standalone)
+        var umaIds = await _context.MeetingActivities
+            .AsNoTracking()
+            .Where(a => completedActivityIds.Contains(a.Id) && a.UmaDefinitionId.HasValue)
+            .Select(a => a.UmaDefinitionId!.Value)
+            .Distinct()
+            .ToListAsync();
+
+        return umaIds.ToHashSet();
+    }
+
+    public async Task<HashSet<int>> GetStandaloneCompletedUmaIdsAsync(string membershipNumber)
+    {
+        // Get UMA IDs completed via standalone (no meeting) - these can be toggled
+        var umaIds = await _context.ActivityCompletions
+            .AsNoTracking()
+            .Where(c => c.MembershipNumber == membershipNumber && c.Completed
+                && c.MeetingActivity.MeetingId == null
+                && c.MeetingActivity.UmaDefinitionId.HasValue)
+            .Select(c => c.MeetingActivity.UmaDefinitionId!.Value)
+            .Distinct()
+            .ToListAsync();
+
+        return umaIds.ToHashSet();
     }
 
     // ===== Helpers =====

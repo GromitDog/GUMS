@@ -18,6 +18,7 @@ public partial class GirlProgress
     private Dictionary<int, bool> _expandedBadges = new();
     private Dictionary<Theme, List<UmaDefinition>> _umasByTheme = new();
     private HashSet<int> _completedUmaIds = new();
+    private HashSet<int> _standaloneCompletedUmaIds = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -39,11 +40,10 @@ public partial class GirlProgress
         _umasByTheme = allUmas.GroupBy(u => u.Theme)
             .ToDictionary(g => g.Key, g => g.ToList());
 
-        var standaloneCompletions = await ProgrammeService.GetStandaloneCompletionsAsync(MembershipNumber);
-        _completedUmaIds = standaloneCompletions
-            .Where(c => c.UmaDefinitionId.HasValue)
-            .Select(c => c.UmaDefinitionId!.Value)
-            .ToHashSet();
+        // Get all completed UMA IDs (both meeting-based and standalone)
+        _completedUmaIds = await ProgrammeService.GetAllCompletedUmaIdsAsync(MembershipNumber);
+        // Get standalone completed UMAs (these can be toggled off)
+        _standaloneCompletedUmaIds = await ProgrammeService.GetStandaloneCompletedUmaIdsAsync(MembershipNumber);
     }
 
     private async Task ToggleGoldChallenge(ChangeEventArgs e)

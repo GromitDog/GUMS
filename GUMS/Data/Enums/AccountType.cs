@@ -18,5 +18,15 @@ public enum AccountType
     /// <summary>
     /// Expense accounts (Supplies, Equipment, etc.) - Debit increases balance (same as Asset)
     /// </summary>
-    Expense
+    Expense,
+
+    /// <summary>
+    /// Liability accounts (amounts owed). Credit increases, Debit decreases.
+    /// </summary>
+    Liability,
+
+    /// <summary>
+    /// Equity accounts (Opening Balances, etc.). Credit increases, Debit decreases.
+    /// </summary>
+    Equity
 }

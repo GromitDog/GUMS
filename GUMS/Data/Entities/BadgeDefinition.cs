@@ -11,8 +11,7 @@ public class BadgeDefinition
     [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
 
-    [Required]
-    public Theme Theme { get; set; }
+    public Theme? Theme { get; set; }
 
     [Required]
     public BadgeType BadgeType { get; set; }
@@ -26,11 +25,6 @@ public class BadgeDefinition
     public string? SkillsBuilderName { get; set; }
 
     public int RequiredCompletions { get; set; } = 4;
-
-    /// <summary>
-    /// Estimated minutes to complete this badge (for term balance calculations)
-    /// </summary>
-    public int EstimatedMinutes { get; set; }
 
     // Navigation properties
     public List<BadgeClause> Clauses { get; set; } = new();

@@ -69,7 +69,8 @@ public partial class Badges
         _editingBadge = new BadgeDefinition
         {
             RequiredCompletions = 4,
-            BadgeType = BadgeType.SkillsBuilder
+            BadgeType = BadgeType.SkillsBuilder,
+            Theme = Theme.KnowMyself
         };
         _editingClauses = new List<BadgeClause>();
         _showBadgeModal = true;
@@ -94,7 +95,8 @@ public partial class Badges
             BadgeDefinitionId = c.BadgeDefinitionId,
             Name = c.Name,
             Description = c.Description,
-            SortOrder = c.SortOrder
+            SortOrder = c.SortOrder,
+            EstimatedMinutes = c.EstimatedMinutes
         }).ToList();
         _showBadgeModal = true;
     }
@@ -102,6 +104,23 @@ public partial class Badges
     private void CloseModal()
     {
         _showBadgeModal = false;
+    }
+
+    private void OnBadgeTypeChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<BadgeType>(e.Value?.ToString(), out var badgeType))
+        {
+            _editingBadge.BadgeType = badgeType;
+            if (badgeType == BadgeType.FunBadge)
+            {
+                _editingBadge.Theme = null;
+                _editingBadge.RequiredCompletions = 0;
+            }
+            else if (!_editingBadge.Theme.HasValue)
+            {
+                _editingBadge.Theme = Theme.KnowMyself;
+            }
+        }
     }
 
     private void AddClause()

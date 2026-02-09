@@ -196,6 +196,9 @@ namespace GUMS.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("EstimatedMinutes")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -220,9 +223,6 @@ namespace GUMS.Migrations
                     b.Property<int>("BadgeType")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("EstimatedMinutes")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -241,7 +241,7 @@ namespace GUMS.Migrations
                     b.Property<int?>("Stage")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Theme")
+                    b.Property<int?>("Theme")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");

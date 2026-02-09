@@ -88,6 +88,28 @@ public interface IAccountingService
         DateTime date,
         string? notes = null);
 
+    // ===== General Account Management =====
+
+    /// <summary>
+    /// Gets all accounts of a given type, including their transaction lines.
+    /// </summary>
+    Task<List<Account>> GetAccountsByTypeAsync(AccountType type);
+
+    /// <summary>
+    /// Creates a new account with auto-assigned code in the correct range.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage, Account? Account)> CreateAccountAsync(string name, AccountType type);
+
+    /// <summary>
+    /// Updates the name of a non-system account.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage)> UpdateAccountAsync(int accountId, string name);
+
+    /// <summary>
+    /// Deletes a non-system account (only if no transactions exist).
+    /// </summary>
+    Task<(bool Success, string ErrorMessage)> DeleteAccountAsync(int accountId);
+
     // ===== Expense Account Management =====
 
     /// <summary>

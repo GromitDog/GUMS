@@ -7,6 +7,7 @@ namespace GUMS.Components.Pages.Accounts;
 public partial class Transactions
 {
     [Inject] private IAccountingService AccountingService { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
     private List<Transaction> _transactions = new();
     private DateTime? _dateFrom;
@@ -14,9 +15,16 @@ public partial class Transactions
 
     private bool _isLoading = true;
     private string _errorMessage = string.Empty;
+    private string _successMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
+        var uri = new Uri(NavigationManager.Uri);
+        if (uri.Query.Contains("success=journal"))
+        {
+            _successMessage = "Journal entry posted successfully!";
+        }
+
         // Default to last 30 days
         _dateTo = DateTime.Today;
         _dateFrom = DateTime.Today.AddDays(-30);
@@ -57,5 +65,10 @@ public partial class Transactions
     private void ClearError()
     {
         _errorMessage = string.Empty;
+    }
+
+    private void ClearSuccess()
+    {
+        _successMessage = string.Empty;
     }
 }

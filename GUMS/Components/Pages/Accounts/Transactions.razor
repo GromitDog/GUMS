@@ -13,6 +13,14 @@
         </a>
     </div>
 
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+        </div>
+    }
+
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
         <div class="alert alert-danger alert-dismissible fade show" role="alert">

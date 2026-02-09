@@ -17,6 +17,11 @@ public class BadgeClause
 
     public int SortOrder { get; set; }
 
+    /// <summary>
+    /// Estimated minutes to complete this clause (for term balance calculations)
+    /// </summary>
+    public int EstimatedMinutes { get; set; }
+
     // Navigation properties
     public BadgeDefinition BadgeDefinition { get; set; } = null!;
 }

@@ -97,7 +97,7 @@
                 <div class="col-md-6 col-lg-4 mb-3">
                     <div class="card h-100">
                         <div class="card-header d-flex justify-content-between align-items-center"
-                             style="background-color: @GetThemeColor(badge.Theme); color: white;">
+                             style="background-color: @(badge.Theme.HasValue ? GetThemeColor(badge.Theme.Value) : "#6c757d"); color: white;">
                             <div>
                                 <strong>@badge.Name</strong>
                                 @if (badge.Stage.HasValue)
@@ -117,7 +117,10 @@
                                 <span class="badge @(badge.BadgeType switch { BadgeType.SkillsBuilder => "bg-primary", BadgeType.InterestBadge => "bg-success", BadgeType.FunBadge => "bg-warning text-dark", _ => "bg-secondary" })">
                                     @(badge.BadgeType switch { BadgeType.SkillsBuilder => "Skills Builder", BadgeType.InterestBadge => "Interest Badge", BadgeType.FunBadge => "Fun Badge", _ => badge.BadgeType.ToString() })
                                 </span>
-                                <span class="badge bg-secondary">@GUMS.Services.ProgrammeService.GetThemeDisplayName(badge.Theme)</span>
+                                @if (badge.Theme.HasValue)
+                                {
+                                    <span class="badge bg-secondary">@GUMS.Services.ProgrammeService.GetThemeDisplayName(badge.Theme.Value)</span>
+                                }
                             </div>
                             @if (!string.IsNullOrEmpty(badge.SkillsBuilderName))
                             {
@@ -162,20 +165,24 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Type</label>
-                                <select class="form-select" @bind="_editingBadge.BadgeType">
-                                    <option value="@BadgeType.SkillsBuilder">Skills Builder</option>
-                                    <option value="@BadgeType.InterestBadge">Interest Badge</option>
+                                <select class="form-select" @onchange="OnBadgeTypeChanged">
+                                    <option value="@BadgeType.SkillsBuilder" selected="@(_editingBadge.BadgeType == BadgeType.SkillsBuilder)">Skills Builder</option>
+                                    <option value="@BadgeType.InterestBadge" selected="@(_editingBadge.BadgeType == BadgeType.InterestBadge)">Interest Badge</option>
+                                    <option value="@BadgeType.FunBadge" selected="@(_editingBadge.BadgeType == BadgeType.FunBadge)">Fun Badge</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Theme</label>
-                                <select class="form-select" @bind="_editingBadge.Theme">
-                                    @foreach (var theme in Enum.GetValues<Theme>())
-                                    {
-                                        <option value="@theme">@GUMS.Services.ProgrammeService.GetThemeDisplayName(theme)</option>
-                                    }
-                                </select>
-                            </div>
+                            @if (_editingBadge.BadgeType != BadgeType.FunBadge)
+                            {
+                                <div class="col-md-4">
+                                    <label class="form-label">Theme</label>
+                                    <select class="form-select" @bind="_editingBadge.Theme">
+                                        @foreach (var theme in Enum.GetValues<Theme>())
+                                        {
+                                            <option value="@theme">@GUMS.Services.ProgrammeService.GetThemeDisplayName(theme)</option>
+                                        }
+                                    </select>
+                                </div>
+                            }
                             <div class="col-md-4">
                                 <label class="form-label">Section</label>
                                 <select class="form-select" @bind="_editingBadge.Section">
@@ -190,11 +197,6 @@
                                 <div class="col-md-4">
                                     <label class="form-label">Required Completions</label>
                                     <input type="number" class="form-control" @bind="_editingBadge.RequiredCompletions" min="1" />
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Estimated Minutes</label>
-                                    <input type="number" class="form-control" @bind="_editingBadge.EstimatedMinutes" min="0"
-                                           placeholder="For term balance" />
                                 </div>
                             }
 
@@ -231,6 +233,10 @@
                                             <input type="text" class="form-control form-control-sm"
                                                    placeholder="Description (optional)"
                                                    @bind="_editingClauses[index].Description" />
+                                            <input type="number" class="form-control form-control-sm"
+                                                   style="max-width: 80px;"
+                                                   placeholder="Mins"
+                                                   @bind="_editingClauses[index].EstimatedMinutes" />
                                             <button class="btn btn-outline-danger btn-sm" @onclick="() => RemoveClause(index)">
                                                 <i class="bi bi-x"></i>
                                             </button>

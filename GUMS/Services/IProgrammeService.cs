@@ -27,6 +27,8 @@ public interface IProgrammeService
     Task<(bool Success, string ErrorMessage)> SaveStandaloneCompletionAsync(
         string membershipNumber, int? badgeClauseId, int? umaDefinitionId, bool completed);
     Task<List<StandaloneCompletionDto>> GetStandaloneCompletionsAsync(string membershipNumber);
+    Task<HashSet<int>> GetAllCompletedUmaIdsAsync(string membershipNumber);
+    Task<HashSet<int>> GetStandaloneCompletedUmaIdsAsync(string membershipNumber);
 
     // ===== Term Balance =====
     Task<TermBalance> GetTermBalanceAsync(int termId);
@@ -159,6 +161,7 @@ public class TermBalance
     public string? TermName { get; set; }
     public Dictionary<Theme, ThemeBalance> ThemeBalances { get; set; } = new();
     public int TotalMinutesPlanned { get; set; }
+    public int TotalUmaMinutesPlanned { get; set; }
     public int TotalBadgesWorkedOn { get; set; }
 }
 
@@ -166,6 +169,7 @@ public class ThemeBalance
 {
     public Theme Theme { get; set; }
     public int MinutesPlanned { get; set; }
+    public int UmaMinutesPlanned { get; set; }
     public int BadgesWorkedOn { get; set; }
     public double PercentageOfTotal { get; set; }
 }

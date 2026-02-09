@@ -224,14 +224,20 @@
                                     {
                                         var umaId = uma.Id;
                                         var isUmaCompleted = _completedUmaIds.Contains(umaId);
+                                        var isStandalone = _standaloneCompletedUmaIds.Contains(umaId);
+                                        var isMeetingBased = isUmaCompleted && !isStandalone;
                                         <div class="form-check form-check-sm">
                                             <input class="form-check-input" type="checkbox"
                                                    checked="@isUmaCompleted"
-                                                   disabled="@_isSaving"
+                                                   disabled="@(_isSaving || isMeetingBased)"
                                                    @onchange="() => ToggleUmaCompletion(umaId, !isUmaCompleted)"
                                                    id="uma-@umaId" />
-                                            <label class="form-check-label small" for="uma-@umaId">
+                                            <label class="form-check-label small @(isMeetingBased ? "text-muted" : "")" for="uma-@umaId">
                                                 @uma.Name (@uma.Minutes min)
+                                                @if (isMeetingBased)
+                                                {
+                                                    <i class="bi bi-calendar-check" title="Completed at a meeting"></i>
+                                                }
                                             </label>
                                         </div>
                                     }
