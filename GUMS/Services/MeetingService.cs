@@ -86,7 +86,8 @@ public class MeetingService : IMeetingService
 
     public async Task<(bool Success, string ErrorMessage, Meeting? Meeting)> CreateAsync(Meeting meeting)
     {
-        if (meeting.EndTime <= meeting.StartTime)
+        var isMultiDay = meeting.EndDate.HasValue && meeting.EndDate.Value.Date > meeting.Date.Date;
+        if (!isMultiDay && meeting.EndTime <= meeting.StartTime)
         {
             return (false, "End time must be after start time.", null);
         }
@@ -128,7 +129,8 @@ public class MeetingService : IMeetingService
             return (false, "Meeting not found.");
         }
 
-        if (meeting.EndTime <= meeting.StartTime)
+        var isMultiDay = meeting.EndDate.HasValue && meeting.EndDate.Value.Date > meeting.Date.Date;
+        if (!isMultiDay && meeting.EndTime <= meeting.StartTime)
         {
             return (false, "End time must be after start time.");
         }

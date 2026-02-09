@@ -947,6 +947,29 @@ public class MeetingServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_ShouldSucceed_WhenMultiDayEventEndTimeBeforeStartTime()
+    {
+        // Arrange - e.g. camp starts 17:00 on 10th, ends 15:00 on 12th
+        var meeting = new Meeting
+        {
+            Date = new DateTime(2026, 4, 10),
+            EndDate = new DateTime(2026, 4, 12),
+            StartTime = new TimeOnly(17, 00),
+            EndTime = new TimeOnly(15, 00),
+            MeetingType = MeetingType.Extra,
+            Title = "Camp",
+            LocationName = "Camp Site"
+        };
+
+        // Act
+        var result = await _sut.CreateAsync(meeting);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Meeting.Should().NotBeNull();
+    }
+
+    [Fact]
     public async Task UpdateAsync_ShouldUpdateEndDate()
     {
         // Arrange
