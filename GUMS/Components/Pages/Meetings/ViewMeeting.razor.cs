@@ -1,4 +1,5 @@
 using GUMS.Data.Entities;
+using GUMS.Data.Enums;
 using GUMS.Services;
 using Microsoft.AspNetCore.Components;
 
@@ -6,8 +7,9 @@ namespace GUMS.Components.Pages.Meetings;
 
 public partial class ViewMeeting
 {
-    [Inject] public required IMeetingService MeetingService { get; set; } 
-    [Inject] public required IAttendanceService AttendanceService { get; set; } 
+    [Inject] public required IMeetingService MeetingService { get; set; }
+    [Inject] public required IAttendanceService AttendanceService { get; set; }
+    [Inject] public required IPaymentService PaymentService { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
 
     [Parameter]
@@ -20,9 +22,16 @@ public partial class ViewMeeting
 
     private bool isLoading = true;
     private bool isDeleting = false;
+    private bool isGeneratingPayments = false;
     private bool showDeleteConfirm = false;
+    private bool showGeneratePaymentsConfirm = false;
     private string successMessage = string.Empty;
     private string errorMessage = string.Empty;
+
+    // Event payment tracking
+    private int eventPaymentsCount = 0;
+    private int consentedWithoutPayment = 0;
+    private List<Attendance> attendees = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -52,6 +61,7 @@ public partial class ViewMeeting
                 activities = await MeetingService.GetActivitiesForMeetingAsync(MeetingId);
                 attendanceStats = await AttendanceService.GetMeetingAttendanceStatsAsync(MeetingId);
                 requiresConsent = await AttendanceService.MeetingRequiresConsentAsync(MeetingId);
+                await LoadEventPaymentInfo();
             }
         }
         catch (Exception ex)
@@ -114,6 +124,72 @@ public partial class ViewMeeting
         finally
         {
             isDeleting = false;
+        }
+    }
+
+    // ===== Event Payments =====
+
+    private bool HasEventCost => meeting?.CostPerAttendee.HasValue == true && meeting.CostPerAttendee.Value > 0;
+
+    private async Task LoadEventPaymentInfo()
+    {
+        if (!HasEventCost) return;
+
+        attendees = await AttendanceService.GetAttendanceForMeetingAsync(MeetingId);
+        var consentedMembers = attendees.Where(a => a.ConsentFormReceived).ToList();
+
+        eventPaymentsCount = 0;
+        consentedWithoutPayment = 0;
+
+        foreach (var a in consentedMembers)
+        {
+            if (await PaymentService.HasActivityPaymentAsync(MeetingId, a.MembershipNumber))
+                eventPaymentsCount++;
+            else
+                consentedWithoutPayment++;
+        }
+    }
+
+    private void ShowGeneratePaymentsConfirm()
+    {
+        showGeneratePaymentsConfirm = true;
+    }
+
+    private void CancelGeneratePayments()
+    {
+        showGeneratePaymentsConfirm = false;
+    }
+
+    private async Task GenerateEventPayments()
+    {
+        if (meeting == null) return;
+
+        isGeneratingPayments = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var consentedMembers = attendees.Where(a => a.ConsentFormReceived).ToList();
+            var created = 0;
+
+            foreach (var a in consentedMembers)
+            {
+                var result = await PaymentService.CreateActivityPaymentAsync(MeetingId, a.MembershipNumber);
+                if (result.Success) created++;
+            }
+
+            showGeneratePaymentsConfirm = false;
+            successMessage = $"Generated {created} payment record{(created != 1 ? "s" : "")} for {meeting.Title}.";
+            await LoadEventPaymentInfo();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+            showGeneratePaymentsConfirm = false;
+        }
+        finally
+        {
+            isGeneratingPayments = false;
         }
     }
 }

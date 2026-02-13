@@ -34,18 +34,8 @@ public partial class GenerateSubs
 
         try
         {
-            // Get current and future terms
-            var currentTerm = await TermService.GetCurrentTermAsync();
-            var futureTerms = await TermService.GetFutureTermsAsync();
-
-            _availableTerms = new List<Term>();
-
-            if (currentTerm != null)
-            {
-                _availableTerms.Add(currentTerm);
-            }
-
-            _availableTerms.AddRange(futureTerms);
+            // Get all terms (past, current, and future)
+            _availableTerms = await TermService.GetAllAsync();
         }
         catch (Exception ex)
         {

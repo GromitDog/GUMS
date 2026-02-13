@@ -13,4 +13,10 @@ public class AwardTracking
     public bool GoldChallengeComplete { get; set; }
 
     public DateTime? GoldChallengeDate { get; set; }
+
+    public DateTime? BronzeAwardedDate { get; set; }
+
+    public DateTime? SilverAwardedDate { get; set; }
+
+    public DateTime? GoldAwardedDate { get; set; }
 }

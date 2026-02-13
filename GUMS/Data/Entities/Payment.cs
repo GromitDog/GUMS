@@ -39,6 +39,12 @@ public class Payment
     public int? MeetingId { get; set; }
     public int? TermId { get; set; }
 
+    /// <summary>
+    /// Optional income account for "Other" payment types.
+    /// When set, the accounting entry credits this account instead of looking up by payment type.
+    /// </summary>
+    public int? IncomeAccountId { get; set; }
+
     public string? Notes { get; set; }
 
     /// <summary>
@@ -53,4 +59,5 @@ public class Payment
     // Navigation properties
     public Meeting? Meeting { get; set; }
     public Term? Term { get; set; }
+    public Account? IncomeAccount { get; set; }
 }

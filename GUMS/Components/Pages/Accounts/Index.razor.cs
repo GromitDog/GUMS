@@ -24,6 +24,10 @@ public partial class Index
         {
             _successMessage = "Bank deposit recorded successfully!";
         }
+        else if (uri.Query.Contains("success=income"))
+        {
+            _successMessage = "Income recorded successfully!";
+        }
 
         await LoadData();
     }

@@ -37,6 +37,8 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     public DbSet<ActivityCompletion> ActivityCompletions { get; set; }
     public DbSet<AwardTracking> AwardTrackings { get; set; }
     public DbSet<AwardedBadge> AwardedBadges { get; set; }
+    public DbSet<AwardedThemeAward> AwardedThemeAwards { get; set; }
+    public DbSet<BankReconciliation> BankReconciliations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -190,6 +192,15 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // AwardedThemeAward configuration
+        modelBuilder.Entity<AwardedThemeAward>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+            entity.HasIndex(a => new { a.MembershipNumber, a.Theme }).IsUnique();
+
+            entity.Property(a => a.MembershipNumber).IsRequired();
+        });
+
         // Payment configuration
         // CRITICAL: Uses MembershipNumber (string) NOT PersonId FK
         modelBuilder.Entity<Payment>(entity =>
@@ -214,6 +225,12 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
             entity.HasOne(p => p.Term)
                 .WithMany(t => t.Payments)
                 .HasForeignKey(p => p.TermId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(p => p.IncomeAccountId);
+            entity.HasOne(p => p.IncomeAccount)
+                .WithMany()
+                .HasForeignKey(p => p.IncomeAccountId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
@@ -281,6 +298,7 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
             entity.HasKey(tl => tl.Id);
             entity.HasIndex(tl => tl.TransactionId);
             entity.HasIndex(tl => tl.AccountId);
+            entity.HasIndex(tl => tl.BankReconciliationId);
 
             entity.Property(tl => tl.Debit).HasPrecision(18, 2);
             entity.Property(tl => tl.Credit).HasPrecision(18, 2);
@@ -376,6 +394,22 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
             entity.HasOne(i => i.ExpenseAccount)
                 .WithMany()
                 .HasForeignKey(i => i.ExpenseAccountId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // BankReconciliation configuration
+        modelBuilder.Entity<BankReconciliation>(entity =>
+        {
+            entity.HasKey(br => br.Id);
+            entity.HasIndex(br => br.Status);
+            entity.HasIndex(br => br.StatementDate);
+
+            entity.Property(br => br.StatementBalance).HasPrecision(18, 2);
+            entity.Property(br => br.ReconciledBookBalance).HasPrecision(18, 2);
+
+            entity.HasMany(br => br.ReconciledLines)
+                .WithOne(tl => tl.BankReconciliation)
+                .HasForeignKey(tl => tl.BankReconciliationId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
     }

@@ -23,6 +23,11 @@ public partial class Index
     private string successMessage = string.Empty;
     private string errorMessage = string.Empty;
 
+    // Past meetings paging/search
+    private string pastSearchText = string.Empty;
+    private int pastPageSize = 20;
+    private const int PageIncrement = 20;
+
     protected override async Task OnInitializedAsync()
     {
         // Check for success message from navigation state
@@ -70,9 +75,43 @@ public partial class Index
         }
     }
 
+    private List<Meeting> FilteredPastMeetings =>
+        string.IsNullOrWhiteSpace(pastSearchText)
+            ? pastMeetings
+            : pastMeetings.Where(m =>
+                m.Title.Contains(pastSearchText, StringComparison.OrdinalIgnoreCase) ||
+                m.Date.ToString("ddd dd MMM yyyy").Contains(pastSearchText, StringComparison.OrdinalIgnoreCase) ||
+                m.LocationName.Contains(pastSearchText, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
     private void TogglePastMeetings()
     {
         showPastMeetings = !showPastMeetings;
+    }
+
+    private async Task ShowMorePastMeetings()
+    {
+        pastPageSize += PageIncrement;
+        await EnsureAttendanceStatsLoaded();
+    }
+
+    private async Task OnPastSearchChanged(ChangeEventArgs e)
+    {
+        pastSearchText = e.Value?.ToString() ?? string.Empty;
+        await EnsureAttendanceStatsLoaded();
+    }
+
+    private async Task EnsureAttendanceStatsLoaded()
+    {
+        var visible = FilteredPastMeetings.Take(pastPageSize).ToList();
+        foreach (var meeting in visible)
+        {
+            if (!attendanceStatsCache.ContainsKey(meeting.Id))
+            {
+                var stats = await AttendanceService.GetMeetingAttendanceStatsAsync(meeting.Id);
+                attendanceStatsCache[meeting.Id] = stats;
+            }
+        }
     }
 
     private void ClearSuccess()

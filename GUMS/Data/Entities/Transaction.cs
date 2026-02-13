@@ -38,6 +38,16 @@ public class Transaction
     public List<TransactionLine> Lines { get; set; } = new();
 
     /// <summary>
+    /// Whether this transaction has been voided
+    /// </summary>
+    public bool IsVoided { get; set; }
+
+    /// <summary>
+    /// Date the transaction was voided
+    /// </summary>
+    public DateTime? VoidedDate { get; set; }
+
+    /// <summary>
     /// Calculated total debits - should equal total credits
     /// </summary>
     public decimal TotalDebits => Lines.Sum(l => l.Debit);

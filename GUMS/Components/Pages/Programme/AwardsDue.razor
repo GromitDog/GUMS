@@ -75,14 +75,11 @@
                                         }
                                     </td>
                                     <td class="text-end">
-                                        @if (award.BadgeDefinitionId.HasValue)
-                                        {
-                                            <button class="btn btn-sm btn-outline-success"
-                                                    disabled="@_isSaving"
-                                                    @onclick="() => MarkAwarded(award)">
-                                                <i class="bi bi-check-lg"></i> Mark Awarded
-                                            </button>
-                                        }
+                                        <button class="btn btn-sm btn-outline-success"
+                                                disabled="@_isSaving"
+                                                @onclick="() => MarkAwarded(award)">
+                                            <i class="bi bi-check-lg"></i> Mark Awarded
+                                        </button>
                                     </td>
                                 </tr>
                             }

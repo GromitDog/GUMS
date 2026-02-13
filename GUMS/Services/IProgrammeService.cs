@@ -22,6 +22,8 @@ public interface IProgrammeService
     Task<(bool Success, string ErrorMessage)> MarkBadgeAwardedAsync(string membershipNumber, int badgeDefinitionId);
     Task<(bool Success, string ErrorMessage)> UnmarkBadgeAwardedAsync(string membershipNumber, int badgeDefinitionId);
     Task<(bool Success, string ErrorMessage)> SetGoldChallengeCompleteAsync(string membershipNumber, bool complete);
+    Task<(bool Success, string ErrorMessage)> MarkThemeAwardedAsync(string membershipNumber, Theme theme);
+    Task<(bool Success, string ErrorMessage)> MarkLevelAwardedAsync(string membershipNumber, string level);
 
     // ===== Standalone Completions =====
     Task<(bool Success, string ErrorMessage)> SaveStandaloneCompletionAsync(
@@ -152,6 +154,7 @@ public class AwardDue
     public string AwardName { get; set; } = string.Empty;
     public string AwardType { get; set; } = string.Empty; // "Badge", "ThemeAward", "Bronze", "Silver", "Gold"
     public int? BadgeDefinitionId { get; set; }
+    public Theme? Theme { get; set; }
     public DateTime? CompletedDate { get; set; }
 }
 

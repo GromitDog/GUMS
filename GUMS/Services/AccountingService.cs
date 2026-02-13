@@ -190,6 +190,69 @@ public class AccountingService : IAccountingService
             .ToListAsync();
     }
 
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage)> VoidTransactionAsync(int transactionId)
+    {
+        var transaction = await _context.Transactions
+            .Include(t => t.Lines)
+            .FirstOrDefaultAsync(t => t.Id == transactionId);
+
+        if (transaction == null)
+        {
+            return (false, "Transaction not found.");
+        }
+
+        if (transaction.IsVoided)
+        {
+            return (false, "Transaction is already voided.");
+        }
+
+        if (transaction.PaymentId.HasValue)
+        {
+            return (false, "Cannot void a payment-linked transaction. Manage this through the payments system.");
+        }
+
+        // Check if any line has been reconciled
+        if (transaction.Lines.Any(l => l.BankReconciliationId.HasValue))
+        {
+            return (false, "Cannot void a reconciled transaction. One or more lines have been included in a bank reconciliation.");
+        }
+
+        // Reverse account balances
+        var accountIds = transaction.Lines.Select(l => l.AccountId).Distinct().ToList();
+        var accounts = await _context.Accounts
+            .Where(a => accountIds.Contains(a.Id))
+            .ToListAsync();
+
+        foreach (var line in transaction.Lines)
+        {
+            var account = accounts.First(a => a.Id == line.AccountId);
+            if (account.Type == AccountType.Asset || account.Type == AccountType.Expense)
+            {
+                account.Balance -= line.Debit - line.Credit;
+            }
+            else // Income, Liability, Equity
+            {
+                account.Balance -= line.Credit - line.Debit;
+            }
+        }
+
+        // Remove any Expense entity that references this transaction
+        var linkedExpense = await _context.Expenses
+            .FirstOrDefaultAsync(e => e.TransactionId == transactionId);
+        if (linkedExpense != null)
+        {
+            _context.Expenses.Remove(linkedExpense);
+        }
+
+        transaction.IsVoided = true;
+        transaction.VoidedDate = DateTime.Now;
+
+        await _context.SaveChangesAsync();
+
+        return (true, string.Empty);
+    }
+
     // ===== Payment Recording Integration =====
 
     /// <inheritdoc/>
@@ -199,7 +262,8 @@ public class AccountingService : IAccountingService
         PaymentMethod paymentMethod,
         PaymentType paymentType,
         string description,
-        DateTime date)
+        DateTime date,
+        int? incomeAccountId = null)
     {
         if (amount <= 0)
         {
@@ -215,16 +279,31 @@ public class AccountingService : IAccountingService
             _ => throw new ArgumentException($"Unknown payment method: {paymentMethod}")
         };
 
-        // Determine income account based on payment type
-        var incomeAccountCode = paymentType switch
-        {
-            PaymentType.Subs => SubsIncomeCode,
-            PaymentType.Activity => ActivityIncomeCode,
-            _ => throw new ArgumentException($"Unknown payment type: {paymentType}")
-        };
-
         var assetAccount = await GetAccountByCodeAsync(assetAccountCode);
-        var incomeAccount = await GetAccountByCodeAsync(incomeAccountCode);
+
+        // Determine income account: use provided ID if available, otherwise look up by payment type
+        Account? incomeAccount;
+        if (incomeAccountId.HasValue)
+        {
+            incomeAccount = await GetAccountByIdAsync(incomeAccountId.Value);
+        }
+        else
+        {
+            var incomeAccountCode = paymentType switch
+            {
+                PaymentType.Subs => SubsIncomeCode,
+                PaymentType.Activity => ActivityIncomeCode,
+                PaymentType.Other => (string?)null,
+                _ => throw new ArgumentException($"Unknown payment type: {paymentType}")
+            };
+
+            if (incomeAccountCode == null)
+            {
+                return (false, "An income account must be selected for 'Other' payment types.");
+            }
+
+            incomeAccount = await GetAccountByCodeAsync(incomeAccountCode);
+        }
 
         if (assetAccount == null || incomeAccount == null)
         {
@@ -587,6 +666,75 @@ public class AccountingService : IAccountingService
         await _context.SaveChangesAsync();
 
         return (true, string.Empty);
+    }
+
+    // ===== Direct Income Recording =====
+
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage, Transaction? Transaction)> RecordDirectIncomeAsync(
+        decimal amount,
+        int creditAccountId,
+        int receivedIntoAccountId,
+        string description,
+        DateTime date,
+        string? reference = null,
+        string? notes = null)
+    {
+        if (amount <= 0)
+        {
+            return (false, "Amount must be greater than zero.", null);
+        }
+
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return (false, "Description is required.", null);
+        }
+
+        var creditAccount = await _context.Accounts.FindAsync(creditAccountId);
+        if (creditAccount == null || (creditAccount.Type != AccountType.Income && creditAccount.Type != AccountType.Expense))
+        {
+            return (false, "Invalid income/expense account.", null);
+        }
+
+        var assetAccount = await _context.Accounts.FindAsync(receivedIntoAccountId);
+        if (assetAccount == null || assetAccount.Type != AccountType.Asset)
+        {
+            return (false, "Invalid asset account.", null);
+        }
+
+        var descriptionPrefix = creditAccount.Type == AccountType.Expense ? "Refund" : "Income";
+        var fullDescription = $"{descriptionPrefix}: {description}";
+        if (!string.IsNullOrWhiteSpace(reference))
+        {
+            fullDescription += $" (Ref: {reference})";
+        }
+        if (!string.IsNullOrWhiteSpace(notes))
+        {
+            fullDescription += $" - {notes}";
+        }
+
+        var transaction = new Transaction
+        {
+            Date = date,
+            Description = fullDescription,
+            Lines = new List<TransactionLine>
+            {
+                new TransactionLine
+                {
+                    AccountId = assetAccount.Id,
+                    Debit = amount,
+                    Credit = 0
+                },
+                new TransactionLine
+                {
+                    AccountId = creditAccount.Id,
+                    Debit = 0,
+                    Credit = amount
+                }
+            }
+        };
+
+        return await CreateTransactionAsync(transaction);
     }
 
     // ===== Direct Expense Recording =====

@@ -88,7 +88,24 @@
                                 <p class="mb-0">
                                     @meeting.StartTime.ToString("HH:mm") - @meeting.EndTime.ToString("HH:mm")
                                     <span class="text-muted">
-                                        (@((meeting.EndTime.ToTimeSpan() - meeting.StartTime.ToTimeSpan()).TotalHours.ToString("F1")) hours)
+                                        @{
+                                            var startDt = meeting.Date.Add(meeting.StartTime.ToTimeSpan());
+                                            var endDt = (meeting.EndDate ?? meeting.Date).Add(meeting.EndTime.ToTimeSpan());
+                                            var duration = endDt - startDt;
+                                            if (duration.TotalHours < 24)
+                                            {
+                                                @($"({duration.TotalHours:F1} hours)")
+                                            }
+                                            else
+                                            {
+                                                var dDays = (int)duration.TotalDays;
+                                                var dHours = duration.Hours;
+                                                var parts = new List<string>();
+                                                if (dDays > 0) parts.Add($"{dDays} day{(dDays != 1 ? "s" : "")}");
+                                                if (dHours > 0) parts.Add($"{dHours} hour{(dHours != 1 ? "s" : "")}");
+                                                @($"({string.Join(" ", parts)})")
+                                            }
+                                        }
                                     </span>
                                 </p>
                             </div>
@@ -185,7 +202,7 @@
                                 <div class="alert alert-warning mt-3 mb-0" role="alert">
                                     <i class="bi bi-info-circle"></i>
                                     <strong>Remember:</strong> Some activities require consent forms from parents.
-                                    You'll be able to track consent status in the attendance section (coming soon).
+                                    Track consent status on the <a href="/Meetings/Attendance/@MeetingId">attendance page</a> — only members with consent will appear on the register.
                                 </div>
                             }
                         </div>
@@ -295,6 +312,12 @@
                                 <a href="/Accounts/EventAccounts/@MeetingId" class="btn btn-outline-success">
                                     <i class="bi bi-currency-pound"></i> View Event Accounts
                                 </a>
+                                @if (consentedWithoutPayment > 0)
+                                {
+                                    <button class="btn btn-warning" @onclick="ShowGeneratePaymentsConfirm">
+                                        <i class="bi bi-cash-coin"></i> Generate Payments (@consentedWithoutPayment)
+                                    </button>
+                                }
                             }
                             @if (meeting.MeetingType == MeetingType.Extra)
                             {
@@ -349,6 +372,18 @@
                             <p class="mb-1">
                                 <i class="bi bi-currency-pound"></i> <strong>Has Cost:</strong> £@meeting.CostPerAttendee.Value.ToString("F2")
                             </p>
+                            <p class="mb-1">
+                                <i class="bi bi-cash-coin"></i> <strong>Payments:</strong>
+                                @eventPaymentsCount generated
+                                @if (consentedWithoutPayment > 0)
+                                {
+                                    <span class="badge bg-warning text-dark ms-1">@consentedWithoutPayment pending</span>
+                                }
+                                else if (eventPaymentsCount > 0)
+                                {
+                                    <span class="badge bg-success ms-1">All done</span>
+                                }
+                            </p>
                         }
 
                         @if (activities.Any(a => a.RequiresConsent))
@@ -363,6 +398,51 @@
                 </div>
             </div>
         </div>
+
+        <!-- Generate Payments Confirmation Modal -->
+        @if (showGeneratePaymentsConfirm && meeting.CostPerAttendee.HasValue)
+        {
+            <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-warning text-dark">
+                            <h5 class="modal-title">
+                                <i class="bi bi-cash-coin"></i> Generate Event Payments
+                            </h5>
+                            <button type="button" class="btn-close" @onclick="CancelGeneratePayments"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>This will create payment records for <strong>@consentedWithoutPayment</strong> member@(consentedWithoutPayment != 1 ? "s" : "") with consent forms for <strong>@meeting.Title</strong>.</p>
+                            <p class="mb-1"><strong>Amount per person:</strong> £@meeting.CostPerAttendee.Value.ToString("F2")</p>
+                            @if (meeting.PaymentDeadline.HasValue)
+                            {
+                                <p class="mb-0"><strong>Due date:</strong> @meeting.PaymentDeadline.Value.ToString("dd MMM yyyy")</p>
+                            }
+                            else
+                            {
+                                <p class="mb-0"><strong>Due date:</strong> @meeting.Date.ToString("dd MMM yyyy") (event date)</p>
+                            }
+                            @if (eventPaymentsCount > 0)
+                            {
+                                <p class="text-muted mt-2 mb-0">
+                                    <i class="bi bi-info-circle"></i> @eventPaymentsCount payment@(eventPaymentsCount != 1 ? "s" : "") already generated will be skipped.
+                                </p>
+                            }
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CancelGeneratePayments">Cancel</button>
+                            <button type="button" class="btn btn-warning" @onclick="GenerateEventPayments" disabled="@isGeneratingPayments">
+                                @if (isGeneratingPayments)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                }
+                                <i class="bi bi-check"></i> Generate Payments
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
 
         <!-- Delete Confirmation Modal -->
         @if (showDeleteConfirm)

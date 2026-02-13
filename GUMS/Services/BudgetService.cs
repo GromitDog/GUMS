@@ -124,29 +124,32 @@ public class BudgetService : IBudgetService
         var adultCount = await _context.Persons
             .CountAsync(p => p.IsActive && !p.IsDataRemoved && p.PersonType == PersonType.Leader);
 
+        var highGirls = girlCount;
+        var midGirls = (int)Math.Round(girlCount * 0.75m);
+        var lowGirls = (int)Math.Round(girlCount * 0.5m);
+
         var estimate = new BudgetEstimate
         {
             MeetingId = meetingId,
             MeetingTitle = budget.Meeting.Title,
             GirlCount = girlCount,
-            AdultCount = adultCount
+            AdultCount = adultCount,
+            HighGirls = highGirls,
+            MidGirls = midGirls,
+            LowGirls = lowGirls
         };
 
-        estimate.HighTotal = CalculateScenarioTotal(budget.Items, girlCount, adultCount, 1.0m);
-        estimate.MidTotal = CalculateScenarioTotal(budget.Items, girlCount, adultCount, 0.75m);
-        estimate.LowTotal = CalculateScenarioTotal(budget.Items, girlCount, adultCount, 0.5m);
+        estimate.HighTotal = CalculateScenarioTotal(budget.Items, highGirls, adultCount);
+        estimate.MidTotal = CalculateScenarioTotal(budget.Items, midGirls, adultCount);
+        estimate.LowTotal = CalculateScenarioTotal(budget.Items, lowGirls, adultCount);
 
-        var highHeadcount = (girlCount + adultCount) * 1.0m;
-        var midHeadcount = (girlCount + adultCount) * 0.75m;
-        var lowHeadcount = (girlCount + adultCount) * 0.5m;
+        var highHeadcount = highGirls + adultCount;
+        var midHeadcount = midGirls + adultCount;
+        var lowHeadcount = lowGirls + adultCount;
 
         estimate.HighPerPerson = highHeadcount > 0 ? estimate.HighTotal / highHeadcount : 0;
         estimate.MidPerPerson = midHeadcount > 0 ? estimate.MidTotal / midHeadcount : 0;
         estimate.LowPerPerson = lowHeadcount > 0 ? estimate.LowTotal / lowHeadcount : 0;
-
-        var highGirls = girlCount * 1.0m;
-        var midGirls = girlCount * 0.75m;
-        var lowGirls = girlCount * 0.5m;
 
         estimate.HighPerGirl = highGirls > 0 ? estimate.HighTotal / highGirls : 0;
         estimate.MidPerGirl = midGirls > 0 ? estimate.MidTotal / midGirls : 0;
@@ -180,6 +183,8 @@ public class BudgetService : IBudgetService
             .Where(e => e.MeetingId == meetingId)
             .ToListAsync();
 
+        var midGirls = (int)Math.Round(girlCount * 0.75m);
+
         var result = new BudgetVsActual
         {
             MeetingId = meetingId,
@@ -197,7 +202,7 @@ public class BudgetService : IBudgetService
         foreach (var accountId in allAccountIds)
         {
             var budgetItems = budget.Items.Where(i => i.ExpenseAccountId == accountId).ToList();
-            var budgeted = CalculateScenarioTotal(budgetItems, girlCount, adultCount, 0.75m);
+            var budgeted = CalculateScenarioTotal(budgetItems, midGirls, adultCount);
             var actual = actualExpenses.Where(e => e.ExpenseAccountId == accountId).Sum(e => e.Amount);
             var categoryName = budgetItems.FirstOrDefault()?.ExpenseAccount?.Name
                 ?? actualExpenses.FirstOrDefault(e => e.ExpenseAccountId == accountId)?.ExpenseAccount?.Name
@@ -219,7 +224,7 @@ public class BudgetService : IBudgetService
             result.Lines.Add(new BudgetVsActualLine
             {
                 Category = "Uncategorised",
-                Budgeted = CalculateScenarioTotal(uncategorizedBudgetItems, girlCount, adultCount, 0.75m),
+                Budgeted = CalculateScenarioTotal(uncategorizedBudgetItems, midGirls, adultCount),
                 Actual = 0
             });
         }
@@ -230,16 +235,16 @@ public class BudgetService : IBudgetService
         return result;
     }
 
-    private static decimal CalculateScenarioTotal(List<EventBudgetItem> items, int girlCount, int adultCount, decimal attendancePct)
+    private static decimal CalculateScenarioTotal(List<EventBudgetItem> items, int girlCount, int adultCount)
     {
         decimal total = 0;
         foreach (var item in items)
         {
             total += item.CostType switch
             {
-                BudgetCostType.PerGirl => item.Amount * girlCount * attendancePct,
-                BudgetCostType.PerAdult => item.Amount * adultCount * attendancePct,
-                BudgetCostType.PerPerson => item.Amount * (girlCount + adultCount) * attendancePct,
+                BudgetCostType.PerGirl => item.Amount * girlCount,
+                BudgetCostType.PerAdult => item.Amount * adultCount,
+                BudgetCostType.PerPerson => item.Amount * (girlCount + adultCount),
                 BudgetCostType.FixedTotal => item.Amount,
                 _ => 0
             };

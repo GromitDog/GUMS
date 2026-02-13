@@ -63,6 +63,12 @@ public interface IAccountingService
     /// </summary>
     Task<List<Transaction>> GetTransactionsForPaymentAsync(int paymentId);
 
+    /// <summary>
+    /// Voids a transaction, reversing its account balance effects.
+    /// Cannot void payment-linked or reconciled transactions.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage)> VoidTransactionAsync(int transactionId);
+
     // ===== Payment Recording Integration =====
 
     /// <summary>
@@ -75,7 +81,8 @@ public interface IAccountingService
         PaymentMethod paymentMethod,
         PaymentType paymentType,
         string description,
-        DateTime date);
+        DateTime date,
+        int? incomeAccountId = null);
 
     // ===== Banking Operations =====
 
@@ -131,6 +138,20 @@ public interface IAccountingService
     /// Deletes an expense account (only if no transactions exist).
     /// </summary>
     Task<(bool Success, string ErrorMessage)> DeleteExpenseAccountAsync(int accountId);
+
+    // ===== Direct Income Recording =====
+
+    /// <summary>
+    /// Records ad-hoc income (donations, visitor fees, refunds) directly into transaction history.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage, Transaction? Transaction)> RecordDirectIncomeAsync(
+        decimal amount,
+        int creditAccountId,
+        int receivedIntoAccountId,
+        string description,
+        DateTime date,
+        string? reference = null,
+        string? notes = null);
 
     // ===== Direct Expense Recording =====
 

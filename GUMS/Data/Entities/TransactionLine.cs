@@ -42,4 +42,14 @@ public class TransactionLine
     /// Navigation property for the account
     /// </summary>
     public Account Account { get; set; } = null!;
+
+    /// <summary>
+    /// Foreign key to bank reconciliation (null = unreconciled)
+    /// </summary>
+    public int? BankReconciliationId { get; set; }
+
+    /// <summary>
+    /// Navigation property for the bank reconciliation
+    /// </summary>
+    public BankReconciliation? BankReconciliation { get; set; }
 }

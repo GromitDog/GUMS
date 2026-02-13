@@ -340,6 +340,18 @@ public class ProgrammeService : IProgrammeService
         {
             var progress = await GetGirlProgressAsync(girl.MembershipNumber);
 
+            // Load awarded themes for this girl
+            var awardedThemes = await _context.AwardedThemeAwards
+                .AsNoTracking()
+                .Where(a => a.MembershipNumber == girl.MembershipNumber)
+                .Select(a => a.Theme)
+                .ToHashSetAsync();
+
+            // Load tracking record for level award filtering
+            var tracking = await _context.AwardTrackings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.MembershipNumber == girl.MembershipNumber);
+
             // Check completed badges
             foreach (var theme in progress.ThemeProgress)
             {
@@ -358,19 +370,20 @@ public class ProgrammeService : IProgrammeService
                     }
                 }
 
-                if (theme.ThemeAwardEarned)
+                if (theme.ThemeAwardEarned && !awardedThemes.Contains(theme.Theme))
                 {
                     awards.Add(new AwardDue
                     {
                         MembershipNumber = girl.MembershipNumber,
                         Name = girl.FullName,
                         AwardName = $"{theme.ThemeDisplayName} Theme Award",
-                        AwardType = "ThemeAward"
+                        AwardType = "ThemeAward",
+                        Theme = theme.Theme
                     });
                 }
             }
 
-            if (progress.Awards.BronzeEarned)
+            if (progress.Awards.BronzeEarned && !(tracking?.BronzeAwardedDate.HasValue ?? false))
             {
                 awards.Add(new AwardDue
                 {
@@ -381,7 +394,7 @@ public class ProgrammeService : IProgrammeService
                 });
             }
 
-            if (progress.Awards.SilverEarned)
+            if (progress.Awards.SilverEarned && !(tracking?.SilverAwardedDate.HasValue ?? false))
             {
                 awards.Add(new AwardDue
                 {
@@ -392,7 +405,7 @@ public class ProgrammeService : IProgrammeService
                 });
             }
 
-            if (progress.Awards.GoldEarned)
+            if (progress.Awards.GoldEarned && !(tracking?.GoldAwardedDate.HasValue ?? false))
             {
                 awards.Add(new AwardDue
                 {
@@ -458,6 +471,57 @@ public class ProgrammeService : IProgrammeService
         {
             tracking.GoldChallengeComplete = complete;
             tracking.GoldChallengeDate = complete ? DateTime.Today : null;
+        }
+
+        await _context.SaveChangesAsync();
+        return (true, string.Empty);
+    }
+
+    public async Task<(bool Success, string ErrorMessage)> MarkThemeAwardedAsync(string membershipNumber, Theme theme)
+    {
+        var exists = await _context.AwardedThemeAwards
+            .AnyAsync(a => a.MembershipNumber == membershipNumber && a.Theme == theme);
+
+        if (exists)
+            return (true, string.Empty);
+
+        _context.AwardedThemeAwards.Add(new AwardedThemeAward
+        {
+            MembershipNumber = membershipNumber,
+            Theme = theme,
+            DateAwarded = DateTime.Today
+        });
+        await _context.SaveChangesAsync();
+        return (true, string.Empty);
+    }
+
+    public async Task<(bool Success, string ErrorMessage)> MarkLevelAwardedAsync(string membershipNumber, string level)
+    {
+        var tracking = await _context.AwardTrackings
+            .FirstOrDefaultAsync(a => a.MembershipNumber == membershipNumber);
+
+        if (tracking == null)
+        {
+            tracking = new AwardTracking
+            {
+                MembershipNumber = membershipNumber
+            };
+            _context.AwardTrackings.Add(tracking);
+        }
+
+        switch (level)
+        {
+            case "Bronze":
+                tracking.BronzeAwardedDate = DateTime.Today;
+                break;
+            case "Silver":
+                tracking.SilverAwardedDate = DateTime.Today;
+                break;
+            case "Gold":
+                tracking.GoldAwardedDate = DateTime.Today;
+                break;
+            default:
+                return (false, $"Unknown level: {level}");
         }
 
         await _context.SaveChangesAsync();

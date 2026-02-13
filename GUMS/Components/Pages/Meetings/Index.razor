@@ -196,6 +196,11 @@
                 @if (showPastMeetings)
                 {
                     <div class="card-body">
+                        <div class="mb-3">
+                            <input type="text" class="form-control" placeholder="Search past meetings by title, date, or location..."
+                                   value="@pastSearchText" @oninput="OnPastSearchChanged" />
+                        </div>
+                        @{ var filtered = FilteredPastMeetings; }
                         <div class="table-responsive">
                             <table class="table table-hover">
                                 <thead>
@@ -209,7 +214,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var meeting in pastMeetings.Take(20))
+                                    @foreach (var meeting in filtered.Take(pastPageSize))
                                     {
                                         var stats = attendanceStatsCache.GetValueOrDefault(meeting.Id);
                                         <tr class="text-muted">
@@ -254,9 +259,14 @@
                                     }
                                 </tbody>
                             </table>
-                            @if (pastMeetings.Count > 20)
+                            @if (filtered.Count > pastPageSize)
                             {
-                                <p class="text-muted text-center mt-2">Showing most recent 20 of @pastMeetings.Count past meetings</p>
+                                <div class="text-center mt-2">
+                                    <p class="text-muted mb-2">Showing @Math.Min(pastPageSize, filtered.Count) of @filtered.Count past meetings</p>
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="ShowMorePastMeetings">
+                                        <i class="bi bi-arrow-down-circle"></i> Show More
+                                    </button>
+                                </div>
                             }
                         </div>
                     </div>

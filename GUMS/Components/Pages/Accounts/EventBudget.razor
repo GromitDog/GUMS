@@ -202,13 +202,9 @@
                                 </h6>
                             </div>
                             <div class="card-body">
-                                <p class="text-muted small mb-3">
-                                    Based on @_estimate.GirlCount girl(s) and @_estimate.AdultCount adult(s)
-                                </p>
-
                                 <div class="mb-3">
                                     <div class="d-flex justify-content-between">
-                                        <strong>High (100%)</strong>
+                                        <strong>High &mdash; @_estimate.HighGirls girls with @_estimate.AdultCount adults</strong>
                                         <span>@_estimate.HighTotal.ToString("C")</span>
                                     </div>
                                     <small class="text-muted">
@@ -219,7 +215,7 @@
 
                                 <div class="mb-3">
                                     <div class="d-flex justify-content-between">
-                                        <strong>Mid (75%)</strong>
+                                        <strong>Mid &mdash; @_estimate.MidGirls girls with @_estimate.AdultCount adults</strong>
                                         <span>@_estimate.MidTotal.ToString("C")</span>
                                     </div>
                                     <small class="text-muted">
@@ -230,7 +226,7 @@
 
                                 <div class="mb-3">
                                     <div class="d-flex justify-content-between">
-                                        <strong>Low (50%)</strong>
+                                        <strong>Low &mdash; @_estimate.LowGirls girls with @_estimate.AdultCount adults</strong>
                                         <span>@_estimate.LowTotal.ToString("C")</span>
                                     </div>
                                     <small class="text-muted">

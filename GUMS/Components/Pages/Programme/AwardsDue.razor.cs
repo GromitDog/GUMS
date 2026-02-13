@@ -31,11 +31,24 @@ public partial class AwardsDue
 
     private async Task MarkAwarded(AwardDue award)
     {
-        if (_isSaving || !award.BadgeDefinitionId.HasValue) return;
+        if (_isSaving) return;
         _isSaving = true;
         try
         {
-            await ProgrammeService.MarkBadgeAwardedAsync(award.MembershipNumber, award.BadgeDefinitionId.Value);
+            switch (award.AwardType)
+            {
+                case "Badge" when award.BadgeDefinitionId.HasValue:
+                    await ProgrammeService.MarkBadgeAwardedAsync(award.MembershipNumber, award.BadgeDefinitionId.Value);
+                    break;
+                case "ThemeAward" when award.Theme.HasValue:
+                    await ProgrammeService.MarkThemeAwardedAsync(award.MembershipNumber, award.Theme.Value);
+                    break;
+                case "Bronze":
+                case "Silver":
+                case "Gold":
+                    await ProgrammeService.MarkLevelAwardedAsync(award.MembershipNumber, award.AwardType);
+                    break;
+            }
             _awards = await ProgrammeService.GetAwardsDueAsync();
         }
         finally

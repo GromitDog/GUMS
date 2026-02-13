@@ -13,6 +13,9 @@
             <a href="/Payments/Overdue" class="btn btn-outline-warning me-2">
                 <i class="bi bi-exclamation-triangle"></i> Overdue Payments
             </a>
+            <a href="/Payments/Create" class="btn btn-outline-primary me-2">
+                <i class="bi bi-plus-circle"></i> Create Payment
+            </a>
             <a href="/Payments/GenerateSubs" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Generate Termly Subs
             </a>
@@ -167,9 +170,13 @@
                                         {
                                             <span class="badge bg-info">Subs</span>
                                         }
-                                        else
+                                        else if (payment.PaymentType == PaymentType.Activity)
                                         {
                                             <span class="badge bg-secondary">Activity</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-dark">Other</span>
                                         }
                                     </td>
                                     <td>@payment.Reference</td>

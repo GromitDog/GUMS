@@ -16,6 +16,7 @@ public partial class Transactions
     private bool _isLoading = true;
     private string _errorMessage = string.Empty;
     private string _successMessage = string.Empty;
+    private int? _confirmVoidId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -23,6 +24,10 @@ public partial class Transactions
         if (uri.Query.Contains("success=journal"))
         {
             _successMessage = "Journal entry posted successfully!";
+        }
+        else if (uri.Query.Contains("success=voided"))
+        {
+            _successMessage = "Transaction voided successfully.";
         }
 
         // Default to last 30 days
@@ -70,5 +75,33 @@ public partial class Transactions
     private void ClearSuccess()
     {
         _successMessage = string.Empty;
+    }
+
+    private async Task VoidTransaction(int transactionId)
+    {
+        if (_confirmVoidId != transactionId)
+        {
+            _confirmVoidId = transactionId;
+            return;
+        }
+
+        _confirmVoidId = null;
+
+        var result = await AccountingService.VoidTransactionAsync(transactionId);
+        if (result.Success)
+        {
+            _successMessage = "Transaction voided successfully. Account balances have been reversed.";
+            _errorMessage = string.Empty;
+            await LoadTransactions();
+        }
+        else
+        {
+            _errorMessage = result.ErrorMessage;
+        }
+    }
+
+    private void CancelVoid()
+    {
+        _confirmVoidId = null;
     }
 }

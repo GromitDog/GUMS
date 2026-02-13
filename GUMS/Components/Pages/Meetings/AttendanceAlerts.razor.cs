@@ -11,15 +11,17 @@ public partial class AttendanceAlerts
 {
     
     [Inject] public required IAttendanceService AttendanceService { get; set; }
-        
+
     [Inject] public required ITermService TermService { get; set; }
     [Inject] public required IPersonService PersonService { get; set; }
+    [Inject] public required IMeetingService MeetingService { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
-    
+
     private Term? currentTerm;
     private List<MemberAttendanceAlert> fullTermAbsences = new();
     private List<MemberAttendanceAlert> lowAttendanceAlerts = new();
     private Dictionary<string, string> alertNotes = new();
+    private int meetingsHeld = 0;
     private int totalMeetingsInTerm = 0;
     private int termProgress = 0;
 
@@ -55,15 +57,9 @@ public partial class AttendanceAlerts
                 fullTermAbsences = await AttendanceService.GetFullTermAbsencesAsync(currentTerm.Id);
                 lowAttendanceAlerts = await AttendanceService.GetLowAttendanceAlertsAsync(currentTerm.Id, 25);
 
-                // Get total meetings count
-                if (fullTermAbsences.Any())
-                {
-                    totalMeetingsInTerm = fullTermAbsences.First().TotalMeetings;
-                }
-                else if (lowAttendanceAlerts.Any())
-                {
-                    totalMeetingsInTerm = lowAttendanceAlerts.First().TotalMeetings;
-                }
+                // Get meeting counts directly
+                totalMeetingsInTerm = await MeetingService.GetMeetingCountInRangeAsync(currentTerm.StartDate, currentTerm.EndDate);
+                meetingsHeld = await MeetingService.GetMeetingCountInRangeAsync(currentTerm.StartDate, DateTime.Today.AddDays(-1));
             }
         }
         catch (Exception ex)

@@ -42,6 +42,10 @@ public partial class Index
         {
             _successMessage = "Termly subscriptions generated successfully!";
         }
+        else if (uri.Query.Contains("success=created"))
+        {
+            _successMessage = "Payment created successfully!";
+        }
         else if (uri.Query.Contains("success=cancelled"))
         {
             _successMessage = "Payment cancelled successfully!";

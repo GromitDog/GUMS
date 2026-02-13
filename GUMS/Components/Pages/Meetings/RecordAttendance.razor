@@ -70,22 +70,106 @@
                 <!-- Quick Stats -->
                 <div class="card mb-3">
                     <div class="card-body py-2">
+                        @{
+                            var visibleRecords = GetVisibleAttendanceRecords();
+                        }
                         <div class="d-flex justify-content-around text-center">
                             <div>
-                                <h4 class="mb-0 text-success">@attendanceRecords.Count(a => a.Attended)</h4>
+                                <h4 class="mb-0 text-success">@visibleRecords.Count(a => a.Attended)</h4>
                                 <small class="text-muted">Present</small>
                             </div>
                             <div>
-                                <h4 class="mb-0 text-danger">@attendanceRecords.Count(a => !a.Attended)</h4>
+                                <h4 class="mb-0 text-danger">@visibleRecords.Count(a => !a.Attended)</h4>
                                 <small class="text-muted">Absent</small>
                             </div>
                             <div>
-                                <h4 class="mb-0 text-primary">@attendanceRecords.Count</h4>
+                                <h4 class="mb-0 text-primary">@visibleRecords.Count</h4>
                                 <small class="text-muted">Total</small>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Consent Tracking (if meeting requires consent) - shown ABOVE attendance -->
+                @if (requiresConsent)
+                {
+                    <div class="card mb-3">
+                        <div class="card-header" style="background-color: #FFC107; color: #212529;">
+                            <h5 class="mb-0">
+                                <i class="bi bi-file-earmark-check"></i> Consent Form Tracking
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-3">
+                                This meeting has activities that require consent forms. Track the status of consent below.
+                                Only members with a received consent form will appear in the attendance checklist.
+                            </p>
+
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Member</th>
+                                            <th class="text-center">Email Received</th>
+                                            <th class="text-center">Form Received</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var record in attendanceRecords.Where(a => memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == PersonType.Girl).OrderBy(a => memberLookup[a.MembershipNumber].FullName))
+                                        {
+                                            var member = memberLookup[record.MembershipNumber];
+                                            <tr>
+                                                <td>@member.FullName</td>
+                                                <td class="text-center">
+                                                    <input type="checkbox" class="form-check-input"
+                                                           checked="@record.ConsentEmailReceived"
+                                                           @onchange="@(e => ToggleConsentEmail(record, (bool)(e.Value ?? false)))" />
+                                                </td>
+                                                <td class="text-center">
+                                                    <input type="checkbox" class="form-check-input"
+                                                           checked="@record.ConsentFormReceived"
+                                                           @onchange="@(e => ToggleConsentForm(record, (bool)(e.Value ?? false)))" />
+                                                </td>
+                                                <td>
+                                                    @if (record.ConsentFormReceived)
+                                                    {
+                                                        <span class="badge bg-success">Complete</span>
+                                                    }
+                                                    else if (record.ConsentEmailReceived)
+                                                    {
+                                                        <span class="badge bg-warning text-dark">Form Outstanding</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary">Not Started</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-light rounded">
+                                <div>
+                                    <strong>Summary:</strong>
+                                    @{
+                                        var allGirlRecords = attendanceRecords.Where(a => memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == PersonType.Girl).ToList();
+                                        var consentFormsComplete = allGirlRecords.Count(r => r.ConsentFormReceived);
+                                    }
+                                    <span class="ms-2">@consentFormsComplete/@allGirlRecords.Count forms received</span>
+                                </div>
+                                @if (allGirlRecords.Count - consentFormsComplete > 0)
+                                {
+                                    <span class="text-warning">
+                                        <i class="bi bi-exclamation-triangle"></i> @(allGirlRecords.Count - consentFormsComplete) outstanding
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
 
                 <!-- Attendance Checklist -->
                 <div class="card">
@@ -104,7 +188,8 @@
                     </div>
                     <div class="card-body p-0">
                         @{
-                            var girls = attendanceRecords.Where(a => memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == PersonType.Girl)
+                            var girls = attendanceRecords.Where(a => memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == PersonType.Girl
+                                && (!requiresConsent || a.ConsentFormReceived))
                                 .OrderBy(a => memberLookup[a.MembershipNumber].FullName)
                                 .ToList();
                             var leaders = attendanceRecords.Where(a => memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == PersonType.Leader)
@@ -190,11 +275,18 @@
                             </div>
                         }
 
-                        @if (!attendanceRecords.Any())
+                        @if (!girls.Any() && !leaders.Any())
                         {
                             <div class="p-4 text-center text-muted">
                                 <i class="bi bi-people" style="font-size: 2rem;"></i>
-                                <p class="mb-0">No active members found. Add members to your register first.</p>
+                                @if (requiresConsent)
+                                {
+                                    <p class="mb-0">No members with consent forms received. Use the consent tracking section above to record received forms.</p>
+                                }
+                                else
+                                {
+                                    <p class="mb-0">No active members found. Add members to your register first.</p>
+                                }
                             </div>
                         }
                     </div>
@@ -243,87 +335,6 @@
                                     </div>
                                 </div>
                             }
-                        </div>
-                    </div>
-                }
-
-                <!-- Consent Tracking (if meeting requires consent) -->
-                @if (requiresConsent)
-                {
-                    <div class="card mt-4">
-                        <div class="card-header" style="background-color: #FFC107; color: #212529;">
-                            <h5 class="mb-0">
-                                <i class="bi bi-file-earmark-check"></i> Consent Form Tracking
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-muted mb-3">
-                                This meeting has activities that require consent forms. Track the status of consent below.
-                            </p>
-
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>Member</th>
-                                            <th class="text-center">Email Received</th>
-                                            <th class="text-center">Form Received</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var record in attendanceRecords.Where(a => memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == PersonType.Girl).OrderBy(a => memberLookup[a.MembershipNumber].FullName))
-                                        {
-                                            var member = memberLookup[record.MembershipNumber];
-                                            <tr>
-                                                <td>@member.FullName</td>
-                                                <td class="text-center">
-                                                    <input type="checkbox" class="form-check-input"
-                                                           checked="@record.ConsentEmailReceived"
-                                                           @onchange="@(e => ToggleConsentEmail(record, (bool)(e.Value ?? false)))" />
-                                                </td>
-                                                <td class="text-center">
-                                                    <input type="checkbox" class="form-check-input"
-                                                           checked="@record.ConsentFormReceived"
-                                                           @onchange="@(e => ToggleConsentForm(record, (bool)(e.Value ?? false)))" />
-                                                </td>
-                                                <td>
-                                                    @if (record.ConsentFormReceived)
-                                                    {
-                                                        <span class="badge bg-success">Complete</span>
-                                                    }
-                                                    else if (record.ConsentEmailReceived)
-                                                    {
-                                                        <span class="badge bg-warning text-dark">Form Outstanding</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="badge bg-secondary">Not Started</span>
-                                                    }
-                                                </td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-light rounded">
-                                <div>
-                                    <strong>Summary:</strong>
-                                    @{
-                                        var girlRecords = attendanceRecords.Where(a => memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == PersonType.Girl).ToList();
-                                        var formsComplete = girlRecords.Count(r => r.ConsentFormReceived);
-                                        var emailsReceived = girlRecords.Count(r => r.ConsentEmailReceived);
-                                    }
-                                    <span class="ms-2">@formsComplete/@girlRecords.Count forms received</span>
-                                </div>
-                                @if (girlRecords.Count - formsComplete > 0)
-                                {
-                                    <span class="text-warning">
-                                        <i class="bi bi-exclamation-triangle"></i> @(girlRecords.Count - formsComplete) outstanding
-                                    </span>
-                                }
-                            </div>
                         </div>
                     </div>
                 }

@@ -432,7 +432,8 @@ public class PaymentService : IPaymentService
                 paymentMethod,
                 payment.PaymentType,
                 description,
-                paymentDate ?? DateTime.Today);
+                paymentDate ?? DateTime.Today,
+                payment.IncomeAccountId);
         }
 
         return (true, string.Empty);
