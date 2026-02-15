@@ -617,7 +617,10 @@ public class ProgrammeService : IProgrammeService
         var balance = new TermBalance
         {
             TermId = termId,
-            TermName = term.Name
+            TermName = term.Name,
+            NightsAwayOffered = meetings
+                .Where(m => m.EndDate.HasValue)
+                .Sum(m => (m.EndDate!.Value - m.Date).Days)
         };
 
         var themes = Enum.GetValues<Theme>();

@@ -67,12 +67,13 @@
     }
     else
     {
+        <!-- Current Term -->
         <div class="row">
             <!-- Summary -->
             <div class="col-md-4 mb-4">
                 <div class="card">
                     <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
-                        <h6 class="mb-0">Summary - @_balance.TermName</h6>
+                        <h6 class="mb-0">Current Term - @_balance.TermName</h6>
                     </div>
                     <div class="card-body text-center">
                         <div class="mb-3">
@@ -81,11 +82,15 @@
                         </div>
                         @if (_filterType != "UMAs")
                         {
-                            <div>
+                            <div class="mb-3">
                                 <h3>@GetFilteredTotalBadges()</h3>
                                 <small class="text-muted">Badges Being Worked On</small>
                             </div>
                         }
+                        <div>
+                            <h3>@_balance.NightsAwayOffered</h3>
+                            <small class="text-muted">Nights Away Offered</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -139,5 +144,86 @@
                 </div>
             </div>
         </div>
+
+        <!-- Previous 3 Terms Combined -->
+        @if (_combinedPreviousBalance != null)
+        {
+            <div class="row">
+                <!-- Summary -->
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <div class="card-header" style="background-color: #495057; color: white;">
+                            <h6 class="mb-0">Previous - @_combinedPreviousBalance.TermName</h6>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="mb-3">
+                                <h3>@GetFilteredTotalUmaMinutes(_combinedPreviousBalance)</h3>
+                                <small class="text-muted">UMA Minutes Planned</small>
+                            </div>
+                            @if (_filterType != "UMAs")
+                            {
+                                <div class="mb-3">
+                                    <h3>@GetFilteredTotalBadges(_combinedPreviousBalance)</h3>
+                                    <small class="text-muted">Badges Being Worked On</small>
+                                </div>
+                            }
+                            <div>
+                                <h3>@_combinedPreviousBalance.NightsAwayOffered</h3>
+                                <small class="text-muted">Nights Away Offered</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Theme Breakdown -->
+                <div class="col-md-8 mb-4">
+                    <div class="card">
+                        <div class="card-header" style="background-color: #6c757d; color: white;">
+                            <h6 class="mb-0">Minutes by Theme - Previous Terms</h6>
+                        </div>
+                        <div class="card-body">
+                            @foreach (var theme in GetFilteredThemes())
+                            {
+                                var tb = _combinedPreviousBalance.ThemeBalances.GetValueOrDefault(theme);
+                                var minutes = GetFilteredMinutes(tb);
+                                var badges = _filterType == "UMAs" ? 0 : (tb?.BadgesWorkedOn ?? 0);
+                                var pct = GetFilteredPercentage(tb, _combinedPreviousBalance);
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <strong style="color: @Badges.GetThemeColor(theme);">
+                                            @GUMS.Services.ProgrammeService.GetThemeDisplayName(theme)
+                                        </strong>
+                                        <span>
+                                            <span class="badge bg-secondary">@minutes min</span>
+                                            @if (_filterType != "UMAs")
+                                            {
+                                                <span class="badge bg-info">@badges badges</span>
+                                            }
+                                        </span>
+                                    </div>
+                                    <div class="progress" style="height: 12px;">
+                                        <div class="progress-bar" role="progressbar"
+                                             style="width: @pct%; background-color: @Badges.GetThemeColor(theme);"
+                                             aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100">
+                                            @if (pct > 10)
+                                            {
+                                                <small>@pct.ToString("F0")%</small>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (GetFilteredTotalMinutes(_combinedPreviousBalance) == 0)
+                            {
+                                <div class="alert alert-info mb-0">
+                                    <i class="bi bi-info-circle"></i> No activities recorded for previous terms with the current filters.
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
     }
 </div>

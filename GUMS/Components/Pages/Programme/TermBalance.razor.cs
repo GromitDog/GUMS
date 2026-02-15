@@ -13,6 +13,7 @@ public partial class TermBalance
     private List<Term> _terms = new();
     private int _selectedTermId;
     private GUMS.Services.TermBalance? _balance;
+    private GUMS.Services.TermBalance? _combinedPreviousBalance;
     private bool _isLoading = true;
 
     private Theme? _filterTheme;
@@ -62,11 +63,70 @@ public partial class TermBalance
         try
         {
             _balance = await ProgrammeService.GetTermBalanceAsync(_selectedTermId);
+            await LoadCombinedPreviousBalance();
         }
         finally
         {
             _isLoading = false;
         }
+    }
+
+    private async Task LoadCombinedPreviousBalance()
+    {
+        // _terms is ordered most recent first, so previous terms are at higher indices
+        var selectedIndex = _terms.FindIndex(t => t.Id == _selectedTermId);
+        if (selectedIndex < 0)
+        {
+            _combinedPreviousBalance = null;
+            return;
+        }
+
+        var previousTerms = _terms.Skip(selectedIndex + 1).Take(3).ToList();
+        if (!previousTerms.Any())
+        {
+            _combinedPreviousBalance = null;
+            return;
+        }
+
+        var combined = new GUMS.Services.TermBalance
+        {
+            TermName = previousTerms.Count == 1
+                ? previousTerms[0].Name
+                : $"{previousTerms.Count} Terms ({previousTerms.Last().Name} - {previousTerms.First().Name})"
+        };
+
+        foreach (var theme in Enum.GetValues<Theme>())
+        {
+            combined.ThemeBalances[theme] = new ThemeBalance { Theme = theme };
+        }
+
+        foreach (var term in previousTerms)
+        {
+            var balance = await ProgrammeService.GetTermBalanceAsync(term.Id);
+            combined.TotalMinutesPlanned += balance.TotalMinutesPlanned;
+            combined.TotalUmaMinutesPlanned += balance.TotalUmaMinutesPlanned;
+            combined.TotalBadgesWorkedOn += balance.TotalBadgesWorkedOn;
+            combined.NightsAwayOffered += balance.NightsAwayOffered;
+
+            foreach (var (theme, tb) in balance.ThemeBalances)
+            {
+                var ctb = combined.ThemeBalances[theme];
+                ctb.MinutesPlanned += tb.MinutesPlanned;
+                ctb.UmaMinutesPlanned += tb.UmaMinutesPlanned;
+                ctb.BadgesWorkedOn += tb.BadgesWorkedOn;
+            }
+        }
+
+        // Recalculate percentages
+        if (combined.TotalMinutesPlanned > 0)
+        {
+            foreach (var tb in combined.ThemeBalances.Values)
+            {
+                tb.PercentageOfTotal = (double)tb.MinutesPlanned / combined.TotalMinutesPlanned * 100;
+            }
+        }
+
+        _combinedPreviousBalance = combined;
     }
 
     private IEnumerable<Theme> GetFilteredThemes()
@@ -87,48 +147,51 @@ public partial class TermBalance
         };
     }
 
-    private int GetFilteredTotalMinutes()
+    private int GetFilteredTotalMinutes(GUMS.Services.TermBalance? balance = null)
     {
-        if (_balance == null) return 0;
+        balance ??= _balance;
+        if (balance == null) return 0;
 
         var themes = GetFilteredThemes();
         return themes.Sum(t =>
         {
-            var tb = _balance.ThemeBalances.GetValueOrDefault(t);
+            var tb = balance.ThemeBalances.GetValueOrDefault(t);
             return GetFilteredMinutes(tb);
         });
     }
 
-    private int GetFilteredTotalUmaMinutes()
+    private int GetFilteredTotalUmaMinutes(GUMS.Services.TermBalance? balance = null)
     {
-        if (_balance == null) return 0;
+        balance ??= _balance;
+        if (balance == null) return 0;
 
         var themes = GetFilteredThemes();
         return themes.Sum(t =>
         {
-            var tb = _balance.ThemeBalances.GetValueOrDefault(t);
+            var tb = balance.ThemeBalances.GetValueOrDefault(t);
             return tb?.UmaMinutesPlanned ?? 0;
         });
     }
 
-    private int GetFilteredTotalBadges()
+    private int GetFilteredTotalBadges(GUMS.Services.TermBalance? balance = null)
     {
-        if (_balance == null) return 0;
+        balance ??= _balance;
+        if (balance == null) return 0;
 
         if (_filterType == "UMAs") return 0;
 
         var themes = GetFilteredThemes();
         return themes.Sum(t =>
         {
-            var tb = _balance.ThemeBalances.GetValueOrDefault(t);
+            var tb = balance.ThemeBalances.GetValueOrDefault(t);
             return tb?.BadgesWorkedOn ?? 0;
         });
     }
 
-    private double GetFilteredPercentage(ThemeBalance? tb)
+    private double GetFilteredPercentage(ThemeBalance? tb, GUMS.Services.TermBalance? balance = null)
     {
-        if (tb == null) return 0;
-        var totalFiltered = GetFilteredTotalMinutes();
+        balance ??= _balance;
+        var totalFiltered = GetFilteredTotalMinutes(balance);
         if (totalFiltered == 0) return 0;
         return (double)GetFilteredMinutes(tb) / totalFiltered * 100;
     }
