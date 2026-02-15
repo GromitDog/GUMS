@@ -597,6 +597,9 @@ namespace GUMS.Migrations
                     b.Property<TimeOnly>("EndTime")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("IncomeAccountId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("LocationAddress")
                         .HasColumnType("TEXT");
 
@@ -622,6 +625,8 @@ namespace GUMS.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Date");
+
+                    b.HasIndex("IncomeAccountId");
 
                     b.ToTable("Meetings");
                 });
@@ -1303,6 +1308,15 @@ namespace GUMS.Migrations
                     b.Navigation("PaidFromAccount");
 
                     b.Navigation("Transaction");
+                });
+
+            modelBuilder.Entity("GUMS.Data.Entities.Meeting", b =>
+                {
+                    b.HasOne("GUMS.Data.Entities.Account", "IncomeAccount")
+                        .WithMany()
+                        .HasForeignKey("IncomeAccountId");
+
+                    b.Navigation("IncomeAccount");
                 });
 
             modelBuilder.Entity("GUMS.Data.Entities.MeetingActivity", b =>

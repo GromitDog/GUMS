@@ -339,7 +339,8 @@ public class PaymentService : IPaymentService
             DueDate = dueDate,
             Status = PaymentStatus.Pending,
             Reference = $"{meeting.Title} - {memberName}",
-            MeetingId = meetingId
+            MeetingId = meetingId,
+            IncomeAccountId = meeting.IncomeAccountId
         };
 
         _context.Payments.Add(payment);

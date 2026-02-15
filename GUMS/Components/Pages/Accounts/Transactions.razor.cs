@@ -17,6 +17,8 @@ public partial class Transactions
     private string _errorMessage = string.Empty;
     private string _successMessage = string.Empty;
     private int? _confirmVoidId;
+    private int? _editDateId;
+    private DateTime _editDateValue;
 
     protected override async Task OnInitializedAsync()
     {
@@ -103,5 +105,32 @@ public partial class Transactions
     private void CancelVoid()
     {
         _confirmVoidId = null;
+    }
+
+    private void StartEditDate(int transactionId, DateTime currentDate)
+    {
+        _editDateId = transactionId;
+        _editDateValue = currentDate;
+    }
+
+    private void CancelEditDate()
+    {
+        _editDateId = null;
+    }
+
+    private async Task SaveDate(int transactionId)
+    {
+        var result = await AccountingService.UpdateTransactionDateAsync(transactionId, _editDateValue);
+        if (result.Success)
+        {
+            _editDateId = null;
+            _successMessage = "Transaction date updated.";
+            _errorMessage = string.Empty;
+            await LoadTransactions();
+        }
+        else
+        {
+            _errorMessage = result.ErrorMessage;
+        }
     }
 }

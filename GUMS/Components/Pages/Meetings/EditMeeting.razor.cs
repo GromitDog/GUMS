@@ -9,6 +9,7 @@ public partial class EditMeeting
 {
     [Inject] public required IMeetingService MeetingService { get; set; }
     [Inject] public required IBadgeService BadgeService { get; set; }
+    [Inject] public required IAccountingService AccountingService { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
 
     [Parameter]
@@ -19,6 +20,7 @@ public partial class EditMeeting
     private List<BadgeClause> _availableClauses = [];
     private List<UmaDefinition> _availableUmas = [];
     private List<BadgeDefinition> _availableFunBadges = [];
+    private List<Account> _incomeAccounts = [];
     private DateTime _startTime;
     private DateTime _endTime;
 
@@ -50,6 +52,7 @@ public partial class EditMeeting
             _availableClauses = await BadgeService.SearchClausesAsync(string.Empty);
             _availableUmas = await BadgeService.SearchUmasAsync(string.Empty);
             _availableFunBadges = await BadgeService.GetBadgesByFilterAsync(badgeType: BadgeType.FunBadge);
+            _incomeAccounts = await AccountingService.GetAccountsByTypeAsync(Data.Enums.AccountType.Income);
         }
         catch (Exception ex)
         {

@@ -96,10 +96,16 @@
                     <input type="text" class="form-control" placeholder="Search by name or membership number..."
                            @bind="_searchTerm" @bind:event="oninput" @bind:after="ApplyFilters" />
                 </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button class="btn btn-outline-secondary w-100" @onclick="ClearFilters">
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button class="btn btn-outline-secondary" @onclick="ClearFilters">
                         <i class="bi bi-x-circle"></i> Clear
                     </button>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="showCancelled"
+                               checked="@_showCancelled"
+                               @onchange="@(e => { _showCancelled = (bool)(e.Value ?? false); ApplyFilters(); })" />
+                        <label class="form-check-label small text-nowrap" for="showCancelled">Show cancelled</label>
+                    </div>
                 </div>
             </div>
         </div>
@@ -142,14 +148,26 @@
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>Member</th>
-                                <th>Type</th>
+                                <th style="cursor: pointer;" @onclick='() => SortBy("Member")'>
+                                    Member <i class="bi @SortIcon("Member") small"></i>
+                                </th>
+                                <th style="cursor: pointer;" @onclick='() => SortBy("Type")'>
+                                    Type <i class="bi @SortIcon("Type") small"></i>
+                                </th>
                                 <th>Reference</th>
-                                <th class="text-end">Amount</th>
+                                <th class="text-end" style="cursor: pointer;" @onclick='() => SortBy("Amount")'>
+                                    Amount <i class="bi @SortIcon("Amount") small"></i>
+                                </th>
                                 <th class="text-end">Paid</th>
-                                <th class="text-end">Outstanding</th>
-                                <th>Due Date</th>
-                                <th>Status</th>
+                                <th class="text-end" style="cursor: pointer;" @onclick='() => SortBy("Outstanding")'>
+                                    Outstanding <i class="bi @SortIcon("Outstanding") small"></i>
+                                </th>
+                                <th style="cursor: pointer;" @onclick='() => SortBy("DueDate")'>
+                                    Due Date <i class="bi @SortIcon("DueDate") small"></i>
+                                </th>
+                                <th style="cursor: pointer;" @onclick='() => SortBy("Status")'>
+                                    Status <i class="bi @SortIcon("Status") small"></i>
+                                </th>
                                 <th>Actions</th>
                             </tr>
                         </thead>

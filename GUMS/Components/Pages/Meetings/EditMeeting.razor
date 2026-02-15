@@ -145,6 +145,17 @@
                                                             <label class="form-label">Payment Deadline</label>
                                                             <InputDate class="form-control" @bind-Value="_meeting.PaymentDeadline" />
                                                         </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label">Income Account</label>
+                                                            <InputSelect class="form-select" @bind-Value="_meeting.IncomeAccountId">
+                                                                <option value="">Activity Income (default)</option>
+                                                                @foreach (var account in _incomeAccounts)
+                                                                {
+                                                                    <option value="@account.Id">@account.Code - @account.Name</option>
+                                                                }
+                                                            </InputSelect>
+                                                            <small class="text-muted">Where payments for this event are booked</small>
+                                                        </div>
                                                     }
                                                 </div>
                                             </div>

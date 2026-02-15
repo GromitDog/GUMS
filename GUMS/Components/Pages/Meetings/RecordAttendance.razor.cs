@@ -56,13 +56,9 @@ public partial class RecordAttendance
             var activeMembers = await PersonService.GetActiveAsync();
             memberLookup = activeMembers.ToDictionary(m => m.MembershipNumber);
 
+            // Always initialize to pick up any new members since last visit
+            await AttendanceService.InitializeAttendanceForMeetingAsync(MeetingId);
             var existingAttendance = await AttendanceService.GetAttendanceForMeetingAsync(MeetingId);
-
-            if (!existingAttendance.Any())
-            {
-                await AttendanceService.InitializeAttendanceForMeetingAsync(MeetingId);
-                existingAttendance = await AttendanceService.GetAttendanceForMeetingAsync(MeetingId);
-            }
 
             attendanceRecords = existingAttendance
                 .Where(a => memberLookup.ContainsKey(a.MembershipNumber))
@@ -176,9 +172,17 @@ public partial class RecordAttendance
         }
     }
 
+    private List<Attendance> GetVisibleAttendanceRecords()
+    {
+        return attendanceRecords
+            .Where(a => memberLookup.ContainsKey(a.MembershipNumber)
+                && (!requiresConsent || a.ConsentFormReceived || memberLookup[a.MembershipNumber].PersonType == PersonType.Leader))
+            .ToList();
+    }
+
     private void MarkAllPresent()
     {
-        foreach (var record in attendanceRecords)
+        foreach (var record in GetVisibleAttendanceRecords())
         {
             ToggleAttendance(record, true);
         }
@@ -186,7 +190,7 @@ public partial class RecordAttendance
 
     private void MarkAllAbsent()
     {
-        foreach (var record in attendanceRecords)
+        foreach (var record in GetVisibleAttendanceRecords())
         {
             ToggleAttendance(record, false);
         }

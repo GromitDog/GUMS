@@ -69,6 +69,11 @@ public interface IAccountingService
     /// </summary>
     Task<(bool Success, string ErrorMessage)> VoidTransactionAsync(int transactionId);
 
+    /// <summary>
+    /// Updates the date on a transaction.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage)> UpdateTransactionDateAsync(int transactionId, DateTime newDate);
+
     // ===== Payment Recording Integration =====
 
     /// <summary>

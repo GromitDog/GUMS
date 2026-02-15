@@ -72,21 +72,46 @@
                     <div class="card-body py-2">
                         @{
                             var visibleRecords = GetVisibleAttendanceRecords();
+                            var girlAttendanceRecords = attendanceRecords.Where(a => memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == Data.Enums.PersonType.Girl).ToList();
                         }
-                        <div class="d-flex justify-content-around text-center">
-                            <div>
-                                <h4 class="mb-0 text-success">@visibleRecords.Count(a => a.Attended)</h4>
-                                <small class="text-muted">Present</small>
+                        @if (requiresConsent)
+                        {
+                            <div class="d-flex justify-content-around text-center">
+                                <div>
+                                    <h4 class="mb-0 text-primary">@girlAttendanceRecords.Count(a => a.ConsentEmailReceived || a.ConsentFormReceived)</h4>
+                                    <small class="text-muted">Attending</small>
+                                </div>
+                                <div>
+                                    <h4 class="mb-0 text-success">@girlAttendanceRecords.Count(a => a.ConsentFormReceived)</h4>
+                                    <small class="text-muted">Forms In</small>
+                                </div>
+                                <div>
+                                    <h4 class="mb-0 text-warning">@girlAttendanceRecords.Count(a => a.ConsentEmailReceived && !a.ConsentFormReceived)</h4>
+                                    <small class="text-muted">Forms Outstanding</small>
+                                </div>
+                                <div>
+                                    <h4 class="mb-0 text-muted">@girlAttendanceRecords.Count</h4>
+                                    <small class="text-muted">Total Girls</small>
+                                </div>
                             </div>
-                            <div>
-                                <h4 class="mb-0 text-danger">@visibleRecords.Count(a => !a.Attended)</h4>
-                                <small class="text-muted">Absent</small>
+                        }
+                        else
+                        {
+                            <div class="d-flex justify-content-around text-center">
+                                <div>
+                                    <h4 class="mb-0 text-success">@visibleRecords.Count(a => a.Attended)</h4>
+                                    <small class="text-muted">Present</small>
+                                </div>
+                                <div>
+                                    <h4 class="mb-0 text-danger">@visibleRecords.Count(a => !a.Attended)</h4>
+                                    <small class="text-muted">Absent</small>
+                                </div>
+                                <div>
+                                    <h4 class="mb-0 text-primary">@visibleRecords.Count</h4>
+                                    <small class="text-muted">Total</small>
+                                </div>
                             </div>
-                            <div>
-                                <h4 class="mb-0 text-primary">@visibleRecords.Count</h4>
-                                <small class="text-muted">Total</small>
-                            </div>
-                        </div>
+                        }
                     </div>
                 </div>
 

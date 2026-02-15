@@ -21,6 +21,9 @@ public partial class Index
     private PaymentStatus? _selectedStatus;
     private int _selectedTermId;
     private string _searchTerm = string.Empty;
+    private bool _showCancelled;
+    private string _sortColumn = "DueDate";
+    private bool _sortAscending;
 
     private bool _isLoading = true;
     private bool _isCancelling;
@@ -102,6 +105,12 @@ public partial class Index
                 .Where(p => p.Status == _selectedStatus.Value)
                 .ToList();
         }
+        else if (!_showCancelled)
+        {
+            _filteredPayments = _filteredPayments
+                .Where(p => p.Status != PaymentStatus.Cancelled)
+                .ToList();
+        }
 
         // Filter by term
         if (_selectedTermId > 0)
@@ -121,6 +130,50 @@ public partial class Index
                            p.Reference.ToLower().Contains(search))
                 .ToList();
         }
+
+        // Apply sorting
+        _filteredPayments = _sortColumn switch
+        {
+            "Member" => _sortAscending
+                ? _filteredPayments.OrderBy(p => _memberNames.GetValueOrDefault(p.MembershipNumber, p.MembershipNumber)).ToList()
+                : _filteredPayments.OrderByDescending(p => _memberNames.GetValueOrDefault(p.MembershipNumber, p.MembershipNumber)).ToList(),
+            "Type" => _sortAscending
+                ? _filteredPayments.OrderBy(p => p.PaymentType).ToList()
+                : _filteredPayments.OrderByDescending(p => p.PaymentType).ToList(),
+            "Amount" => _sortAscending
+                ? _filteredPayments.OrderBy(p => p.Amount).ToList()
+                : _filteredPayments.OrderByDescending(p => p.Amount).ToList(),
+            "Outstanding" => _sortAscending
+                ? _filteredPayments.OrderBy(p => p.OutstandingBalance).ToList()
+                : _filteredPayments.OrderByDescending(p => p.OutstandingBalance).ToList(),
+            "DueDate" => _sortAscending
+                ? _filteredPayments.OrderBy(p => p.DueDate).ToList()
+                : _filteredPayments.OrderByDescending(p => p.DueDate).ToList(),
+            "Status" => _sortAscending
+                ? _filteredPayments.OrderBy(p => p.Status).ToList()
+                : _filteredPayments.OrderByDescending(p => p.Status).ToList(),
+            _ => _filteredPayments
+        };
+    }
+
+    private void SortBy(string column)
+    {
+        if (_sortColumn == column)
+        {
+            _sortAscending = !_sortAscending;
+        }
+        else
+        {
+            _sortColumn = column;
+            _sortAscending = true;
+        }
+        ApplyFilters();
+    }
+
+    private string SortIcon(string column)
+    {
+        if (_sortColumn != column) return "bi-arrow-down-up text-muted";
+        return _sortAscending ? "bi-sort-up" : "bi-sort-down";
     }
 
     private void ClearFilters()
@@ -128,6 +181,9 @@ public partial class Index
         _selectedStatus = null;
         _selectedTermId = 0;
         _searchTerm = string.Empty;
+        _showCancelled = false;
+        _sortColumn = "DueDate";
+        _sortAscending = false;
         ApplyFilters();
     }
 

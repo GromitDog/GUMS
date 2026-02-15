@@ -207,11 +207,6 @@ public class AccountingService : IAccountingService
             return (false, "Transaction is already voided.");
         }
 
-        if (transaction.PaymentId.HasValue)
-        {
-            return (false, "Cannot void a payment-linked transaction. Manage this through the payments system.");
-        }
-
         // Check if any line has been reconciled
         if (transaction.Lines.Any(l => l.BankReconciliationId.HasValue))
         {
@@ -237,6 +232,23 @@ public class AccountingService : IAccountingService
             }
         }
 
+        // If linked to a payment, reverse the AmountPaid and reset status
+        if (transaction.PaymentId.HasValue)
+        {
+            var payment = await _context.Payments.FindAsync(transaction.PaymentId.Value);
+            if (payment != null)
+            {
+                var transactionAmount = transaction.TotalDebits;
+                payment.AmountPaid -= transactionAmount;
+                if (payment.AmountPaid < 0) payment.AmountPaid = 0;
+
+                if (payment.Status == PaymentStatus.Paid)
+                {
+                    payment.Status = PaymentStatus.Pending;
+                }
+            }
+        }
+
         // Remove any Expense entity that references this transaction
         var linkedExpense = await _context.Expenses
             .FirstOrDefaultAsync(e => e.TransactionId == transactionId);
@@ -248,6 +260,24 @@ public class AccountingService : IAccountingService
         transaction.IsVoided = true;
         transaction.VoidedDate = DateTime.Now;
 
+        await _context.SaveChangesAsync();
+
+        return (true, string.Empty);
+    }
+
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage)> UpdateTransactionDateAsync(int transactionId, DateTime newDate)
+    {
+        var transaction = await _context.Transactions
+            .FirstOrDefaultAsync(t => t.Id == transactionId);
+
+        if (transaction == null)
+            return (false, "Transaction not found.");
+
+        if (transaction.IsVoided)
+            return (false, "Cannot edit a voided transaction.");
+
+        transaction.Date = newDate;
         await _context.SaveChangesAsync();
 
         return (true, string.Empty);

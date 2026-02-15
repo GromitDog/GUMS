@@ -101,7 +101,32 @@
                                         @if (isFirst)
                                         {
                                             <td rowspan="@rowCount">
-                                                @transaction.Date.ToString("dd MMM yyyy")
+                                                @if (_editDateId == transaction.Id)
+                                                {
+                                                    <div class="d-flex flex-column gap-1">
+                                                        <input type="date" class="form-control form-control-sm" @bind="_editDateValue" style="width: 140px;" />
+                                                        <div>
+                                                            <button class="btn btn-success btn-sm py-0 px-1" @onclick="() => SaveDate(transaction.Id)">
+                                                                <i class="bi bi-check"></i>
+                                                            </button>
+                                                            <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="CancelEditDate">
+                                                                <i class="bi bi-x"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                }
+                                                else if (!transaction.IsVoided)
+                                                {
+                                                    <span @onclick="() => StartEditDate(transaction.Id, transaction.Date)"
+                                                          style="cursor: pointer; border-bottom: 1px dashed #6c757d;"
+                                                          title="Click to edit date">
+                                                        @transaction.Date.ToString("dd MMM yyyy")
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    @transaction.Date.ToString("dd MMM yyyy")
+                                                }
                                             </td>
                                             <td rowspan="@rowCount">
                                                 @transaction.Description
@@ -141,7 +166,7 @@
                                         @if (isFirst == false && line == transaction.Lines.First())
                                         {
                                             <td rowspan="@rowCount" class="text-center" style="text-decoration: none;">
-                                                @if (!transaction.IsVoided && !transaction.PaymentId.HasValue)
+                                                @if (!transaction.IsVoided)
                                                 {
                                                     @if (_confirmVoidId == transaction.Id)
                                                     {
