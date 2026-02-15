@@ -640,7 +640,8 @@ public class AttendanceService : IAttendanceService
                 MemberName = person?.FullName,
                 PersonType = person?.PersonType.ToString(),
                 TotalNightsAway = g.TotalNightsAway,
-                MultiDayEventsAttended = g.MultiDayEventsAttended
+                MultiDayEventsAttended = g.MultiDayEventsAttended,
+                ExtraNightsAway = person?.PersonType == PersonType.Leader ? (person?.ExtraNightsAway ?? 0) : 0
             };
         })
         .OrderByDescending(s => s.TotalNightsAway)

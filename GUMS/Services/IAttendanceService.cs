@@ -223,4 +223,6 @@ public class MemberNightsAwaySummary
     public string? PersonType { get; set; }
     public int TotalNightsAway { get; set; }
     public int MultiDayEventsAttended { get; set; }
+    public int ExtraNightsAway { get; set; }
+    public int DisplayTotal => TotalNightsAway + ExtraNightsAway;
 }

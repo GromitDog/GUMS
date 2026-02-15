@@ -1,5 +1,6 @@
 @page "/Reports/NightsAway"
 @using GUMS.Data.Enums
+@using GUMS.Services
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @rendermode InteractiveServer
@@ -25,23 +26,15 @@
     <div class="card mb-4">
         <div class="card-body">
             <div class="row g-3 align-items-end">
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label class="form-label">From Date</label>
                     <input type="date" class="form-control" @bind="_fromDate" @bind:after="LoadData" />
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label class="form-label">To Date</label>
                     <input type="date" class="form-control" @bind="_toDate" @bind:after="LoadData" />
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">Show</label>
-                    <select class="form-select" @bind="_personTypeFilter" @bind:after="LoadData">
-                        <option value="">Everyone</option>
-                        <option value="Girl">Girls Only</option>
-                        <option value="Leader">Leaders Only</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <button class="btn btn-outline-secondary" @onclick="ClearFilters">
                         <i class="bi bi-x-circle"></i> Clear Filters
                     </button>
@@ -60,12 +53,14 @@
     }
     else
     {
+        var allSummaries = _girlSummaries.Concat(_leaderSummaries).ToList();
+
         <!-- Summary Stats -->
         <div class="row mb-4">
             <div class="col-md-4">
                 <div class="card text-center" style="background-color: #E8F5E9;">
                     <div class="card-body">
-                        <h3 class="mb-0 text-success">@_summaries.Sum(s => s.TotalNightsAway)</h3>
+                        <h3 class="mb-0 text-success">@allSummaries.Sum(s => s.TotalNightsAway)</h3>
                         <small class="text-muted">Total Nights Away</small>
                     </div>
                 </div>
@@ -73,7 +68,7 @@
             <div class="col-md-4">
                 <div class="card text-center" style="background-color: #E3F2FD;">
                     <div class="card-body">
-                        <h3 class="mb-0 text-primary">@_summaries.Count</h3>
+                        <h3 class="mb-0 text-primary">@allSummaries.Count</h3>
                         <small class="text-muted">Members with Nights Away</small>
                     </div>
                 </div>
@@ -81,26 +76,26 @@
             <div class="col-md-4">
                 <div class="card text-center" style="background-color: #FFF3E0;">
                     <div class="card-body">
-                        <h3 class="mb-0 text-warning">@_summaries.Sum(s => s.MultiDayEventsAttended)</h3>
+                        <h3 class="mb-0 text-warning">@allSummaries.Sum(s => s.MultiDayEventsAttended)</h3>
                         <small class="text-muted">Multi-Day Events Attended</small>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Data Table -->
-        <div class="card">
+        <!-- Girls Table -->
+        <div class="card mb-4">
             <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
                 <h5 class="mb-0">
-                    <i class="bi bi-table"></i> Nights Away Summary
+                    <i class="bi bi-person-heart"></i> Girls
                 </h5>
             </div>
             <div class="card-body p-0">
-                @if (!_summaries.Any())
+                @if (!_girlSummaries.Any())
                 {
                     <div class="p-4 text-center text-muted">
                         <i class="bi bi-moon" style="font-size: 2rem;"></i>
-                        <p class="mb-0 mt-2">No nights away recorded for the selected period.</p>
+                        <p class="mb-0 mt-2">No nights away recorded for girls in the selected period.</p>
                     </div>
                 }
                 else
@@ -110,13 +105,13 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Name</th>
-                                    <th>Type</th>
-                                    <th class="text-center">Multi-Day Events</th>
+                                    <th class="text-center">Events</th>
                                     <th class="text-center">Total Nights</th>
+                                    <th>Badges</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var summary in _summaries)
+                                @foreach (var summary in _girlSummaries)
                                 {
                                     <tr>
                                         <td>
@@ -124,32 +119,113 @@
                                             <br />
                                             <small class="text-muted">@summary.MembershipNumber</small>
                                         </td>
-                                        <td>
-                                            @if (summary.PersonType == "Girl")
-                                            {
-                                                <span class="badge bg-info">Girl</span>
-                                            }
-                                            else if (summary.PersonType == "Leader")
-                                            {
-                                                <span class="badge bg-warning text-dark">Leader</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-secondary">@summary.PersonType</span>
-                                            }
-                                        </td>
                                         <td class="text-center">@summary.MultiDayEventsAttended</td>
                                         <td class="text-center">
                                             <strong class="text-success">@summary.TotalNightsAway</strong>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex gap-1 flex-wrap">
+                                                @foreach (var milestone in GUMS.Services.ProgrammeService.NightsAwayMilestones)
+                                                {
+                                                    <span class="badge @GetMilestoneBadgeClass(summary.MembershipNumber, milestone, summary.TotalNightsAway)"
+                                                          style="font-size: 0.75rem;">
+                                                        @milestone
+                                                    </span>
+                                                }
+                                            </div>
                                         </td>
                                     </tr>
                                 }
                             </tbody>
                             <tfoot class="table-light">
                                 <tr>
-                                    <th colspan="2">Total</th>
-                                    <th class="text-center">@_summaries.Sum(s => s.MultiDayEventsAttended)</th>
-                                    <th class="text-center text-success">@_summaries.Sum(s => s.TotalNightsAway)</th>
+                                    <th>Total</th>
+                                    <th class="text-center">@_girlSummaries.Sum(s => s.MultiDayEventsAttended)</th>
+                                    <th class="text-center text-success">@_girlSummaries.Sum(s => s.TotalNightsAway)</th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Leaders Table -->
+        <div class="card">
+            <div class="card-header" style="background-color: #6c757d; color: white;">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-badge"></i> Leaders
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                @if (!_leaderSummaries.Any())
+                {
+                    <div class="p-4 text-center text-muted">
+                        <i class="bi bi-moon" style="font-size: 2rem;"></i>
+                        <p class="mb-0 mt-2">No nights away recorded for leaders in the selected period.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th class="text-center">Events</th>
+                                    <th class="text-center">Unit Nights</th>
+                                    <th class="text-center">Extra Nights</th>
+                                    <th class="text-center">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var summary in _leaderSummaries)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@(summary.MemberName ?? "Unknown")</strong>
+                                            <br />
+                                            <small class="text-muted">@summary.MembershipNumber</small>
+                                        </td>
+                                        <td class="text-center">@summary.MultiDayEventsAttended</td>
+                                        <td class="text-center">@summary.TotalNightsAway</td>
+                                        <td class="text-center">
+                                            @if (_editingMembershipNumber == summary.MembershipNumber)
+                                            {
+                                                <div class="d-inline-flex align-items-center gap-1">
+                                                    <input type="number" class="form-control form-control-sm" style="width: 80px;"
+                                                           @bind="_editExtraNights" min="0" />
+                                                    <button class="btn btn-sm btn-success" @onclick="() => SaveExtraNights(summary)">
+                                                        <i class="bi bi-check"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEditExtraNights">
+                                                        <i class="bi bi-x"></i>
+                                                    </button>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span>@summary.ExtraNightsAway</span>
+                                                <button class="btn btn-sm btn-link p-0 ms-1" @onclick="() => StartEditExtraNights(summary)"
+                                                        title="Edit extra nights from previous units">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            <strong class="text-success">@summary.DisplayTotal</strong>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th>Total</th>
+                                    <th class="text-center">@_leaderSummaries.Sum(s => s.MultiDayEventsAttended)</th>
+                                    <th class="text-center">@_leaderSummaries.Sum(s => s.TotalNightsAway)</th>
+                                    <th class="text-center">@_leaderSummaries.Sum(s => s.ExtraNightsAway)</th>
+                                    <th class="text-center text-success">@_leaderSummaries.Sum(s => s.DisplayTotal)</th>
                                 </tr>
                             </tfoot>
                         </table>

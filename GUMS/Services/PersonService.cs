@@ -311,6 +311,19 @@ public class PersonService : IPersonService
         // linked by MembershipNumber (not FK), allowing historical records to persist
     }
 
+    public async Task<(bool Success, string ErrorMessage)> UpdateExtraNightsAwayAsync(string membershipNumber, int extraNights)
+    {
+        var person = await _context.Persons
+            .FirstOrDefaultAsync(p => p.MembershipNumber == membershipNumber);
+
+        if (person == null)
+            return (false, "Person not found.");
+
+        person.ExtraNightsAway = extraNights;
+        await _context.SaveChangesAsync();
+        return (true, string.Empty);
+    }
+
     public async Task<bool> IsMembershipNumberUniqueAsync(string membershipNumber, int? excludePersonId = null)
     {
         var query = _context.Persons.Where(p => p.MembershipNumber == membershipNumber);

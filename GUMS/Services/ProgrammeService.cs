@@ -7,6 +7,8 @@ namespace GUMS.Services;
 
 public class ProgrammeService : IProgrammeService
 {
+    public static readonly int[] NightsAwayMilestones = { 1, 5, 10, 15, 20, 25, 30 };
+
     private readonly ApplicationDbContext _context;
 
     public ProgrammeService(ApplicationDbContext context)
@@ -415,6 +417,31 @@ public class ProgrammeService : IProgrammeService
                     AwardType = "Gold"
                 });
             }
+
+            // Check nights away milestones
+            var totalNights = await _context.Attendances
+                .Where(a => a.MembershipNumber == girl.MembershipNumber && a.Attended && a.NightsAway.HasValue && a.NightsAway > 0)
+                .SumAsync(a => a.NightsAway ?? 0);
+
+            var awardedMilestones = await _context.NightsAwayBadges
+                .Where(n => n.MembershipNumber == girl.MembershipNumber)
+                .Select(n => n.Milestone)
+                .ToHashSetAsync();
+
+            foreach (var milestone in NightsAwayMilestones)
+            {
+                if (totalNights >= milestone && !awardedMilestones.Contains(milestone))
+                {
+                    awards.Add(new AwardDue
+                    {
+                        MembershipNumber = girl.MembershipNumber,
+                        Name = girl.FullName,
+                        AwardName = $"Nights Away ({milestone})",
+                        AwardType = "NightsAway",
+                        Milestone = milestone
+                    });
+                }
+            }
         }
 
         return awards;
@@ -526,6 +553,44 @@ public class ProgrammeService : IProgrammeService
 
         await _context.SaveChangesAsync();
         return (true, string.Empty);
+    }
+
+    // ===== Nights Away Badges =====
+
+    public async Task<(bool Success, string ErrorMessage)> MarkNightsAwayBadgeAwardedAsync(string membershipNumber, int milestone)
+    {
+        var exists = await _context.NightsAwayBadges
+            .AnyAsync(n => n.MembershipNumber == membershipNumber && n.Milestone == milestone);
+
+        if (exists)
+            return (true, string.Empty);
+
+        _context.NightsAwayBadges.Add(new NightsAwayBadge
+        {
+            MembershipNumber = membershipNumber,
+            Milestone = milestone,
+            DateAwarded = DateTime.Today
+        });
+        await _context.SaveChangesAsync();
+        return (true, string.Empty);
+    }
+
+    public async Task<Dictionary<string, HashSet<int>>> GetAwardedNightsAwayMilestonesAsync(List<string> membershipNumbers)
+    {
+        var records = await _context.NightsAwayBadges
+            .AsNoTracking()
+            .Where(n => membershipNumbers.Contains(n.MembershipNumber))
+            .Select(n => new { n.MembershipNumber, n.Milestone })
+            .ToListAsync();
+
+        var result = new Dictionary<string, HashSet<int>>();
+        foreach (var r in records)
+        {
+            if (!result.ContainsKey(r.MembershipNumber))
+                result[r.MembershipNumber] = new HashSet<int>();
+            result[r.MembershipNumber].Add(r.Milestone);
+        }
+        return result;
     }
 
     // ===== Term Balance =====

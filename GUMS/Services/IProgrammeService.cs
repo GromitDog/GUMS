@@ -24,6 +24,8 @@ public interface IProgrammeService
     Task<(bool Success, string ErrorMessage)> SetGoldChallengeCompleteAsync(string membershipNumber, bool complete);
     Task<(bool Success, string ErrorMessage)> MarkThemeAwardedAsync(string membershipNumber, Theme theme);
     Task<(bool Success, string ErrorMessage)> MarkLevelAwardedAsync(string membershipNumber, string level);
+    Task<(bool Success, string ErrorMessage)> MarkNightsAwayBadgeAwardedAsync(string membershipNumber, int milestone);
+    Task<Dictionary<string, HashSet<int>>> GetAwardedNightsAwayMilestonesAsync(List<string> membershipNumbers);
 
     // ===== Standalone Completions =====
     Task<(bool Success, string ErrorMessage)> SaveStandaloneCompletionAsync(
@@ -152,8 +154,9 @@ public class AwardDue
     public string MembershipNumber { get; set; } = string.Empty;
     public string? Name { get; set; }
     public string AwardName { get; set; } = string.Empty;
-    public string AwardType { get; set; } = string.Empty; // "Badge", "ThemeAward", "Bronze", "Silver", "Gold"
+    public string AwardType { get; set; } = string.Empty; // "Badge", "ThemeAward", "Bronze", "Silver", "Gold", "NightsAway"
     public int? BadgeDefinitionId { get; set; }
+    public int? Milestone { get; set; }
     public Theme? Theme { get; set; }
     public DateTime? CompletedDate { get; set; }
 }

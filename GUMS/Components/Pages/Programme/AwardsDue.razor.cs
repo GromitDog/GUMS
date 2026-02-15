@@ -43,6 +43,9 @@ public partial class AwardsDue
                 case "ThemeAward" when award.Theme.HasValue:
                     await ProgrammeService.MarkThemeAwardedAsync(award.MembershipNumber, award.Theme.Value);
                     break;
+                case "NightsAway" when award.Milestone.HasValue:
+                    await ProgrammeService.MarkNightsAwayBadgeAwardedAsync(award.MembershipNumber, award.Milestone.Value);
+                    break;
                 case "Bronze":
                 case "Silver":
                 case "Gold":

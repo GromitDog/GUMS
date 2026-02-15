@@ -24,6 +24,9 @@ public interface IPersonService
     Task<string> ExportMemberDataAsync(int personId);
     Task RemoveMemberDataAsync(int personId, string removedBy, bool dataExported = false);
 
+    // Extra nights away (leaders)
+    Task<(bool Success, string ErrorMessage)> UpdateExtraNightsAwayAsync(string membershipNumber, int extraNights);
+
     // Validation
     Task<bool> IsMembershipNumberUniqueAsync(string membershipNumber, int? excludePersonId = null);
 }

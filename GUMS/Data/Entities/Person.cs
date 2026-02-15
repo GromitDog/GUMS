@@ -52,6 +52,9 @@ public class Person
 
     public PhotoPermission PhotoPermission { get; set; } = PhotoPermission.None;
 
+    // Extra nights away from previous units (leaders only)
+    public int ExtraNightsAway { get; set; }
+
     // Navigation properties
     public List<EmergencyContact> EmergencyContacts { get; set; } = new();
 }

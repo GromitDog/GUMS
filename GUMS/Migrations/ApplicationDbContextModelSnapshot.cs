@@ -676,6 +676,31 @@ namespace GUMS.Migrations
                     b.ToTable("Activities", (string)null);
                 });
 
+            modelBuilder.Entity("GUMS.Data.Entities.NightsAwayBadge", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DateAwarded")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MembershipNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Milestone")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MembershipNumber", "Milestone")
+                        .IsUnique();
+
+                    b.ToTable("NightsAwayBadges");
+                });
+
             modelBuilder.Entity("GUMS.Data.Entities.Payment", b =>
                 {
                     b.Property<int>("Id")
@@ -770,6 +795,9 @@ namespace GUMS.Migrations
                     b.Property<string>("Email")
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("ExtraNightsAway")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("FullName")
                         .HasMaxLength(200)

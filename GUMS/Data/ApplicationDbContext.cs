@@ -38,6 +38,7 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     public DbSet<AwardTracking> AwardTrackings { get; set; }
     public DbSet<AwardedBadge> AwardedBadges { get; set; }
     public DbSet<AwardedThemeAward> AwardedThemeAwards { get; set; }
+    public DbSet<NightsAwayBadge> NightsAwayBadges { get; set; }
     public DbSet<BankReconciliation> BankReconciliations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -197,6 +198,15 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
         {
             entity.HasKey(a => a.Id);
             entity.HasIndex(a => new { a.MembershipNumber, a.Theme }).IsUnique();
+
+            entity.Property(a => a.MembershipNumber).IsRequired();
+        });
+
+        // NightsAwayBadge configuration
+        modelBuilder.Entity<NightsAwayBadge>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+            entity.HasIndex(a => new { a.MembershipNumber, a.Milestone }).IsUnique();
 
             entity.Property(a => a.MembershipNumber).IsRequired();
         });
