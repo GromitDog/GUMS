@@ -89,6 +89,19 @@ public interface IAccountingService
         DateTime date,
         int? incomeAccountId = null);
 
+    /// <summary>
+    /// Records the accounting entries for a payment refund.
+    /// Creates debit to income account, credit to asset account (reverse of RecordPaymentEntryAsync).
+    /// </summary>
+    Task<(bool Success, string ErrorMessage, int? TransactionId)> RecordRefundEntryAsync(
+        int paymentId,
+        decimal amount,
+        PaymentMethod refundMethod,
+        PaymentType paymentType,
+        string description,
+        DateTime date,
+        int? incomeAccountId = null);
+
     // ===== Banking Operations =====
 
     /// <summary>

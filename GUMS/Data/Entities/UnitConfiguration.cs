@@ -36,4 +36,8 @@ public class UnitConfiguration
     [Required]
     [Range(1, 365)]
     public int PaymentTermDays { get; set; } = 14;
+
+    [Required]
+    [Range(0, 10000)]
+    public decimal JoiningFeeAmount { get; set; }
 }

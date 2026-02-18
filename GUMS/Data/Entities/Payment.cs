@@ -53,6 +53,13 @@ public class Payment
     /// </summary>
     public PaymentMethod? PaymentMethod { get; set; }
 
+    // Refund tracking
+    [Range(0, 10000)]
+    public decimal RefundAmount { get; set; }
+    public DateTime? RefundDate { get; set; }
+    public int? RefundTransactionId { get; set; }
+    public Transaction? RefundTransaction { get; set; }
+
     // Computed property
     public decimal OutstandingBalance => Amount - AmountPaid;
 

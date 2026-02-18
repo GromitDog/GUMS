@@ -100,7 +100,7 @@
                 <div class="card h-100">
                     <div class="card-body text-center">
                         <h6 class="text-muted mb-2">Bank Account</h6>
-                        <h2 class="mb-0 text-primary">
+                        <h2 class="mb-0" style="color: var(--gg-primary-blue);">
                             @_dashboardStats.BankBalance.ToString("C")
                         </h2>
                         <small class="text-muted">Deposited funds</small>
@@ -253,19 +253,19 @@
                                         @switch (account.Type)
                                         {
                                             case AccountType.Asset:
-                                                <span class="badge bg-info">Asset</span>
+                                                <span class="badge badge-gg-asset">Asset</span>
                                                 break;
                                             case AccountType.Liability:
-                                                <span class="badge bg-warning text-dark">Liability</span>
+                                                <span class="badge badge-gg-liability">Liability</span>
                                                 break;
                                             case AccountType.Equity:
-                                                <span class="badge bg-secondary">Equity</span>
+                                                <span class="badge badge-gg-equity">Equity</span>
                                                 break;
                                             case AccountType.Income:
-                                                <span class="badge bg-success">Income</span>
+                                                <span class="badge badge-gg-income">Income</span>
                                                 break;
                                             case AccountType.Expense:
-                                                <span class="badge bg-danger">Expense</span>
+                                                <span class="badge badge-gg-expense">Expense</span>
                                                 break;
                                         }
                                     </td>

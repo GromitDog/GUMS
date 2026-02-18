@@ -14,6 +14,14 @@
         </a>
     </div>
 
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+        </div>
+    }
+
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -152,11 +160,11 @@
                                         <td>
                                             @if (payment.PaymentType == PaymentType.Subs)
                                             {
-                                                <span class="badge bg-info">Subs</span>
+                                                <span class="badge badge-gg-subs">Subs</span>
                                             }
                                             else
                                             {
-                                                <span class="badge bg-secondary">Activity</span>
+                                                <span class="badge badge-gg-activity">Activity</span>
                                             }
                                         </td>
                                         <td>
@@ -182,19 +190,23 @@
                                         <td>
                                             @if (isOverdue)
                                             {
-                                                <span class="badge bg-danger">Overdue</span>
+                                                <span class="badge badge-gg-overdue">Overdue</span>
                                             }
                                             else if (payment.Status == PaymentStatus.Pending)
                                             {
-                                                <span class="badge bg-warning text-dark">Pending</span>
+                                                <span class="badge badge-gg-pending">Pending</span>
                                             }
                                             else if (payment.Status == PaymentStatus.Paid)
                                             {
-                                                <span class="badge bg-success">Paid</span>
+                                                <span class="badge badge-gg-paid">Paid</span>
+                                            }
+                                            else if (payment.Status == PaymentStatus.Refunded)
+                                            {
+                                                <span class="badge badge-gg-refunded">Refunded</span>
                                             }
                                             else
                                             {
-                                                <span class="badge bg-secondary">Cancelled</span>
+                                                <span class="badge badge-gg-cancelled">Cancelled</span>
                                             }
                                         </td>
                                         <td>
@@ -203,6 +215,13 @@
                                                 <a href="/Payments/RecordPayment/@payment.Id" class="btn btn-sm btn-success">
                                                     <i class="bi bi-cash"></i> Pay
                                                 </a>
+                                            }
+                                            else if (payment.Status == PaymentStatus.Paid)
+                                            {
+                                                <button class="btn btn-sm btn-outline-info" @onclick="() => ShowRefundConfirm(payment)"
+                                                        title="Refund payment">
+                                                    <i class="bi bi-arrow-counterclockwise"></i> Refund
+                                                </button>
                                             }
                                         </td>
                                     </tr>
@@ -213,5 +232,59 @@
                 </div>
             </div>
         }
+    }
+
+    <!-- Refund Confirmation Modal -->
+    @if (_showRefundConfirm && _paymentToRefund != null)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header modal-header-refund">
+                        <h5 class="modal-title">
+                            <i class="bi bi-arrow-counterclockwise"></i> Refund Payment
+                        </h5>
+                        <button type="button" class="btn-close" @onclick="CancelRefundConfirm"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Refund payment for <strong>@_paymentToRefund.Reference</strong> (paid @_paymentToRefund.AmountPaid.ToString("C")).</p>
+                        <div class="mb-3">
+                            <label class="form-label">Refund Amount <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" @bind="_refundAmount" min="0.01"
+                                   max="@_paymentToRefund.AmountPaid" step="0.01" />
+                            <div class="form-text">Maximum: @_paymentToRefund.AmountPaid.ToString("C")</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Refund Method <span class="text-danger">*</span></label>
+                            <select class="form-select" @bind="_refundMethod">
+                                <option value="@PaymentMethod.Cash">Cash</option>
+                                <option value="@PaymentMethod.Cheque">Cheque</option>
+                                <option value="@PaymentMethod.BankTransfer">Bank Transfer</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Refund Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" @bind="_refundDate" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Reason for refund <span class="text-danger">*</span></label>
+                            <textarea class="form-control" rows="2" @bind="_refundReason"
+                                      placeholder="e.g., Event cancelled, Overpayment..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelRefundConfirm">Close</button>
+                        <button type="button" class="btn btn-info text-white" @onclick="RefundPayment"
+                                disabled="@(_isRefunding || string.IsNullOrWhiteSpace(_refundReason) || _refundAmount <= 0 || _refundAmount > _paymentToRefund.AmountPaid)">
+                            @if (_isRefunding)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            <i class="bi bi-arrow-counterclockwise"></i> Refund Payment
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     }
 </div>

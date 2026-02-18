@@ -32,6 +32,11 @@ public partial class Home
     private int _overduePaymentCount;
     private decimal _totalOutstanding;
 
+    // Accounts stats
+    private decimal _bankBalance;
+    private DateTime? _lastReconciliationDate;
+    private bool _reconciliationOverdue;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadDashboardData();
@@ -80,6 +85,13 @@ public partial class Home
             _pendingPaymentCount = paymentStats.PendingCount;
             _overduePaymentCount = paymentStats.OverdueCount;
             _totalOutstanding = paymentStats.TotalOutstanding;
+
+            // Load accounts stats
+            _bankBalance = await AccountingService.GetBankBalanceAsync();
+            var lastReconciliation = await ReconciliationService.GetLastCompletedReconciliationAsync();
+            _lastReconciliationDate = lastReconciliation?.StatementDate;
+            _reconciliationOverdue = !_lastReconciliationDate.HasValue
+                || _lastReconciliationDate.Value < DateTime.Today.AddMonths(-1);
         }
         finally
         {

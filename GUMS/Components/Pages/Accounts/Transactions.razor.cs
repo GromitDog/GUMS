@@ -7,11 +7,15 @@ namespace GUMS.Components.Pages.Accounts;
 public partial class Transactions
 {
     [Inject] private IAccountingService AccountingService { get; set; } = default!;
+    [Inject] private ITermService TermService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
+    private List<Transaction> _allTransactions = new();
     private List<Transaction> _transactions = new();
+    private List<Account> _accounts = new();
     private DateTime? _dateFrom;
     private DateTime? _dateTo;
+    private int _selectedAccountId;
 
     private bool _isLoading = true;
     private string _errorMessage = string.Empty;
@@ -32,9 +36,27 @@ public partial class Transactions
             _successMessage = "Transaction voided successfully.";
         }
 
-        // Default to last 30 days
-        _dateTo = DateTime.Today;
-        _dateFrom = DateTime.Today.AddDays(-30);
+        // Load accounts for filter dropdown
+        _accounts = await AccountingService.GetAccountsAsync();
+
+        // Default date range: current term + the one before it
+        var currentTerm = await TermService.GetCurrentTermAsync();
+        if (currentTerm != null)
+        {
+            var terms = await TermService.GetAllAsync();
+            var previousTerm = terms
+                .Where(t => t.StartDate < currentTerm.StartDate)
+                .OrderByDescending(t => t.StartDate)
+                .FirstOrDefault();
+
+            _dateFrom = previousTerm?.StartDate ?? currentTerm.StartDate;
+            _dateTo = currentTerm.EndDate;
+        }
+        else
+        {
+            _dateTo = DateTime.Today;
+            _dateFrom = DateTime.Today.AddMonths(-6);
+        }
 
         await LoadTransactions();
     }
@@ -45,7 +67,8 @@ public partial class Transactions
 
         try
         {
-            _transactions = await AccountingService.GetTransactionsAsync(_dateFrom, _dateTo);
+            _allTransactions = await AccountingService.GetTransactionsAsync(_dateFrom, _dateTo);
+            ApplyAccountFilter();
         }
         catch (Exception ex)
         {
@@ -54,6 +77,20 @@ public partial class Transactions
         finally
         {
             _isLoading = false;
+        }
+    }
+
+    private void ApplyAccountFilter()
+    {
+        if (_selectedAccountId > 0)
+        {
+            _transactions = _allTransactions
+                .Where(t => t.Lines.Any(l => l.AccountId == _selectedAccountId))
+                .ToList();
+        }
+        else
+        {
+            _transactions = _allTransactions;
         }
     }
 
@@ -66,6 +103,7 @@ public partial class Transactions
     {
         _dateFrom = null;
         _dateTo = null;
+        _selectedAccountId = 0;
         await LoadTransactions();
     }
 

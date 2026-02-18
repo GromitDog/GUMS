@@ -129,11 +129,11 @@
                                         <td>
                                             @if (meeting.MeetingType == MeetingType.Regular)
                                             {
-                                                <span class="badge bg-info">Regular</span>
+                                                <span class="badge badge-gg-regular">Regular</span>
                                             }
                                             else
                                             {
-                                                <span class="badge bg-warning text-dark">Special Event</span>
+                                                <span class="badge badge-gg-special">Special Event</span>
                                             }
                                         </td>
                                         <td>@meeting.LocationName</td>
@@ -143,7 +143,7 @@
                                                 <span class="badge bg-secondary">@meeting.MeetingActivities.Count</span>
                                                 @if (meeting.MeetingActivities.Any(a => a.RequiresConsent))
                                                 {
-                                                    <span class="badge bg-warning text-dark">
+                                                    <span class="badge bg-warning">
                                                         <i class="bi bi-exclamation-triangle"></i> Consent
                                                     </span>
                                                 }
@@ -176,7 +176,7 @@
         {
             <!-- Past Meetings -->
             <div class="card">
-                <div class="card-header" style="background-color: #6c757d; color: white;">
+                <div class="card-header" style="background-color: var(--gg-muted); color: white;">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
                             <i class="bi bi-calendar-x"></i> Past Meetings (@pastMeetings.Count)
@@ -226,11 +226,11 @@
                                             <td>
                                                 @if (meeting.MeetingType == MeetingType.Regular)
                                                 {
-                                                    <span class="badge bg-info">Regular</span>
+                                                    <span class="badge badge-gg-regular">Regular</span>
                                                 }
                                                 else
                                                 {
-                                                    <span class="badge bg-warning text-dark">Special Event</span>
+                                                    <span class="badge badge-gg-special">Special Event</span>
                                                 }
                                             </td>
                                             <td>
@@ -281,7 +281,7 @@
         <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
-                    <div class="modal-header bg-danger text-white">
+                    <div class="modal-header modal-header-delete">
                         <h5 class="modal-title">
                             <i class="bi bi-exclamation-triangle-fill"></i> Confirm Deletion
                         </h5>

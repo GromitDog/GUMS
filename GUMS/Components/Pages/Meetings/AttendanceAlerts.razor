@@ -170,7 +170,7 @@
             @if (lowAttendanceAlerts.Any())
             {
                 <div class="card mb-4">
-                    <div class="card-header bg-warning text-dark">
+                    <div class="card-header bg-warning">
                         <h5 class="mb-0">
                             <i class="bi bi-exclamation-circle-fill"></i> Low Attendance (@lowAttendanceAlerts.Count)
                         </h5>
@@ -201,7 +201,7 @@
                                             </td>
                                             <td>@alert.MembershipNumber</td>
                                             <td>
-                                                <span class="badge bg-warning text-dark">
+                                                <span class="badge bg-warning">
                                                     @alert.MeetingsAttended/@alert.TotalMeetings
                                                 </span>
                                             </td>

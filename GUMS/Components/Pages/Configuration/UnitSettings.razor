@@ -156,6 +156,13 @@
                                     <ValidationMessage For="@(() => _config.PaymentTermDays)" />
                                     <small class="text-muted">Days after invoice before payment is overdue</small>
                                 </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Joining Fee (£)</label>
+                                    <InputNumber class="form-control" @bind-Value="_config.JoiningFeeAmount" />
+                                    <ValidationMessage For="@(() => _config.JoiningFeeAmount)" />
+                                    <small class="text-muted">Charged to new members for welcome pack. Set to 0 to disable.</small>
+                                </div>
                             </div>
                         </div>
                     </div>

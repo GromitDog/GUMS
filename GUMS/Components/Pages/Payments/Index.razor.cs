@@ -18,7 +18,7 @@ public partial class Index
     private Dictionary<string, string> _memberNames = new();
     private PaymentDashboardStats _dashboardStats = new();
 
-    private PaymentStatus? _selectedStatus;
+    private PaymentStatus? _selectedStatus = PaymentStatus.Pending;
     private int _selectedTermId;
     private string _searchTerm = string.Empty;
     private bool _showCancelled;
@@ -32,6 +32,15 @@ public partial class Index
     private string _cancelReason = string.Empty;
     private string _successMessage = string.Empty;
     private string _errorMessage = string.Empty;
+
+    // Refund modal state
+    private bool _showRefundConfirm;
+    private Payment? _paymentToRefund;
+    private decimal _refundAmount;
+    private PaymentMethod _refundMethod;
+    private DateTime _refundDate = DateTime.Today;
+    private string _refundReason = string.Empty;
+    private bool _isRefunding;
 
     protected override async Task OnInitializedAsync()
     {
@@ -85,12 +94,15 @@ public partial class Index
         }
     }
 
+    private string _selectedStatusString = "Pending";
+
     private void OnStatusFilterChange(ChangeEventArgs e)
     {
-        var value = e.Value?.ToString();
-        _selectedStatus = string.IsNullOrEmpty(value)
+        _selectedStatusString = e.Value?.ToString() ?? "";
+        _selectedStatus = string.IsNullOrEmpty(_selectedStatusString)
             ? null
-            : Enum.Parse<PaymentStatus>(value);
+            : Enum.Parse<PaymentStatus>(_selectedStatusString);
+        _showCancelled = false;
         ApplyFilters();
     }
 
@@ -107,8 +119,9 @@ public partial class Index
         }
         else if (!_showCancelled)
         {
+            // "All Statuses" without checkbox: hide Cancelled and Refunded
             _filteredPayments = _filteredPayments
-                .Where(p => p.Status != PaymentStatus.Cancelled)
+                .Where(p => p.Status != PaymentStatus.Cancelled && p.Status != PaymentStatus.Refunded)
                 .ToList();
         }
 
@@ -178,7 +191,8 @@ public partial class Index
 
     private void ClearFilters()
     {
-        _selectedStatus = null;
+        _selectedStatus = PaymentStatus.Pending;
+        _selectedStatusString = "Pending";
         _selectedTermId = 0;
         _searchTerm = string.Empty;
         _showCancelled = false;
@@ -244,6 +258,60 @@ public partial class Index
         finally
         {
             _isCancelling = false;
+        }
+    }
+
+    private void ShowRefundConfirm(Payment payment)
+    {
+        _paymentToRefund = payment;
+        _refundAmount = payment.AmountPaid;
+        _refundMethod = PaymentMethod.BankTransfer;
+        _refundDate = DateTime.Today;
+        _refundReason = string.Empty;
+        _showRefundConfirm = true;
+    }
+
+    private void CancelRefundConfirm()
+    {
+        _paymentToRefund = null;
+        _refundReason = string.Empty;
+        _showRefundConfirm = false;
+    }
+
+    private async Task RefundPayment()
+    {
+        if (_paymentToRefund == null || string.IsNullOrWhiteSpace(_refundReason)) return;
+
+        _isRefunding = true;
+        _errorMessage = string.Empty;
+
+        try
+        {
+            var result = await PaymentService.RefundPaymentAsync(
+                _paymentToRefund.Id, _refundAmount, _refundMethod, _refundDate, _refundReason);
+
+            if (result.Success)
+            {
+                _successMessage = $"Payment '{_paymentToRefund.Reference}' refunded successfully!";
+                _showRefundConfirm = false;
+                _paymentToRefund = null;
+                _refundReason = string.Empty;
+                await LoadData();
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage;
+                _showRefundConfirm = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred: {ex.Message}";
+            _showRefundConfirm = false;
+        }
+        finally
+        {
+            _isRefunding = false;
         }
     }
 }

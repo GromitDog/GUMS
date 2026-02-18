@@ -59,6 +59,19 @@
                             <InputDate class="form-control" @bind-Value="_dateJoined" />
                             <small class="form-text text-muted">Leave blank for today</small>
                         </div>
+
+                        @if (_joiningFeeAmount > 0)
+                        {
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="waiveJoiningFee"
+                                           @bind="_waiveJoiningFee" />
+                                    <label class="form-check-label" for="waiveJoiningFee">
+                                        Waive Joining Fee (£@_joiningFeeAmount.ToString("F2")) — e.g. transferring from another unit
+                                    </label>
+                                </div>
+                            </div>
+                        }
                     </div>
                 </div>
 

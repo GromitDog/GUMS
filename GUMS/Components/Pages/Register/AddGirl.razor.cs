@@ -9,6 +9,7 @@ public partial class AddGirl
 {
     [Inject] public required IPersonService PersonService { get; set; }
     [Inject] public required IConfigurationService ConfigService { get; set; }
+    [Inject] public required IPaymentService PaymentService { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
 
     private Person _person = new()
@@ -19,6 +20,9 @@ public partial class AddGirl
     };
 
     private DateTime _dateJoined = DateTime.Today;
+    private bool _waiveJoiningFee;
+    private decimal _joiningFeeAmount;
+    private int _paymentTermDays;
     private string? _errorMessage;
     private bool _isProcessing;
 
@@ -26,6 +30,8 @@ public partial class AddGirl
     {
         var config = await ConfigService.GetConfigurationAsync();
         _person.Section = config.UnitType;
+        _joiningFeeAmount = config.JoiningFeeAmount;
+        _paymentTermDays = config.PaymentTermDays;
 
         _person.EmergencyContacts.Add(new EmergencyContact
         {
@@ -63,6 +69,20 @@ public partial class AddGirl
             _person.DateJoined = _dateJoined;
 
             await PersonService.AddAsync(_person);
+
+            if (_joiningFeeAmount > 0 && !_waiveJoiningFee)
+            {
+                var payment = new Payment
+                {
+                    MembershipNumber = _person.MembershipNumber,
+                    Amount = _joiningFeeAmount,
+                    PaymentType = PaymentType.Other,
+                    DueDate = DateTime.Today.AddDays(_paymentTermDays),
+                    Reference = "Joining Fee",
+                    Status = PaymentStatus.Pending
+                };
+                await PaymentService.CreateAsync(payment);
+            }
 
             NavigationManager.NavigateTo("/Register");
         }

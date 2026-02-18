@@ -477,6 +477,80 @@ public class PaymentService : IPaymentService
         return (true, string.Empty);
     }
 
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage)> RefundPaymentAsync(
+        int paymentId, decimal amount, PaymentMethod refundMethod, DateTime refundDate, string reason)
+    {
+        var payment = await _context.Payments.FindAsync(paymentId);
+        if (payment == null)
+        {
+            return (false, "Payment not found.");
+        }
+
+        if (payment.Status != PaymentStatus.Paid)
+        {
+            return (false, "Only paid payments can be refunded.");
+        }
+
+        if (amount <= 0)
+        {
+            return (false, "Refund amount must be greater than zero.");
+        }
+
+        if (amount > payment.AmountPaid)
+        {
+            return (false, $"Refund amount ({amount:C}) exceeds amount paid ({payment.AmountPaid:C}).");
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return (false, "Refund reason is required.");
+        }
+
+        // Create reverse accounting entry if accounting service is available
+        int? transactionId = null;
+        if (_accountingService != null)
+        {
+            var member = await _context.Persons
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.MembershipNumber == payment.MembershipNumber);
+            var memberName = member?.FullName ?? payment.MembershipNumber;
+
+            var description = $"Refund to {memberName} - {payment.Reference}";
+
+            var result = await _accountingService.RecordRefundEntryAsync(
+                payment.Id,
+                amount,
+                refundMethod,
+                payment.PaymentType,
+                description,
+                refundDate,
+                payment.IncomeAccountId);
+
+            if (!result.Success)
+            {
+                return (false, $"Failed to create refund transaction: {result.ErrorMessage}");
+            }
+
+            transactionId = result.TransactionId;
+        }
+
+        payment.Status = PaymentStatus.Refunded;
+        payment.RefundAmount = amount;
+        payment.RefundDate = refundDate;
+        payment.RefundTransactionId = transactionId;
+
+        // Append refund reason to notes (same pattern as cancel)
+        var refundNote = $"REFUNDED ({refundDate:d}): {reason}";
+        payment.Notes = string.IsNullOrWhiteSpace(payment.Notes)
+            ? refundNote
+            : $"{payment.Notes}\n{refundNote}";
+
+        await _context.SaveChangesAsync();
+
+        return (true, string.Empty);
+    }
+
     // ===== Statistics =====
 
     /// <inheritdoc/>

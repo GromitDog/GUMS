@@ -57,7 +57,7 @@
     else if (!_claims.Any())
     {
         <div class="text-center py-5">
-            <i class="bi bi-receipt" style="font-size: 2rem; color: #6c757d;"></i>
+            <i class="bi bi-receipt" style="font-size: 2rem; color: var(--gg-muted);"></i>
             <p class="text-muted mt-2">No expense claims found.</p>
         </div>
     }
@@ -92,7 +92,7 @@
                                                 <span class="badge bg-secondary">Draft</span>
                                                 break;
                                             case ExpenseClaimStatus.Submitted:
-                                                <span class="badge bg-warning text-dark">Submitted</span>
+                                                <span class="badge bg-warning">Submitted</span>
                                                 break;
                                             case ExpenseClaimStatus.Settled:
                                                 <span class="badge bg-success">Settled</span>

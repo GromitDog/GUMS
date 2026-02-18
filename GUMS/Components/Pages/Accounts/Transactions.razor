@@ -29,17 +29,27 @@
         </div>
     }
 
-    <!-- Date Filter -->
+    <!-- Filters -->
     <div class="card mb-4">
         <div class="card-body">
             <div class="row g-3 align-items-end">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">From Date</label>
                     <input type="date" class="form-control" @bind="_dateFrom" />
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">To Date</label>
                     <input type="date" class="form-control" @bind="_dateTo" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Account</label>
+                    <select class="form-select" @bind="_selectedAccountId" @bind:after="ApplyAccountFilter">
+                        <option value="0">All Accounts</option>
+                        @foreach (var account in _accounts)
+                        {
+                            <option value="@account.Id">@account.Code - @account.Name</option>
+                        }
+                    </select>
                 </div>
                 <div class="col-md-3">
                     <button class="btn btn-primary me-2" @onclick="ApplyFilter">
@@ -49,7 +59,7 @@
                         <i class="bi bi-x-circle"></i> Clear
                     </button>
                 </div>
-                <div class="col-md-3 text-end">
+                <div class="col-md-2 text-end">
                     <span class="text-muted">@_transactions.Count transaction(s)</span>
                 </div>
             </div>
@@ -118,7 +128,7 @@
                                                 else if (!transaction.IsVoided)
                                                 {
                                                     <span @onclick="() => StartEditDate(transaction.Id, transaction.Date)"
-                                                          style="cursor: pointer; border-bottom: 1px dashed #6c757d;"
+                                                          style="cursor: pointer; border-bottom: 1px dashed var(--gg-muted);"
                                                           title="Click to edit date">
                                                         @transaction.Date.ToString("dd MMM yyyy")
                                                     </span>

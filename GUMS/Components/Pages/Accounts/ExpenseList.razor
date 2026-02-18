@@ -81,7 +81,7 @@
                 @if (!_expenses.Any())
                 {
                     <div class="text-center py-4">
-                        <i class="bi bi-receipt" style="font-size: 2rem; color: #6c757d;"></i>
+                        <i class="bi bi-receipt" style="font-size: 2rem; color: var(--gg-muted);"></i>
                         <p class="text-muted mt-2">No expenses found.</p>
                     </div>
                 }
@@ -127,7 +127,7 @@
                                         <td>
                                             @if (expense.ExpenseClaimId.HasValue)
                                             {
-                                                <span class="badge bg-warning text-dark">Claim</span>
+                                                <span class="badge bg-warning">Claim</span>
                                             }
                                             else
                                             {

@@ -19,6 +19,16 @@ public partial class MemberHistory
 
     private bool _isLoading = true;
     private string _errorMessage = string.Empty;
+    private string _successMessage = string.Empty;
+
+    // Refund modal state
+    private bool _showRefundConfirm;
+    private Payment? _paymentToRefund;
+    private decimal _refundAmount;
+    private PaymentMethod _refundMethod;
+    private DateTime _refundDate = DateTime.Today;
+    private string _refundReason = string.Empty;
+    private bool _isRefunding;
 
     protected override async Task OnInitializedAsync()
     {
@@ -68,5 +78,64 @@ public partial class MemberHistory
     private void ClearError()
     {
         _errorMessage = string.Empty;
+    }
+
+    private void ClearSuccess()
+    {
+        _successMessage = string.Empty;
+    }
+
+    private void ShowRefundConfirm(Payment payment)
+    {
+        _paymentToRefund = payment;
+        _refundAmount = payment.AmountPaid;
+        _refundMethod = PaymentMethod.BankTransfer;
+        _refundDate = DateTime.Today;
+        _refundReason = string.Empty;
+        _showRefundConfirm = true;
+    }
+
+    private void CancelRefundConfirm()
+    {
+        _paymentToRefund = null;
+        _refundReason = string.Empty;
+        _showRefundConfirm = false;
+    }
+
+    private async Task RefundPayment()
+    {
+        if (_paymentToRefund == null || string.IsNullOrWhiteSpace(_refundReason)) return;
+
+        _isRefunding = true;
+        _errorMessage = string.Empty;
+
+        try
+        {
+            var result = await PaymentService.RefundPaymentAsync(
+                _paymentToRefund.Id, _refundAmount, _refundMethod, _refundDate, _refundReason);
+
+            if (result.Success)
+            {
+                _successMessage = $"Payment '{_paymentToRefund.Reference}' refunded successfully!";
+                _showRefundConfirm = false;
+                _paymentToRefund = null;
+                _refundReason = string.Empty;
+                await LoadPaymentHistory();
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage;
+                _showRefundConfirm = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred: {ex.Message}";
+            _showRefundConfirm = false;
+        }
+        finally
+        {
+            _isRefunding = false;
+        }
     }
 }

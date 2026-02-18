@@ -59,6 +59,7 @@ public class ConfigurationService : IConfigurationService
             existing.DefaultLocationAddress = configuration.DefaultLocationAddress;
             existing.DefaultSubsAmount = configuration.DefaultSubsAmount;
             existing.PaymentTermDays = configuration.PaymentTermDays;
+            existing.JoiningFeeAmount = configuration.JoiningFeeAmount;
 
             _context.UnitConfigurations.Update(existing);
         }
@@ -93,7 +94,8 @@ public class ConfigurationService : IConfigurationService
             DefaultLocationName = "Village Hall",
             DefaultLocationAddress = null,
             DefaultSubsAmount = 20.00m,
-            PaymentTermDays = 14
+            PaymentTermDays = 14,
+            JoiningFeeAmount = 0m
         };
 
         _context.UnitConfigurations.Add(defaultConfig);

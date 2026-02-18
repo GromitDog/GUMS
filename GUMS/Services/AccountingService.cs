@@ -366,6 +366,93 @@ public class AccountingService : IAccountingService
         return (result.Success, result.ErrorMessage);
     }
 
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage, int? TransactionId)> RecordRefundEntryAsync(
+        int paymentId,
+        decimal amount,
+        PaymentMethod refundMethod,
+        PaymentType paymentType,
+        string description,
+        DateTime date,
+        int? incomeAccountId = null)
+    {
+        if (amount <= 0)
+        {
+            return (false, "Amount must be greater than zero.", null);
+        }
+
+        // Determine asset account based on refund method
+        var assetAccountCode = refundMethod switch
+        {
+            PaymentMethod.Cash => CashOnHandCode,
+            PaymentMethod.Cheque => ChequesPendingCode,
+            PaymentMethod.BankTransfer => BankAccountCode,
+            _ => throw new ArgumentException($"Unknown payment method: {refundMethod}")
+        };
+
+        var assetAccount = await GetAccountByCodeAsync(assetAccountCode);
+
+        // Determine income account: use provided ID if available, otherwise look up by payment type
+        Account? incomeAccount;
+        if (incomeAccountId.HasValue)
+        {
+            incomeAccount = await GetAccountByIdAsync(incomeAccountId.Value);
+        }
+        else
+        {
+            var incomeAccountCode = paymentType switch
+            {
+                PaymentType.Subs => SubsIncomeCode,
+                PaymentType.Activity => ActivityIncomeCode,
+                PaymentType.Other => (string?)null,
+                _ => throw new ArgumentException($"Unknown payment type: {paymentType}")
+            };
+
+            if (incomeAccountCode == null)
+            {
+                return (false, "An income account must be selected for 'Other' payment types.", null);
+            }
+
+            incomeAccount = await GetAccountByCodeAsync(incomeAccountCode);
+        }
+
+        if (assetAccount == null || incomeAccount == null)
+        {
+            return (false, "Required accounts not found. Please ensure default accounts have been created.", null);
+        }
+
+        // Reverse of payment entry: Debit income, Credit asset
+        var transaction = new Transaction
+        {
+            Date = date,
+            Description = description,
+            PaymentId = paymentId,
+            Lines = new List<TransactionLine>
+            {
+                new TransactionLine
+                {
+                    AccountId = incomeAccount.Id,
+                    Debit = amount,
+                    Credit = 0
+                },
+                new TransactionLine
+                {
+                    AccountId = assetAccount.Id,
+                    Debit = 0,
+                    Credit = amount
+                }
+            }
+        };
+
+        var result = await CreateTransactionAsync(transaction);
+        if (!result.Success)
+        {
+            return (false, result.ErrorMessage, null);
+        }
+
+        return (true, string.Empty, result.Transaction!.Id);
+    }
+
     // ===== Banking Operations =====
 
     /// <inheritdoc/>

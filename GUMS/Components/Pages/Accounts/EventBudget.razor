@@ -62,7 +62,7 @@
         {
             <div class="card">
                 <div class="card-body text-center py-5">
-                    <i class="bi bi-calculator" style="font-size: 3rem; color: #6c757d;"></i>
+                    <i class="bi bi-calculator" style="font-size: 3rem; color: var(--gg-muted);"></i>
                     <p class="text-muted mt-3 mb-3">No budget has been created for this event yet.</p>
                     <button class="btn btn-primary" @onclick="CreateBudget">
                         <i class="bi bi-plus-circle"></i> Create Budget
@@ -115,7 +115,7 @@
                                                     </td>
                                                     <td class="text-end">@item.Amount.ToString("C")</td>
                                                     <td>
-                                                        <span class="badge @(item.CostStatus == BudgetCostStatus.Confirmed ? "bg-success" : "bg-warning text-dark")">
+                                                        <span class="badge @(item.CostStatus == BudgetCostStatus.Confirmed ? "bg-success" : "bg-warning")">
                                                             @item.CostStatus
                                                         </span>
                                                     </td>

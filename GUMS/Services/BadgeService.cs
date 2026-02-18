@@ -50,7 +50,9 @@ public class BadgeService : IBadgeService
             query = query.Where(b => b.BadgeType == badgeType.Value);
 
         return await query
-            .OrderBy(b => b.Name)
+            .OrderBy(b => b.Theme)
+            .ThenBy(b => b.BadgeType)
+            .ThenBy(b => b.Name)
             .ToListAsync();
     }
 

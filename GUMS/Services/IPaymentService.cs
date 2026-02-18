@@ -128,6 +128,12 @@ public interface IPaymentService
     /// <param name="reason">The reason for cancellation.</param>
     Task<(bool Success, string ErrorMessage)> CancelPaymentAsync(int paymentId, string reason);
 
+    /// <summary>
+    /// Refunds a paid payment, creating a reverse accounting entry.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage)> RefundPaymentAsync(
+        int paymentId, decimal amount, PaymentMethod refundMethod, DateTime refundDate, string reason);
+
     // ===== Statistics =====
 
     /// <summary>

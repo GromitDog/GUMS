@@ -10,6 +10,8 @@
 @inject IMeetingService MeetingService
 @inject IConfigurationService ConfigService
 @inject IPaymentService PaymentService
+@inject IReconciliationService ReconciliationService
+@inject IAccountingService AccountingService
 
 <PageTitle>Home - GUMS</PageTitle>
 
@@ -114,7 +116,7 @@
                         Attendance Alerts
                         @if (_alertCount > 0)
                         {
-                            <span class="badge bg-warning text-dark ms-2">@_alertCount</span>
+                            <span class="badge bg-warning ms-2">@_alertCount</span>
                         }
                     </h5>
                     @if (_isLoading)
@@ -178,13 +180,13 @@
     <div class="row mt-4">
         <!-- Payments Card -->
         <div class="col-md-4">
-            <div class="card @(_overduePaymentCount > 0 ? "border-danger" : "")">
+            <div class="card @(_overduePaymentCount > 0 ? "border-warning" : "")">
                 <div class="card-body">
                     <h5 class="card-title">
                         Payments
                         @if (_overduePaymentCount > 0)
                         {
-                            <span class="badge bg-danger ms-2">@_overduePaymentCount overdue</span>
+                            <span class="badge bg-warning ms-2">@_overduePaymentCount overdue</span>
                         }
                     </h5>
                     @if (_isLoading)
@@ -202,11 +204,11 @@
                                 <strong>@_pendingPaymentCount</strong> pending @(_pendingPaymentCount == 1 ? "payment" : "payments")
                             </p>
                             <p class="card-text mb-1">
-                                Outstanding: <strong class="@(_totalOutstanding > 0 ? "text-danger" : "text-success")">@_totalOutstanding.ToString("C")</strong>
+                                Outstanding: <strong class="@(_totalOutstanding > 0 ? "text-warning" : "text-success")">@_totalOutstanding.ToString("C")</strong>
                             </p>
                         </div>
                         <div>
-                            <a href="/Payments" class="btn @(_overduePaymentCount > 0 ? "btn-danger" : "btn-primary") me-2">
+                            <a href="/Payments" class="btn @(_overduePaymentCount > 0 ? "btn-warning" : "btn-primary") me-2">
                                 @if (_overduePaymentCount > 0)
                                 {
                                     <span>View Overdue</span>
@@ -217,6 +219,63 @@
                                 }
                             </a>
                         </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Accounts Card -->
+        <div class="col-md-4">
+            <div class="card @(_reconciliationOverdue ? "border-danger" : "")">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        Accounts
+                        @if (_reconciliationOverdue)
+                        {
+                            <span class="badge bg-danger ms-2">Action needed</span>
+                        }
+                    </h5>
+                    @if (_isLoading)
+                    {
+                        <div class="text-center py-2">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <p class="card-text mb-1">
+                                Bank balance: <strong>@_bankBalance.ToString("C")</strong>
+                            </p>
+                            @if (_lastReconciliationDate.HasValue)
+                            {
+                                <p class="card-text mb-1 @(_reconciliationOverdue ? "text-danger" : "")">
+                                    @if (_reconciliationOverdue)
+                                    {
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                    }
+                                    Last reconciled: <strong>@_lastReconciliationDate.Value.ToString("dd MMM yyyy")</strong>
+                                </p>
+                            }
+                            else
+                            {
+                                <p class="card-text mb-1 text-danger">
+                                    <i class="bi bi-exclamation-triangle"></i> Never reconciled
+                                </p>
+                            }
+                        </div>
+                        <a href="/Accounts" class="btn @(_reconciliationOverdue ? "btn-danger" : "btn-primary")">
+                            @if (_reconciliationOverdue)
+                            {
+                                <span>Reconcile Now</span>
+                            }
+                            else
+                            {
+                                <span>View Accounts</span>
+                            }
+                        </a>
                     }
                 </div>
             </div>

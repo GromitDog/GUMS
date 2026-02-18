@@ -223,6 +223,7 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
             entity.Property(p => p.MembershipNumber).IsRequired();
             entity.Property(p => p.Amount).HasPrecision(18, 2);
             entity.Property(p => p.AmountPaid).HasPrecision(18, 2);
+            entity.Property(p => p.RefundAmount).HasPrecision(18, 2);
 
             // NO foreign key to Person table - allows data to persist after Person removal
 
@@ -242,6 +243,11 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
                 .WithMany()
                 .HasForeignKey(p => p.IncomeAccountId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(p => p.RefundTransaction)
+                .WithMany()
+                .HasForeignKey(p => p.RefundTransactionId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Term configuration
@@ -258,6 +264,7 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
         {
             entity.HasKey(uc => uc.Id);
             entity.Property(uc => uc.DefaultSubsAmount).HasPrecision(18, 2);
+            entity.Property(uc => uc.JoiningFeeAmount).HasPrecision(18, 2);
         });
 
         // DataRemovalLog configuration

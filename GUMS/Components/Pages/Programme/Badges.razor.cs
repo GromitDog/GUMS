@@ -9,10 +9,12 @@ public partial class Badges
 {
     [Inject] public required IBadgeService BadgeService { get; set; }
     [Inject] public required IProgrammeService ProgrammeService { get; set; }
+    [Inject] public required IConfigurationService ConfigurationService { get; set; }
 
     private List<BadgeDefinition> _badges = new();
     private BadgeDefinition _editingBadge = new();
     private List<BadgeClause> _editingClauses = new();
+    private Section _defaultSection;
 
     private Theme? _filterTheme;
     private Section? _filterSection;
@@ -26,6 +28,8 @@ public partial class Badges
 
     protected override async Task OnInitializedAsync()
     {
+        var config = await ConfigurationService.GetConfigurationAsync();
+        _defaultSection = config.UnitType;
         await LoadBadges();
     }
 
@@ -70,7 +74,8 @@ public partial class Badges
         {
             RequiredCompletions = 4,
             BadgeType = BadgeType.SkillsBuilder,
-            Theme = Theme.KnowMyself
+            Theme = Theme.KnowMyself,
+            Section = _defaultSection
         };
         _editingClauses = new List<BadgeClause>();
         _showBadgeModal = true;

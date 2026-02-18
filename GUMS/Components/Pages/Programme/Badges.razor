@@ -91,59 +91,66 @@
     }
     else
     {
-        <div class="row">
-            @foreach (var badge in _badges)
-            {
-                <div class="col-md-6 col-lg-4 mb-3">
-                    <div class="card h-100">
-                        <div class="card-header d-flex justify-content-between align-items-center"
-                             style="background-color: @(badge.Theme.HasValue ? GetThemeColor(badge.Theme.Value) : "#6c757d"); color: white;">
-                            <div>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Theme</th>
+                        <th>Type</th>
+                        <th>Clauses</th>
+                        <th style="width: 80px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var badge in _badges)
+                    {
+                        <tr>
+                            <td>
                                 <strong>@badge.Name</strong>
                                 @if (badge.Stage.HasValue)
                                 {
-                                    <span class="badge bg-light text-dark ms-1">Stage @badge.Stage</span>
+                                    <span class="text-muted ms-1">(Stage @badge.Stage)</span>
                                 }
-                            </div>
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-light" @onclick="() => ShowEditBadge(badge)">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-2">
-                                <span class="badge bg-info">@badge.Section</span>
-                                <span class="badge @(badge.BadgeType switch { BadgeType.SkillsBuilder => "bg-primary", BadgeType.InterestBadge => "bg-success", BadgeType.FunBadge => "bg-warning text-dark", _ => "bg-secondary" })">
-                                    @(badge.BadgeType switch { BadgeType.SkillsBuilder => "Skills Builder", BadgeType.InterestBadge => "Interest Badge", BadgeType.FunBadge => "Fun Badge", _ => badge.BadgeType.ToString() })
-                                </span>
+                                @if (!string.IsNullOrEmpty(badge.SkillsBuilderName))
+                                {
+                                    <br /><small class="text-muted">@badge.SkillsBuilderName</small>
+                                }
+                            </td>
+                            <td>
                                 @if (badge.Theme.HasValue)
                                 {
-                                    <span class="badge bg-secondary">@GUMS.Services.ProgrammeService.GetThemeDisplayName(badge.Theme.Value)</span>
+                                    <span class="badge" style="background-color: @GetThemeColor(badge.Theme.Value);">
+                                        @GUMS.Services.ProgrammeService.GetThemeDisplayName(badge.Theme.Value)
+                                    </span>
                                 }
-                            </div>
-                            @if (!string.IsNullOrEmpty(badge.SkillsBuilderName))
-                            {
-                                <small class="text-muted d-block">Group: @badge.SkillsBuilderName</small>
-                            }
-                            <small class="text-muted">@badge.RequiredCompletions of @badge.Clauses.Count clauses needed</small>
-
-                            @if (badge.Clauses.Any())
-                            {
-                                <hr class="my-2" />
-                                <ul class="list-unstyled mb-0">
-                                    @foreach (var clause in badge.Clauses.OrderBy(c => c.SortOrder))
-                                    {
-                                        <li class="small">
-                                            <i class="bi bi-check-circle text-muted"></i> @clause.Name
-                                        </li>
-                                    }
-                                </ul>
-                            }
-                        </div>
-                    </div>
-                </div>
-            }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                @(badge.BadgeType switch { BadgeType.SkillsBuilder => "Skills Builder", BadgeType.InterestBadge => "Interest Badge", BadgeType.FunBadge => "Fun Badge", _ => badge.BadgeType.ToString() })
+                            </td>
+                            <td>
+                                @if (badge.BadgeType != BadgeType.FunBadge)
+                                {
+                                    <span>@badge.RequiredCompletions of @badge.Clauses.Count</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditBadge(badge)">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     }
 
