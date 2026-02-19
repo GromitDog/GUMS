@@ -1,0 +1,141 @@
+@page "/Accounts/RecordIncome"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Record Income - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Record Income</h2>
+        <a href="/Accounts" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Accounts
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                        <h5 class="mb-0">
+                            <i class="bi bi-cash-stack"></i> Record Income
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Date <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" @bind="_formDate" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Amount <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">£</span>
+                                    <input type="number" class="form-control" @bind="_formAmount" step="0.01" min="0.01" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Income Account <span class="text-danger">*</span></label>
+                            <select class="form-select" @bind="_formCreditAccountId">
+                                <option value="0">-- Select Account --</option>
+                                @if (_incomeAccounts.Any())
+                                {
+                                    <optgroup label="Income Accounts">
+                                        @foreach (var account in _incomeAccounts)
+                                        {
+                                            <option value="@account.Id">@account.Name</option>
+                                        }
+                                    </optgroup>
+                                }
+                                @if (_expenseAccounts.Any())
+                                {
+                                    <optgroup label="Refund (Expense Accounts)">
+                                        @foreach (var account in _expenseAccounts)
+                                        {
+                                            <option value="@account.Id">@account.Name</option>
+                                        }
+                                    </optgroup>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Received Into <span class="text-danger">*</span></label>
+                            <select class="form-select" @bind="_formReceivedIntoId">
+                                <option value="0">-- Select Account --</option>
+                                @foreach (var account in _assetAccounts)
+                                {
+                                    <option value="@account.Id">@account.Name (@account.Balance.ToString("C"))</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Description <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" @bind="_formDescription" placeholder="e.g. Donation from local business" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Reference</label>
+                            <input type="text" class="form-control" @bind="_formReference" placeholder="Receipt/reference number (optional)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea class="form-control" @bind="_formNotes" rows="2" placeholder="Optional notes..."></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="/Accounts" class="btn btn-outline-secondary me-2">Cancel</a>
+                            <button class="btn btn-success" @onclick="SubmitIncome" disabled="@(_isSubmitting || !IsFormValid())">
+                                @if (_isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                }
+                                <i class="bi bi-check-circle"></i> Record Income
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h6><i class="bi bi-info-circle"></i> About Ad-Hoc Income</h6>
+                        <hr />
+                        <p class="text-muted small">Use this form to record income that isn't tied to a member payment, such as:</p>
+                        <ul class="text-muted small">
+                            <li>Donations from non-members</li>
+                            <li>Visitor fees</li>
+                            <li>Fundraising proceeds</li>
+                            <li>Expense refunds (select an expense account)</li>
+                        </ul>
+                        <p class="text-muted small mb-0">The transaction will appear directly in Transaction History.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

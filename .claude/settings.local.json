@@ -35,7 +35,13 @@
       "WebFetch(domain:www.girlguiding.org.uk)",
       "Bash(dotnet ef migrations:*)",
       "Bash(Select-String -Pattern \"error\")",
-      "Bash(Select-String -NotMatch -Pattern \"MSB3026|MSB3027|MSB3021|apphost\")"
+      "Bash(Select-String -NotMatch -Pattern \"MSB3026|MSB3027|MSB3021|apphost\")",
+      "Bash(tee:*)",
+      "Bash(cmd.exe /c \"dir %APPDATA%\\\\GUMS\")",
+      "Bash(cmd.exe /c \"echo %APPDATA%\")",
+      "Bash(powershell.exe -Command \"Write-Host $env:APPDATA; Get-ChildItem -Path ''$env:APPDATA\\\\GUMS'' -ErrorAction SilentlyContinue\")",
+      "Bash(powershell.exe -Command:*)",
+      "Bash(dotnet ef dbcontext script:*)"
     ]
   }
 }

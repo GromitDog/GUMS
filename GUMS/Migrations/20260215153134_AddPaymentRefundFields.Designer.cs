@@ -3,6 +3,7 @@ using System;
 using GUMS.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GUMS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260215153134_AddPaymentRefundFields")]
+    partial class AddPaymentRefundFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -996,16 +999,6 @@ namespace GUMS.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("DefaultSubsAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("FinancialYearEndDay")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("FinancialYearEndMonth")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("JoiningFeeAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("TEXT");
 

@@ -9,16 +9,21 @@ public partial class RecordExpense
 {
     [Inject] private IAccountingService AccountingService { get; set; } = default!;
     [Inject] private IMeetingService MeetingService { get; set; } = default!;
+    [Inject] private IPersonService PersonService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+
+    [SupplyParameterFromQuery(Name = "claimId")]
+    public int? PreselectedClaimId { get; set; }
 
     private List<Account> _expenseAccounts = new();
     private List<Account> _assetAccounts = new();
     private List<Meeting> _meetings = new();
     private List<ExpenseClaim> _draftClaims = new();
+    private List<Person> _leaders = new();
 
     private string _expenseType = "direct";
     private int _selectedClaimId;
-    private string _newClaimName = string.Empty;
+    private int _newClaimLeaderId;
 
     // Form fields
     private DateTime _formDate = DateTime.Today;
@@ -37,6 +42,12 @@ public partial class RecordExpense
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
+
+        if (PreselectedClaimId > 0)
+        {
+            _expenseType = "claim";
+            _selectedClaimId = PreselectedClaimId.Value;
+        }
     }
 
     private async Task LoadData()
@@ -49,6 +60,7 @@ public partial class RecordExpense
             _assetAccounts = allAccounts.Where(a => a.Type == AccountType.Asset).ToList();
             _meetings = await MeetingService.GetAllAsync();
             _draftClaims = await AccountingService.GetExpenseClaimsAsync(ExpenseClaimStatus.Draft);
+            _leaders = await PersonService.GetByTypeAsync(PersonType.Leader);
         }
         catch (Exception ex)
         {
@@ -67,7 +79,7 @@ public partial class RecordExpense
         if (string.IsNullOrWhiteSpace(_formDescription)) return false;
 
         if (_expenseType == "direct" && _formPaidFromId == 0) return false;
-        if (_expenseType == "claim" && _selectedClaimId == 0 && string.IsNullOrWhiteSpace(_newClaimName)) return false;
+        if (_expenseType == "claim" && _selectedClaimId == 0 && _newClaimLeaderId == 0) return false;
 
         return true;
     }
@@ -112,10 +124,11 @@ public partial class RecordExpense
 
                 if (claimId == 0)
                 {
+                    var leader = _leaders.First(l => l.Id == _newClaimLeaderId);
                     // Create new claim
                     var claimResult = await AccountingService.CreateExpenseClaimAsync(new ExpenseClaim
                     {
-                        ClaimedBy = _newClaimName.Trim(),
+                        ClaimedBy = leader.FullName,
                         SubmittedDate = DateTime.Today
                     });
 

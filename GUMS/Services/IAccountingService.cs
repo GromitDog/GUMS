@@ -296,11 +296,13 @@ public class AccountingDashboardStats
     public decimal ChequesPending { get; set; }
     public decimal BankBalance { get; set; }
     public decimal TotalAssets => CashOnHand + ChequesPending + BankBalance;
-    public decimal SubsIncomeThisTerm { get; set; }
-    public decimal ActivityIncomeThisTerm { get; set; }
-    public decimal TotalIncomeThisTerm => SubsIncomeThisTerm + ActivityIncomeThisTerm;
-    public decimal TotalExpensesThisTerm { get; set; }
-    public decimal NetIncomeThisTerm => TotalIncomeThisTerm - TotalExpensesThisTerm;
+    public decimal SubsIncomeThisYear { get; set; }
+    public decimal ActivityIncomeThisYear { get; set; }
+    public decimal TotalIncomeThisYear => SubsIncomeThisYear + ActivityIncomeThisYear;
+    public decimal TotalExpensesThisYear { get; set; }
+    public decimal NetIncomeThisYear => TotalIncomeThisYear - TotalExpensesThisYear;
+    public DateTime FinancialYearStart { get; set; }
+    public DateTime FinancialYearEnd { get; set; }
     public int PendingClaimsCount { get; set; }
     public decimal PendingClaimsAmount { get; set; }
 }

@@ -9,9 +9,18 @@
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Record Expense</h2>
-        <a href="/Accounts/Expenses" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Expenses
-        </a>
+        @if (PreselectedClaimId > 0)
+        {
+            <a href="/Accounts/Claims/@PreselectedClaimId" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Claim
+            </a>
+        }
+        else
+        {
+            <a href="/Accounts/Expenses" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Expenses
+            </a>
+        }
     </div>
 
     @if (!string.IsNullOrEmpty(_errorMessage))
@@ -75,7 +84,13 @@
                             {
                                 <div class="mb-3">
                                     <label class="form-label">Claimed By <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" @bind="_newClaimName" placeholder="Leader name" />
+                                    <select class="form-select" @bind="_newClaimLeaderId">
+                                        <option value="0">-- Select Leader --</option>
+                                        @foreach (var leader in _leaders)
+                                        {
+                                            <option value="@leader.Id">@leader.FullName</option>
+                                        }
+                                    </select>
                                 </div>
                             }
                         }
@@ -146,7 +161,7 @@
                         </div>
 
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="/Accounts/Expenses" class="btn btn-outline-secondary me-2">Cancel</a>
+                            <a href="@(PreselectedClaimId > 0 ? $"/Accounts/Claims/{PreselectedClaimId}" : "/Accounts/Expenses")" class="btn btn-outline-secondary me-2">Cancel</a>
                             <button class="btn btn-primary" @onclick="SubmitExpense" disabled="@(_isSubmitting || !IsFormValid())">
                                 @if (_isSubmitting)
                                 {

@@ -60,6 +60,8 @@ public class ConfigurationService : IConfigurationService
             existing.DefaultSubsAmount = configuration.DefaultSubsAmount;
             existing.PaymentTermDays = configuration.PaymentTermDays;
             existing.JoiningFeeAmount = configuration.JoiningFeeAmount;
+            existing.FinancialYearEndDay = configuration.FinancialYearEndDay;
+            existing.FinancialYearEndMonth = configuration.FinancialYearEndMonth;
 
             _context.UnitConfigurations.Update(existing);
         }

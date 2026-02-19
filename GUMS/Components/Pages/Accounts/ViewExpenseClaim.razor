@@ -101,7 +101,7 @@
                         <h5 class="mb-0"><i class="bi bi-list-check"></i> Expense Items (@_claim.Expenses.Count)</h5>
                         @if (_claim.Status == ExpenseClaimStatus.Draft)
                         {
-                            <a href="/Accounts/RecordExpense" class="btn btn-sm btn-primary">
+                            <a href="/Accounts/RecordExpense?claimId=@ClaimId" class="btn btn-sm btn-primary">
                                 <i class="bi bi-plus-circle"></i> Add Item
                             </a>
                         }

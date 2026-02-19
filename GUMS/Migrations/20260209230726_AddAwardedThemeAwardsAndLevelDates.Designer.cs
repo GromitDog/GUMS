@@ -3,6 +3,7 @@ using System;
 using GUMS.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GUMS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260209230726_AddAwardedThemeAwardsAndLevelDates")]
+    partial class AddAwardedThemeAwardsAndLevelDates
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -289,45 +292,6 @@ namespace GUMS.Migrations
                     b.ToTable("BadgeDefinitions");
                 });
 
-            modelBuilder.Entity("GUMS.Data.Entities.BankReconciliation", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime?>("CompletedDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal?>("ReconciledBookBalance")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("StatementBalance")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("StatementDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StatementDate");
-
-                    b.HasIndex("Status");
-
-                    b.ToTable("BankReconciliations");
-                });
-
             modelBuilder.Entity("GUMS.Data.Entities.DataRemovalLog", b =>
                 {
                     b.Property<int>("Id")
@@ -597,9 +561,6 @@ namespace GUMS.Migrations
                     b.Property<TimeOnly>("EndTime")
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("IncomeAccountId")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("LocationAddress")
                         .HasColumnType("TEXT");
 
@@ -625,8 +586,6 @@ namespace GUMS.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Date");
-
-                    b.HasIndex("IncomeAccountId");
 
                     b.ToTable("Meetings");
                 });
@@ -676,31 +635,6 @@ namespace GUMS.Migrations
                     b.ToTable("Activities", (string)null);
                 });
 
-            modelBuilder.Entity("GUMS.Data.Entities.NightsAwayBadge", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("DateAwarded")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("MembershipNumber")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Milestone")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MembershipNumber", "Milestone")
-                        .IsUnique();
-
-                    b.ToTable("NightsAwayBadges");
-                });
-
             modelBuilder.Entity("GUMS.Data.Entities.Payment", b =>
                 {
                     b.Property<int>("Id")
@@ -717,9 +651,6 @@ namespace GUMS.Migrations
 
                     b.Property<DateTime>("DueDate")
                         .HasColumnType("TEXT");
-
-                    b.Property<int?>("IncomeAccountId")
-                        .HasColumnType("INTEGER");
 
                     b.Property<int?>("MeetingId")
                         .HasColumnType("INTEGER");
@@ -746,16 +677,6 @@ namespace GUMS.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("RefundAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("RefundDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("RefundTransactionId")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
@@ -766,13 +687,9 @@ namespace GUMS.Migrations
 
                     b.HasIndex("DueDate");
 
-                    b.HasIndex("IncomeAccountId");
-
                     b.HasIndex("MeetingId");
 
                     b.HasIndex("MembershipNumber");
-
-                    b.HasIndex("RefundTransactionId");
 
                     b.HasIndex("Status");
 
@@ -807,9 +724,6 @@ namespace GUMS.Migrations
                     b.Property<string>("Email")
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
-
-                    b.Property<int>("ExtraNightsAway")
-                        .HasColumnType("INTEGER");
 
                     b.Property<string>("FullName")
                         .HasMaxLength(200)
@@ -896,14 +810,8 @@ namespace GUMS.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("IsVoided")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int?>("PaymentId")
                         .HasColumnType("INTEGER");
-
-                    b.Property<DateTime?>("VoidedDate")
-                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -923,9 +831,6 @@ namespace GUMS.Migrations
                     b.Property<int>("AccountId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int?>("BankReconciliationId")
-                        .HasColumnType("INTEGER");
-
                     b.Property<decimal>("Credit")
                         .HasPrecision(18, 2)
                         .HasColumnType("TEXT");
@@ -940,8 +845,6 @@ namespace GUMS.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AccountId");
-
-                    b.HasIndex("BankReconciliationId");
 
                     b.HasIndex("TransactionId");
 
@@ -996,16 +899,6 @@ namespace GUMS.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("DefaultSubsAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("FinancialYearEndDay")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("FinancialYearEndMonth")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("JoiningFeeAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("TEXT");
 
@@ -1360,15 +1253,6 @@ namespace GUMS.Migrations
                     b.Navigation("Transaction");
                 });
 
-            modelBuilder.Entity("GUMS.Data.Entities.Meeting", b =>
-                {
-                    b.HasOne("GUMS.Data.Entities.Account", "IncomeAccount")
-                        .WithMany()
-                        .HasForeignKey("IncomeAccountId");
-
-                    b.Navigation("IncomeAccount");
-                });
-
             modelBuilder.Entity("GUMS.Data.Entities.MeetingActivity", b =>
                 {
                     b.HasOne("GUMS.Data.Entities.BadgeClause", "BadgeClause")
@@ -1402,19 +1286,9 @@ namespace GUMS.Migrations
 
             modelBuilder.Entity("GUMS.Data.Entities.Payment", b =>
                 {
-                    b.HasOne("GUMS.Data.Entities.Account", "IncomeAccount")
-                        .WithMany()
-                        .HasForeignKey("IncomeAccountId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("GUMS.Data.Entities.Meeting", "Meeting")
                         .WithMany()
                         .HasForeignKey("MeetingId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("GUMS.Data.Entities.Transaction", "RefundTransaction")
-                        .WithMany()
-                        .HasForeignKey("RefundTransactionId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("GUMS.Data.Entities.Term", "Term")
@@ -1422,11 +1296,7 @@ namespace GUMS.Migrations
                         .HasForeignKey("TermId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.Navigation("IncomeAccount");
-
                     b.Navigation("Meeting");
-
-                    b.Navigation("RefundTransaction");
 
                     b.Navigation("Term");
                 });
@@ -1449,11 +1319,6 @@ namespace GUMS.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("GUMS.Data.Entities.BankReconciliation", "BankReconciliation")
-                        .WithMany("ReconciledLines")
-                        .HasForeignKey("BankReconciliationId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("GUMS.Data.Entities.Transaction", "Transaction")
                         .WithMany("Lines")
                         .HasForeignKey("TransactionId")
@@ -1461,8 +1326,6 @@ namespace GUMS.Migrations
                         .IsRequired();
 
                     b.Navigation("Account");
-
-                    b.Navigation("BankReconciliation");
 
                     b.Navigation("Transaction");
                 });
@@ -1526,11 +1389,6 @@ namespace GUMS.Migrations
             modelBuilder.Entity("GUMS.Data.Entities.BadgeDefinition", b =>
                 {
                     b.Navigation("Clauses");
-                });
-
-            modelBuilder.Entity("GUMS.Data.Entities.BankReconciliation", b =>
-                {
-                    b.Navigation("ReconciledLines");
                 });
 
             modelBuilder.Entity("GUMS.Data.Entities.EventBudget", b =>

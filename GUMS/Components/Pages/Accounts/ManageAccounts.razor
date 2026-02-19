@@ -1,0 +1,170 @@
+@page "/Accounts/Manage"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Manage Accounts - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/Accounts">Accounts</a></li>
+            <li class="breadcrumb-item active">Manage Accounts</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-bank"></i> Manage Accounts</h2>
+            <p class="text-muted mb-0">Create and manage your chart of accounts</p>
+        </div>
+        <a href="/Accounts" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Accounts
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="() => _successMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    <!-- Account Type Tabs -->
+    <ul class="nav nav-pills mb-4">
+        @foreach (var type in _accountTypes)
+        {
+            <li class="nav-item">
+                <button class="nav-link @(_selectedType == type ? "active" : "")"
+                        style="@(_selectedType == type ? "background-color: var(--gg-primary-blue); color: white;" : "color: var(--gg-dark-navy);")"
+                        @onclick="() => SelectType(type)">
+                    <i class="bi @GetTypeIcon(type)"></i> @type.ToString()
+                </button>
+            </li>
+        }
+    </ul>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Add New Account -->
+        <div class="card mb-4">
+            <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
+                <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add New @_selectedType Account</h5>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-end">
+                    <div class="col-md-8">
+                        <label class="form-label">Account Name</label>
+                        <input type="text" class="form-control" @bind="_newAccountName" placeholder="e.g. Petty Cash, Grants Received..." />
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-primary w-100" @onclick="CreateAccount" disabled="@(string.IsNullOrWhiteSpace(_newAccountName) || _isSubmitting)">
+                            @if (_isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            <i class="bi bi-plus-circle"></i> Add Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Existing Accounts -->
+        <div class="card">
+            <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                <h5 class="mb-0"><i class="bi bi-list-check"></i> @_selectedType Accounts</h5>
+            </div>
+            <div class="card-body">
+                @if (!_accounts.Any())
+                {
+                    <p class="text-muted text-center py-3">No @_selectedType.ToString().ToLower() accounts found.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th class="text-end">Balance</th>
+                                    <th class="text-end">Transactions</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var account in _accounts)
+                                {
+                                    <tr>
+                                        <td><code>@account.Code</code></td>
+                                        <td>
+                                            @if (_editingAccountId == account.Id)
+                                            {
+                                                <div class="input-group input-group-sm">
+                                                    <input type="text" class="form-control" @bind="_editingName" />
+                                                    <button class="btn btn-sm btn-success" @onclick="SaveEdit">
+                                                        <i class="bi bi-check"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">
+                                                        <i class="bi bi-x"></i>
+                                                    </button>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                @if (account.IsSystem)
+                                                {
+                                                    <i class="bi bi-lock-fill text-muted me-1" title="System account"></i>
+                                                }
+                                                @account.Name
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <strong class="@(account.Balance >= 0 ? "" : "text-danger")">
+                                                @account.Balance.ToString("C")
+                                            </strong>
+                                        </td>
+                                        <td class="text-end">@account.TransactionLines.Count</td>
+                                        <td>
+                                            @if (!account.IsSystem && _editingAccountId != account.Id)
+                                            {
+                                                <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => StartEdit(account)">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                @if (account.TransactionLines.Count == 0)
+                                                {
+                                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAccount(account.Id)">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                }
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

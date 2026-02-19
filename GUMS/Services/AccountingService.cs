@@ -12,6 +12,7 @@ public class AccountingService : IAccountingService
 {
     private readonly ApplicationDbContext _context;
     private readonly ITermService _termService;
+    private readonly IConfigurationService _configurationService;
 
     // Default account codes
     public const string CashOnHandCode = "1001";
@@ -27,10 +28,22 @@ public class AccountingService : IAccountingService
     public const string OtherExpensesCode = "5099";
     public const string OpeningBalancesCode = "3001";
 
-    public AccountingService(ApplicationDbContext context, ITermService termService)
+    public AccountingService(ApplicationDbContext context, ITermService termService, IConfigurationService configurationService)
     {
         _context = context;
         _termService = termService;
+        _configurationService = configurationService;
+    }
+
+    private static (DateTime Start, DateTime End) GetCurrentFinancialYear(int endMonth, int endDay)
+    {
+        var today = DateTime.Today;
+        var yearEndThisCalYear = new DateTime(today.Year, endMonth, endDay);
+        var yearEnd = today <= yearEndThisCalYear
+            ? yearEndThisCalYear
+            : new DateTime(today.Year + 1, endMonth, endDay);
+        var yearStart = yearEnd.AddYears(-1).AddDays(1);
+        return (yearStart, yearEnd);
     }
 
     // ===== Account Operations =====
@@ -1392,17 +1405,18 @@ public class AccountingService : IAccountingService
             BankBalance = await GetBankBalanceAsync()
         };
 
-        // Get current term for income and expense calculation
-        var currentTerm = await _termService.GetCurrentTermAsync();
-        if (currentTerm != null)
-        {
-            var incomeReport = await GetIncomeReportAsync(currentTerm.StartDate, currentTerm.EndDate);
-            stats.SubsIncomeThisTerm = incomeReport.SubsIncome;
-            stats.ActivityIncomeThisTerm = incomeReport.ActivityIncome;
+        // Get financial year date range from unit configuration
+        var config = await _configurationService.GetConfigurationAsync();
+        var (fyStart, fyEnd) = GetCurrentFinancialYear(config.FinancialYearEndMonth, config.FinancialYearEndDay);
+        stats.FinancialYearStart = fyStart;
+        stats.FinancialYearEnd = fyEnd;
 
-            var expenseReport = await GetExpenseReportAsync(currentTerm.StartDate, currentTerm.EndDate);
-            stats.TotalExpensesThisTerm = expenseReport.TotalExpenses;
-        }
+        var incomeReport = await GetIncomeReportAsync(fyStart, fyEnd);
+        stats.SubsIncomeThisYear = incomeReport.SubsIncome;
+        stats.ActivityIncomeThisYear = incomeReport.ActivityIncome;
+
+        var expenseReport = await GetExpenseReportAsync(fyStart, fyEnd);
+        stats.TotalExpensesThisYear = expenseReport.TotalExpenses;
 
         // Get pending claims
         var pendingClaims = await _context.ExpenseClaims

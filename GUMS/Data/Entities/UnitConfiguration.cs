@@ -40,4 +40,14 @@ public class UnitConfiguration
     [Required]
     [Range(0, 10000)]
     public decimal JoiningFeeAmount { get; set; }
+
+    /// <summary>Day of month the financial year ends (e.g. 31 for 31st July).</summary>
+    [Required]
+    [Range(1, 31)]
+    public int FinancialYearEndDay { get; set; } = 31;
+
+    /// <summary>Month the financial year ends (e.g. 7 for July).</summary>
+    [Required]
+    [Range(1, 12)]
+    public int FinancialYearEndMonth { get; set; } = 7;
 }

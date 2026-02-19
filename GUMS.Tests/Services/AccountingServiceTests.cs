@@ -12,6 +12,7 @@ public class AccountingServiceTests : IDisposable
 {
     private readonly ApplicationDbContext _context;
     private readonly Mock<ITermService> _mockTermService;
+    private readonly Mock<IConfigurationService> _mockConfigService;
     private readonly AccountingService _sut; // System Under Test
 
     public AccountingServiceTests()
@@ -28,7 +29,16 @@ public class AccountingServiceTests : IDisposable
         // Mock term service
         _mockTermService = new Mock<ITermService>();
 
-        _sut = new AccountingService(_context, _mockTermService.Object);
+        // Mock configuration service - default to 31st July financial year end
+        _mockConfigService = new Mock<IConfigurationService>();
+        _mockConfigService.Setup(x => x.GetConfigurationAsync())
+            .ReturnsAsync(new UnitConfiguration
+            {
+                FinancialYearEndDay = 31,
+                FinancialYearEndMonth = 7
+            });
+
+        _sut = new AccountingService(_context, _mockTermService.Object, _mockConfigService.Object);
     }
 
     public void Dispose()
@@ -747,8 +757,8 @@ public class AccountingServiceTests : IDisposable
         result.ChequesPending.Should().Be(25.00m);
         result.BankBalance.Should().Be(200.00m);
         result.TotalAssets.Should().Be(315.00m);
-        result.SubsIncomeThisTerm.Should().Be(25.00m);
-        result.ActivityIncomeThisTerm.Should().Be(15.00m);
+        result.SubsIncomeThisYear.Should().Be(25.00m);
+        result.ActivityIncomeThisYear.Should().Be(15.00m);
     }
 
     #endregion
@@ -1465,7 +1475,7 @@ public class AccountingServiceTests : IDisposable
         var result = await _sut.GetDashboardStatsAsync();
 
         // Assert
-        result.TotalExpensesThisTerm.Should().Be(40m);
+        result.TotalExpensesThisYear.Should().Be(40m);
     }
 
     [Fact]

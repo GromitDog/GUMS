@@ -29,7 +29,7 @@
                 <i class="bi bi-plus-circle"></i> Record Expense
             </a>
             <a href="/Accounts/Manage" class="btn btn-outline-secondary me-2">
-                <i class="bi bi-gear"></i> Manage Accounts
+                <i class="bi bi-gear"></i> Chart of Accounts
             </a>
             <a href="/Accounts/Reconciliation" class="btn btn-outline-primary me-2">
                 <i class="bi bi-check2-square"></i> Reconcile Bank
@@ -121,18 +121,19 @@
             </div>
         </div>
 
-        <!-- Income This Term -->
+        <!-- Income This Year -->
         <div class="row mb-4">
             <div class="col-12">
                 <h4 class="mb-3">
-                    <i class="bi bi-graph-up-arrow"></i> Income This Term
+                    <i class="bi bi-graph-up-arrow"></i> Income This Year
+                    <small class="text-muted fs-6 ms-2">@_dashboardStats.FinancialYearStart.ToString("d MMM yyyy") – @_dashboardStats.FinancialYearEnd.ToString("d MMM yyyy")</small>
                 </h4>
             </div>
             <div class="col-md-4">
                 <div class="card h-100">
                     <div class="card-body text-center">
                         <h6 class="text-muted mb-2">Subscription Income</h6>
-                        <h2 class="mb-0 text-success">@_dashboardStats.SubsIncomeThisTerm.ToString("C")</h2>
+                        <h2 class="mb-0 text-success">@_dashboardStats.SubsIncomeThisYear.ToString("C")</h2>
                         <small class="text-muted">From termly subs</small>
                     </div>
                 </div>
@@ -141,7 +142,7 @@
                 <div class="card h-100">
                     <div class="card-body text-center">
                         <h6 class="text-muted mb-2">Activity Income</h6>
-                        <h2 class="mb-0 text-success">@_dashboardStats.ActivityIncomeThisTerm.ToString("C")</h2>
+                        <h2 class="mb-0 text-success">@_dashboardStats.ActivityIncomeThisYear.ToString("C")</h2>
                         <small class="text-muted">From special events</small>
                     </div>
                 </div>
@@ -150,35 +151,35 @@
                 <div class="card h-100 bg-success text-white">
                     <div class="card-body text-center">
                         <h6 class="mb-2">Total Income</h6>
-                        <h2 class="mb-0">@_dashboardStats.TotalIncomeThisTerm.ToString("C")</h2>
-                        <small>This term</small>
+                        <h2 class="mb-0">@_dashboardStats.TotalIncomeThisYear.ToString("C")</h2>
+                        <small>This year</small>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Expenses This Term -->
+        <!-- Expenses This Year -->
         <div class="row mb-4">
             <div class="col-12">
                 <h4 class="mb-3">
-                    <i class="bi bi-graph-down-arrow"></i> Expenses & Net Position This Term
+                    <i class="bi bi-graph-down-arrow"></i> Expenses & Net Position This Year
                 </h4>
             </div>
             <div class="col-md-4">
                 <div class="card h-100">
                     <div class="card-body text-center">
                         <h6 class="text-muted mb-2">Total Expenses</h6>
-                        <h2 class="mb-0 text-danger">@_dashboardStats.TotalExpensesThisTerm.ToString("C")</h2>
-                        <small class="text-muted">This term</small>
+                        <h2 class="mb-0 text-danger">@_dashboardStats.TotalExpensesThisYear.ToString("C")</h2>
+                        <small class="text-muted">This year</small>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card h-100 @(_dashboardStats.NetIncomeThisTerm >= 0 ? "border-success" : "border-danger")">
+                <div class="card h-100 @(_dashboardStats.NetIncomeThisYear >= 0 ? "border-success" : "border-danger")">
                     <div class="card-body text-center">
                         <h6 class="text-muted mb-2">Net Position</h6>
-                        <h2 class="mb-0 @(_dashboardStats.NetIncomeThisTerm >= 0 ? "text-success" : "text-danger")">
-                            @_dashboardStats.NetIncomeThisTerm.ToString("C")
+                        <h2 class="mb-0 @(_dashboardStats.NetIncomeThisYear >= 0 ? "text-success" : "text-danger")">
+                            @_dashboardStats.NetIncomeThisYear.ToString("C")
                         </h2>
                         <small class="text-muted">Income - Expenses</small>
                     </div>

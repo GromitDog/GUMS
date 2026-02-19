@@ -1,0 +1,143 @@
+@page "/Payments/Create"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Create Payment - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Create Payment</h2>
+        <a href="/Payments" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Payments
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading members...</p>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-md-7">
+                <div class="card">
+                    <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                        <h5 class="mb-0">
+                            <i class="bi bi-plus-circle"></i> New Payment
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <EditForm Model="_model" OnValidSubmit="HandleSubmit" FormName="CreatePaymentForm">
+                            <DataAnnotationsValidator />
+
+                            <div class="mb-3">
+                                <label class="form-label">Member <span class="text-danger">*</span></label>
+                                <select class="form-select" @bind="_model.MembershipNumber">
+                                    <option value="">-- Select a Member --</option>
+                                    @foreach (var member in _members)
+                                    {
+                                        <option value="@member.MembershipNumber">@member.FullName (@member.MembershipNumber)</option>
+                                    }
+                                </select>
+                                <ValidationMessage For="() => _model.MembershipNumber" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Description <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" @bind="_model.Reference"
+                                       placeholder="e.g. Book - The Jungle Book, Uniform polo shirt" />
+                                <ValidationMessage For="() => _model.Reference" />
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Amount <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">&pound;</span>
+                                        <input type="number" class="form-control" @bind="_model.Amount"
+                                               step="0.01" min="0.01" max="10000" />
+                                    </div>
+                                    <ValidationMessage For="() => _model.Amount" />
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Due Date <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" @bind="_model.DueDate" />
+                                    <ValidationMessage For="() => _model.DueDate" />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Income Account <span class="text-danger">*</span></label>
+                                <select class="form-select" @bind="_model.IncomeAccountId">
+                                    <option value="">-- Select Income Account --</option>
+                                    @foreach (var account in _incomeAccounts)
+                                    {
+                                        <option value="@account.Id">@account.Code - @account.Name</option>
+                                    }
+                                </select>
+                                <div class="form-text">Which income account should this payment be credited to?</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Notes</label>
+                                <textarea class="form-control" rows="2" @bind="_model.Notes"
+                                          placeholder="Optional notes about this payment..."></textarea>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
+                                    @if (_isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    <i class="bi bi-plus-circle"></i> Create Payment
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-5">
+                <div class="card">
+                    <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
+                        <h5 class="mb-0">
+                            <i class="bi bi-info-circle"></i> About One-Off Payments
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Use this page to create one-off payment records for items like:</p>
+                        <ul>
+                            <li>Books or resources</li>
+                            <li>Uniform items</li>
+                            <li>Camp or trip fees</li>
+                            <li>Any other ad-hoc charges</li>
+                        </ul>
+                        <hr />
+                        <p class="text-muted mb-0">
+                            <strong>Note:</strong> For termly subscriptions, use
+                            <a href="/Payments/GenerateSubs">Generate Termly Subs</a> instead.
+                            Activity payments are created automatically when attendance is recorded for costed meetings.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

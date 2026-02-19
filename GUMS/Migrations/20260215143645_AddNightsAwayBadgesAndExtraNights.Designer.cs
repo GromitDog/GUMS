@@ -3,6 +3,7 @@ using System;
 using GUMS.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GUMS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260215143645_AddNightsAwayBadgesAndExtraNights")]
+    partial class AddNightsAwayBadgesAndExtraNights
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -746,16 +749,6 @@ namespace GUMS.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("RefundAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("RefundDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("RefundTransactionId")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
@@ -771,8 +764,6 @@ namespace GUMS.Migrations
                     b.HasIndex("MeetingId");
 
                     b.HasIndex("MembershipNumber");
-
-                    b.HasIndex("RefundTransactionId");
 
                     b.HasIndex("Status");
 
@@ -996,16 +987,6 @@ namespace GUMS.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("DefaultSubsAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("FinancialYearEndDay")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("FinancialYearEndMonth")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("JoiningFeeAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("TEXT");
 
@@ -1412,11 +1393,6 @@ namespace GUMS.Migrations
                         .HasForeignKey("MeetingId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("GUMS.Data.Entities.Transaction", "RefundTransaction")
-                        .WithMany()
-                        .HasForeignKey("RefundTransactionId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("GUMS.Data.Entities.Term", "Term")
                         .WithMany("Payments")
                         .HasForeignKey("TermId")
@@ -1425,8 +1401,6 @@ namespace GUMS.Migrations
                     b.Navigation("IncomeAccount");
 
                     b.Navigation("Meeting");
-
-                    b.Navigation("RefundTransaction");
 
                     b.Navigation("Term");
                 });
