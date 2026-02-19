@@ -50,4 +50,9 @@ public class UnitConfiguration
     [Required]
     [Range(1, 12)]
     public int FinancialYearEndMonth { get; set; } = 7;
+
+    /// <summary>
+    /// When set, no transactions may be posted on or before this date (year-end lock).
+    /// </summary>
+    public DateTime? AccountsLockedUntil { get; set; }
 }

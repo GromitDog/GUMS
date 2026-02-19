@@ -96,6 +96,8 @@
     height: 2.5rem;
     line-height: 2.5rem;
     font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .nav-scrollable {

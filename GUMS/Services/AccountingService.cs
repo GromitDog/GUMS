@@ -104,6 +104,13 @@ public class AccountingService : IAccountingService
             return (false, "Transaction description is required.", null);
         }
 
+        // Period lock check
+        var config = await _configurationService.GetConfigurationAsync();
+        if (config.AccountsLockedUntil.HasValue && transaction.Date <= config.AccountsLockedUntil.Value)
+        {
+            return (false, $"This period is locked. Transactions dated on or before {config.AccountsLockedUntil.Value:d MMMM yyyy} cannot be posted.", null);
+        }
+
         if (transaction.Lines == null || !transaction.Lines.Any())
         {
             return (false, "Transaction must have at least one line.", null);
@@ -218,6 +225,13 @@ public class AccountingService : IAccountingService
         if (transaction.IsVoided)
         {
             return (false, "Transaction is already voided.");
+        }
+
+        // Period lock check
+        var lockConfig = await _configurationService.GetConfigurationAsync();
+        if (lockConfig.AccountsLockedUntil.HasValue && transaction.Date <= lockConfig.AccountsLockedUntil.Value)
+        {
+            return (false, $"This period is locked. Transactions dated on or before {lockConfig.AccountsLockedUntil.Value:d MMMM yyyy} cannot be voided.");
         }
 
         // Check if any line has been reconciled
@@ -1465,5 +1479,301 @@ public class AccountingService : IAccountingService
         }
 
         await _context.SaveChangesAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task<YearEndAccountsReport> GetYearEndReportAsync(DateTime yearEnd)
+    {
+        var thisYearEnd   = yearEnd.Date;
+        var thisYearStart = thisYearEnd.AddYears(-1).AddDays(1);
+        var lastYearEnd   = thisYearStart.AddDays(-1);
+        var lastYearStart = lastYearEnd.AddYears(-1).AddDays(1);
+
+        // Load all non-voided transaction lines once
+        var allLines = await _context.TransactionLines
+            .Include(l => l.Transaction)
+            .Include(l => l.Account)
+            .AsNoTracking()
+            .Where(l => !l.Transaction.IsVoided)
+            .ToListAsync();
+
+        var thisYearLines = allLines
+            .Where(l => l.Transaction.Date >= thisYearStart && l.Transaction.Date <= thisYearEnd)
+            .ToList();
+        var lastYearLines = allLines
+            .Where(l => l.Transaction.Date >= lastYearStart && l.Transaction.Date <= lastYearEnd)
+            .ToList();
+
+        // Income accounts — Credit increases income, Debit decreases it
+        var incomeAccounts = await _context.Accounts
+            .Where(a => a.Type == AccountType.Income)
+            .OrderBy(a => a.Code)
+            .AsNoTracking()
+            .ToListAsync();
+
+        var incomeRows = new List<YearAccountRow>();
+        foreach (var account in incomeAccounts)
+        {
+            var thisAmt = thisYearLines
+                .Where(l => l.AccountId == account.Id)
+                .Sum(l => l.Credit - l.Debit);
+            var lastAmt = lastYearLines
+                .Where(l => l.AccountId == account.Id)
+                .Sum(l => l.Credit - l.Debit);
+
+            if (thisAmt != 0 || lastAmt != 0)
+                incomeRows.Add(new YearAccountRow { Name = account.Name, ThisYear = thisAmt, LastYear = lastAmt });
+        }
+
+        // Expense accounts — Debit increases expenses, Credit decreases
+        var expenseAccounts = await _context.Accounts
+            .Where(a => a.Type == AccountType.Expense)
+            .OrderBy(a => a.Code)
+            .AsNoTracking()
+            .ToListAsync();
+
+        var expenseRows = new List<YearAccountRow>();
+        foreach (var account in expenseAccounts)
+        {
+            var thisAmt = thisYearLines
+                .Where(l => l.AccountId == account.Id)
+                .Sum(l => l.Debit - l.Credit);
+            var lastAmt = lastYearLines
+                .Where(l => l.AccountId == account.Id)
+                .Sum(l => l.Debit - l.Credit);
+
+            if (thisAmt != 0 || lastAmt != 0)
+                expenseRows.Add(new YearAccountRow
+                {
+                    Name = account.Name,
+                    ThisYear = thisAmt != 0 ? thisAmt : null,
+                    LastYear = lastAmt != 0 ? lastAmt : null
+                });
+        }
+
+        // Asset accounts — point-in-time balances from transaction lines
+        var assetAccounts = await _context.Accounts
+            .Where(a => a.Type == AccountType.Asset)
+            .OrderBy(a => a.Code)
+            .AsNoTracking()
+            .ToListAsync();
+
+        var broughtForwardRows = new List<YearAssetRow>();
+        var atYearEndRows      = new List<YearAssetRow>();
+
+        foreach (var account in assetAccounts)
+        {
+            var linesForAccount = allLines.Where(l => l.AccountId == account.Id).ToList();
+
+            // Brought forward = balance at the start of each year (all lines BEFORE the year starts)
+            var bfThis = linesForAccount
+                .Where(l => l.Transaction.Date < thisYearStart)
+                .Sum(l => l.Debit - l.Credit);
+            var bfLast = linesForAccount
+                .Where(l => l.Transaction.Date < lastYearStart)
+                .Sum(l => l.Debit - l.Credit);
+
+            // At year end = balance of all lines up to and including the year end date
+            var yeThis = linesForAccount
+                .Where(l => l.Transaction.Date <= thisYearEnd)
+                .Sum(l => l.Debit - l.Credit);
+            var yeLast = linesForAccount
+                .Where(l => l.Transaction.Date <= lastYearEnd)
+                .Sum(l => l.Debit - l.Credit);
+
+            broughtForwardRows.Add(new YearAssetRow { Name = account.Name, ThisYear = bfThis, LastYear = bfLast });
+            atYearEndRows.Add(new YearAssetRow { Name = account.Name, ThisYear = yeThis, LastYear = yeLast });
+        }
+
+        return new YearEndAccountsReport
+        {
+            ThisYearStart       = thisYearStart,
+            ThisYearEnd         = thisYearEnd,
+            LastYearStart       = lastYearStart,
+            LastYearEnd         = lastYearEnd,
+            IncomeRows          = incomeRows,
+            ExpenseRows         = expenseRows,
+            BroughtForwardRows  = broughtForwardRows,
+            AtYearEndRows       = atYearEndRows
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<YearClosingPreview> GetYearClosingPreviewAsync(DateTime yearEnd)
+    {
+        var thisYearEnd   = yearEnd.Date;
+        var thisYearStart = thisYearEnd.AddYears(-1).AddDays(1);
+
+        var config = await _configurationService.GetConfigurationAsync();
+        var alreadyFinalised = config.AccountsLockedUntil.HasValue
+            && config.AccountsLockedUntil.Value >= thisYearEnd;
+
+        // Load non-voided lines for this year
+        var yearLines = await _context.TransactionLines
+            .Include(l => l.Transaction)
+            .Include(l => l.Account)
+            .AsNoTracking()
+            .Where(l => !l.Transaction.IsVoided
+                     && l.Transaction.Date >= thisYearStart
+                     && l.Transaction.Date <= thisYearEnd)
+            .ToListAsync();
+
+        var journalLines = new List<YearClosingLine>();
+        decimal totalIncome = 0;
+        decimal totalExpenses = 0;
+
+        // Income accounts: Dr to zero (net credit activity → we debit it)
+        var incomeAccounts = await _context.Accounts
+            .Where(a => a.Type == AccountType.Income)
+            .OrderBy(a => a.Code)
+            .AsNoTracking()
+            .ToListAsync();
+
+        foreach (var account in incomeAccounts)
+        {
+            var net = yearLines
+                .Where(l => l.AccountId == account.Id)
+                .Sum(l => l.Credit - l.Debit); // positive = income earned
+
+            if (net != 0)
+            {
+                journalLines.Add(new YearClosingLine
+                {
+                    AccountName = account.Name,
+                    Debit = net > 0 ? net : null,
+                    Credit = net < 0 ? -net : null
+                });
+                totalIncome += net;
+            }
+        }
+
+        // Expense accounts: Cr to zero (net debit activity → we credit it)
+        var expenseAccounts = await _context.Accounts
+            .Where(a => a.Type == AccountType.Expense)
+            .OrderBy(a => a.Code)
+            .AsNoTracking()
+            .ToListAsync();
+
+        foreach (var account in expenseAccounts)
+        {
+            var net = yearLines
+                .Where(l => l.AccountId == account.Id)
+                .Sum(l => l.Debit - l.Credit); // positive = expense incurred
+
+            if (net != 0)
+            {
+                journalLines.Add(new YearClosingLine
+                {
+                    AccountName = account.Name,
+                    Debit = net < 0 ? -net : null,
+                    Credit = net > 0 ? net : null
+                });
+                totalExpenses += net;
+            }
+        }
+
+        // Net surplus/deficit → Opening Balances equity account
+        var netSurplus = totalIncome - totalExpenses;
+        if (netSurplus != 0)
+        {
+            journalLines.Add(new YearClosingLine
+            {
+                AccountName = "Opening Balances (Equity)",
+                Debit = netSurplus < 0 ? -netSurplus : null,
+                Credit = netSurplus > 0 ? netSurplus : null
+            });
+        }
+
+        return new YearClosingPreview
+        {
+            YearStart      = thisYearStart,
+            YearEnd        = thisYearEnd,
+            AlreadyFinalised = alreadyFinalised,
+            JournalLines   = journalLines,
+            TotalIncome    = totalIncome,
+            TotalExpenses  = totalExpenses
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage)> FinaliseYearEndAsync(DateTime yearEnd)
+    {
+        var preview = await GetYearClosingPreviewAsync(yearEnd);
+
+        if (preview.AlreadyFinalised)
+        {
+            return (false, "This financial year has already been finalised.");
+        }
+
+        if (!preview.JournalLines.Any())
+        {
+            // Nothing to close — still set the lock
+            await _configurationService.SetAccountsLockedUntilAsync(yearEnd.Date);
+            return (true, string.Empty);
+        }
+
+        // Build the closing journal transaction
+        var openingBalancesAccount = await GetAccountByCodeAsync(OpeningBalancesCode);
+        if (openingBalancesAccount == null)
+        {
+            return (false, "Opening Balances account (3001) not found. Please ensure default accounts have been created.");
+        }
+
+        var incomeAccounts = await _context.Accounts
+            .Where(a => a.Type == AccountType.Income)
+            .AsNoTracking()
+            .ToListAsync();
+        var expenseAccounts = await _context.Accounts
+            .Where(a => a.Type == AccountType.Expense)
+            .AsNoTracking()
+            .ToListAsync();
+
+        var allPnlAccounts = incomeAccounts.Concat(expenseAccounts)
+            .ToDictionary(a => a.Name);
+
+        var lines = new List<TransactionLine>();
+
+        foreach (var jl in preview.JournalLines)
+        {
+            int accountId;
+            if (jl.AccountName == "Opening Balances (Equity)")
+            {
+                accountId = openingBalancesAccount.Id;
+            }
+            else if (allPnlAccounts.TryGetValue(jl.AccountName, out var acct))
+            {
+                accountId = acct.Id;
+            }
+            else
+            {
+                return (false, $"Account '{jl.AccountName}' not found.");
+            }
+
+            lines.Add(new TransactionLine
+            {
+                AccountId = accountId,
+                Debit     = jl.Debit ?? 0,
+                Credit    = jl.Credit ?? 0
+            });
+        }
+
+        var transaction = new Transaction
+        {
+            Date        = yearEnd.Date,
+            Description = $"Year end close – {yearEnd:d MMMM yyyy}",
+            Lines       = lines
+        };
+
+        // Temporarily bypass the lock check by setting lock after posting
+        var result = await CreateTransactionAsync(transaction);
+        if (!result.Success)
+        {
+            return (false, result.ErrorMessage);
+        }
+
+        // Set the lock
+        await _configurationService.SetAccountsLockedUntilAsync(yearEnd.Date);
+
+        return (true, string.Empty);
     }
 }

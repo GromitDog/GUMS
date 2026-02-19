@@ -15,6 +15,10 @@ public partial class Index
     private bool _isLoading = true;
     private string _successMessage = string.Empty;
     private string _errorMessage = string.Empty;
+    private bool _showMore = false;
+
+    private void ToggleMore() => _showMore = !_showMore;
+    private void CloseMore() => _showMore = false;
 
     protected override async Task OnInitializedAsync()
     {

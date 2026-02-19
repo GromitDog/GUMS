@@ -19,13 +19,13 @@
         </div>
 
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="Register">
+            <NavLink class="nav-link" href="Register" Match="NavLinkMatch.All">
                 <span class="bi bi-people-fill" aria-hidden="true"></span> Member Register
             </NavLink>
         </div>
 
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="Meetings">
+            <NavLink class="nav-link" href="Meetings" Match="NavLinkMatch.All">
                 <span class="bi bi-calendar-week" aria-hidden="true"></span> Meetings
             </NavLink>
         </div>
@@ -54,6 +54,9 @@
                     <NavLink class="nav-link nav-link-sub" href="Programme/TermBalance">
                         <span class="bi bi-pie-chart" aria-hidden="true"></span> Term Balance
                     </NavLink>
+                    <NavLink class="nav-link nav-link-sub" href="Reports/NightsAway">
+                        <span class="bi bi-moon-stars" aria-hidden="true"></span> Nights Away
+                    </NavLink>
                 </div>
             }
         </div>
@@ -67,7 +70,7 @@
             @if (_financeExpanded)
             {
                 <div class="nav-group-items">
-                    <NavLink class="nav-link nav-link-sub" href="Payments">
+                    <NavLink class="nav-link nav-link-sub" href="Payments" Match="NavLinkMatch.All">
                         <span class="bi bi-cash-coin" aria-hidden="true"></span> Payments
                     </NavLink>
                     <NavLink class="nav-link nav-link-sub" href="Accounts" Match="NavLinkMatch.All">
@@ -104,8 +107,17 @@
             @if (_reportsExpanded)
             {
                 <div class="nav-group-items">
-                    <NavLink class="nav-link nav-link-sub" href="Reports/NightsAway">
-                        <span class="bi bi-moon-stars" aria-hidden="true"></span> Nights Away
+                    <NavLink class="nav-link nav-link-sub" href="Meetings/Alerts">
+                        <span class="bi bi-exclamation-triangle" aria-hidden="true"></span> Attendance Alerts
+                    </NavLink>
+                    <NavLink class="nav-link nav-link-sub" href="Meetings/Timetable">
+                        <span class="bi bi-calendar-week" aria-hidden="true"></span> Timetable
+                    </NavLink>
+                    <NavLink class="nav-link nav-link-sub" href="Payments/Overdue">
+                        <span class="bi bi-exclamation-triangle-fill" aria-hidden="true"></span> Overdue Payments
+                    </NavLink>
+                    <NavLink class="nav-link nav-link-sub" href="Reports/YearEndAccounts">
+                        <span class="bi bi-file-earmark-text" aria-hidden="true"></span> Year End Accounts
                     </NavLink>
                 </div>
             }

@@ -262,6 +262,24 @@ public interface IAccountingService
     /// Ensures default accounts exist. Called on application startup.
     /// </summary>
     Task EnsureDefaultAccountsAsync();
+
+    /// <summary>
+    /// Gets the year-end accounts report for the specified financial year end date.
+    /// Includes all income/expense accounts active in that year or the prior year,
+    /// plus asset balances brought forward and at year end.
+    /// </summary>
+    Task<YearEndAccountsReport> GetYearEndReportAsync(DateTime yearEnd);
+
+    /// <summary>
+    /// Builds a preview of the closing journal that would be posted for the given year end,
+    /// without actually posting anything.
+    /// </summary>
+    Task<YearClosingPreview> GetYearClosingPreviewAsync(DateTime yearEnd);
+
+    /// <summary>
+    /// Posts the year-end closing journal and locks the period.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage)> FinaliseYearEndAsync(DateTime yearEnd);
 }
 
 /// <summary>
@@ -353,4 +371,69 @@ public class ExpenseReportLine
     public string AccountCode { get; set; } = string.Empty;
     public decimal Amount { get; set; }
     public int TransactionCount { get; set; }
+}
+
+/// <summary>
+/// Year-end accounts report comparing this year and the prior year.
+/// </summary>
+public class YearEndAccountsReport
+{
+    public DateTime ThisYearStart { get; set; }
+    public DateTime ThisYearEnd { get; set; }
+    public DateTime LastYearStart { get; set; }
+    public DateTime LastYearEnd { get; set; }
+
+    public List<YearAccountRow> IncomeRows { get; set; } = new();
+    public List<YearAccountRow> ExpenseRows { get; set; } = new();
+    public List<YearAssetRow> BroughtForwardRows { get; set; } = new();
+    public List<YearAssetRow> AtYearEndRows { get; set; } = new();
+
+    public decimal TotalIncomeThisYear => IncomeRows.Sum(r => r.ThisYear ?? 0);
+    public decimal TotalIncomeLastYear => IncomeRows.Sum(r => r.LastYear ?? 0);
+    public decimal TotalExpenseThisYear => ExpenseRows.Sum(r => r.ThisYear ?? 0);
+    public decimal TotalExpenseLastYear => ExpenseRows.Sum(r => r.LastYear ?? 0);
+    public decimal SurplusThisYear => TotalIncomeThisYear - TotalExpenseThisYear;
+    public decimal SurplusLastYear => TotalIncomeLastYear - TotalExpenseLastYear;
+    public decimal TotalBroughtForwardThisYear => BroughtForwardRows.Sum(r => r.ThisYear);
+    public decimal TotalBroughtForwardLastYear => BroughtForwardRows.Sum(r => r.LastYear);
+    public decimal TotalAtYearEndThisYear => AtYearEndRows.Sum(r => r.ThisYear);
+    public decimal TotalAtYearEndLastYear => AtYearEndRows.Sum(r => r.LastYear);
+}
+
+/// <summary>Row in income or expense section. Null = no activity (shown as blank).</summary>
+public class YearAccountRow
+{
+    public string Name { get; set; } = string.Empty;
+    public decimal? ThisYear { get; set; }
+    public decimal? LastYear { get; set; }
+}
+
+/// <summary>Asset account balance row.</summary>
+public class YearAssetRow
+{
+    public string Name { get; set; } = string.Empty;
+    public decimal ThisYear { get; set; }
+    public decimal LastYear { get; set; }
+}
+
+/// <summary>
+/// Preview of the closing journal entries that will be posted at year-end close.
+/// </summary>
+public class YearClosingPreview
+{
+    public DateTime YearStart { get; set; }
+    public DateTime YearEnd { get; set; }
+    public bool AlreadyFinalised { get; set; }
+    public List<YearClosingLine> JournalLines { get; set; } = new();
+    public decimal TotalIncome { get; set; }
+    public decimal TotalExpenses { get; set; }
+    public decimal NetSurplus => TotalIncome - TotalExpenses;
+}
+
+/// <summary>A single debit or credit line in the year-end closing journal preview.</summary>
+public class YearClosingLine
+{
+    public string AccountName { get; set; } = string.Empty;
+    public decimal? Debit { get; set; }
+    public decimal? Credit { get; set; }
 }

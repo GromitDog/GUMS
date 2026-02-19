@@ -62,6 +62,7 @@ public class ConfigurationService : IConfigurationService
             existing.JoiningFeeAmount = configuration.JoiningFeeAmount;
             existing.FinancialYearEndDay = configuration.FinancialYearEndDay;
             existing.FinancialYearEndMonth = configuration.FinancialYearEndMonth;
+            existing.AccountsLockedUntil = configuration.AccountsLockedUntil;
 
             _context.UnitConfigurations.Update(existing);
         }
@@ -77,6 +78,18 @@ public class ConfigurationService : IConfigurationService
     public async Task<bool> IsConfiguredAsync()
     {
         return await _context.UnitConfigurations.AnyAsync();
+    }
+
+    public async Task SetAccountsLockedUntilAsync(DateTime? lockedUntil)
+    {
+        var existing = await _context.UnitConfigurations.FirstOrDefaultAsync();
+        if (existing == null) return;
+
+        existing.AccountsLockedUntil = lockedUntil;
+        await _context.SaveChangesAsync();
+
+        // Clear cache so next read returns the updated value
+        _cachedConfiguration = null;
     }
 
     public async Task EnsureDefaultConfigurationAsync()

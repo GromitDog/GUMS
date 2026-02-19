@@ -41,7 +41,9 @@
       "Bash(cmd.exe /c \"echo %APPDATA%\")",
       "Bash(powershell.exe -Command \"Write-Host $env:APPDATA; Get-ChildItem -Path ''$env:APPDATA\\\\GUMS'' -ErrorAction SilentlyContinue\")",
       "Bash(powershell.exe -Command:*)",
-      "Bash(dotnet ef dbcontext script:*)"
+      "Bash(dotnet ef dbcontext script:*)",
+      "WebFetch(domain:)",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }

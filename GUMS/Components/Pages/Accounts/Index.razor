@@ -9,34 +9,34 @@
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Accounts</h2>
-        <div>
-            <a href="/Accounts/Expenses" class="btn btn-outline-secondary me-2">
-                <i class="bi bi-receipt"></i> Expenses
-            </a>
-            <a href="/Accounts/Claims" class="btn btn-outline-secondary me-2">
-                <i class="bi bi-file-earmark-text"></i> Claims
-            </a>
-            <a href="/Accounts/JournalEntry" class="btn btn-outline-primary me-2">
-                <i class="bi bi-journal-plus"></i> Journal Entry
-            </a>
-            <a href="/Accounts/Transactions" class="btn btn-outline-primary me-2">
-                <i class="bi bi-list-ul"></i> Transaction History
-            </a>
-            <a href="/Accounts/RecordIncome" class="btn btn-success me-2">
+        <div class="d-flex gap-2">
+            <a href="/Accounts/RecordIncome" class="btn btn-success">
                 <i class="bi bi-plus-circle"></i> Record Income
             </a>
-            <a href="/Accounts/RecordExpense" class="btn btn-warning me-2">
+            <a href="/Accounts/RecordExpense" class="btn btn-warning">
                 <i class="bi bi-plus-circle"></i> Record Expense
-            </a>
-            <a href="/Accounts/Manage" class="btn btn-outline-secondary me-2">
-                <i class="bi bi-gear"></i> Chart of Accounts
-            </a>
-            <a href="/Accounts/Reconciliation" class="btn btn-outline-primary me-2">
-                <i class="bi bi-check2-square"></i> Reconcile Bank
             </a>
             <a href="/Accounts/BankDeposit" class="btn btn-primary">
                 <i class="bi bi-bank"></i> Bank Deposit
             </a>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" @onclick="ToggleMore" @onclick:stopPropagation="true">
+                    More
+                </button>
+                @if (_showMore)
+                {
+                    <ul class="dropdown-menu dropdown-menu-end show">
+                        <li><a class="dropdown-item" href="/Accounts/Transactions"><i class="bi bi-list-ul me-2"></i>Transaction History</a></li>
+                        <li><a class="dropdown-item" href="/Accounts/Expenses"><i class="bi bi-receipt me-2"></i>Expenses</a></li>
+                        <li><a class="dropdown-item" href="/Accounts/Claims"><i class="bi bi-file-earmark-text me-2"></i>Claims</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/Accounts/JournalEntry"><i class="bi bi-journal-plus me-2"></i>Journal Entry</a></li>
+                        <li><a class="dropdown-item" href="/Accounts/Reconciliation"><i class="bi bi-check2-square me-2"></i>Reconcile Bank</a></li>
+                        <li><a class="dropdown-item" href="/Accounts/Manage"><i class="bi bi-gear me-2"></i>Chart of Accounts</a></li>
+                    </ul>
+                    <div style="position:fixed;inset:0;z-index:999;" @onclick="CloseMore"></div>
+                }
+            </div>
         </div>
     </div>
 

@@ -1,0 +1,464 @@
+@page "/Reports/YearEndAccounts"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Year End Accounts - GUMS</PageTitle>
+
+<style>
+    .yea-wrapper {
+        max-width: 720px;
+        margin: 0 auto;
+        font-family: Arial, sans-serif;
+        font-size: 0.92rem;
+    }
+
+    .yea-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 1.5rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .yea-logo img {
+        max-height: 90px;
+        border: 3px solid #1a2b6b;
+        padding: 6px;
+        background: #1a2b6b;
+    }
+
+    .yea-title h2 {
+        color: #1a2b6b;
+        font-size: 1.4rem;
+        font-weight: bold;
+        margin: 0 0 0.2rem 0;
+    }
+
+    .yea-title p {
+        color: #333;
+        margin: 0;
+        font-size: 0.95rem;
+    }
+
+    .yea-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .yea-table td {
+        padding: 3px 6px;
+        vertical-align: top;
+    }
+
+    .yea-table .col-name  { width: 55%; }
+    .yea-table .col-this  { width: 22%; text-align: right; }
+    .yea-table .col-last  { width: 22%; text-align: right; }
+
+    .yea-col-headers td {
+        font-weight: bold;
+        text-align: right;
+        padding-bottom: 4px;
+        border-bottom: 1px solid #333;
+    }
+
+    .yea-col-headers .col-name { text-align: left; }
+
+    .yea-section-heading td {
+        color: #1a56db;
+        font-weight: bold;
+        padding-top: 10px;
+        padding-bottom: 2px;
+        font-size: 1rem;
+    }
+
+    .yea-totals td {
+        font-weight: bold;
+        border-top: 1px dashed #555;
+    }
+
+    .yea-totals .col-this,
+    .yea-totals .col-last {
+        border: 1px dashed #555;
+        background: #f8f8f8;
+    }
+
+    .yea-surplus td {
+        padding-top: 6px;
+        padding-bottom: 6px;
+    }
+
+    .yea-surplus .col-this,
+    .yea-surplus .col-last {
+        border: 1px dashed #555;
+        background: #f0f0f0;
+        font-weight: bold;
+    }
+
+    .yea-section-label td {
+        padding-top: 10px;
+        font-weight: normal;
+    }
+
+    .yea-asset-row td {
+        padding-left: 2rem;
+    }
+
+    .yea-asset-total .col-this,
+    .yea-asset-total .col-last {
+        border: 1px dashed #555;
+        background: #f8f8f8;
+        font-weight: bold;
+    }
+
+    .yea-footer {
+        margin-top: 2rem;
+        font-size: 0.9rem;
+    }
+
+    .yea-footer .sig-line {
+        display: flex;
+        gap: 3rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .yea-footer .sig-field {
+        display: flex;
+        align-items: flex-end;
+        gap: 0.5rem;
+    }
+
+    .yea-footer .sig-field span {
+        display: inline-block;
+        border-bottom: 1px solid #333;
+        min-width: 160px;
+        height: 1.2em;
+    }
+
+    .amt-negative { color: #c00; }
+
+    @@media print {
+        .no-print { display: none !important; }
+        body { font-size: 10pt; }
+        .container-fluid { padding: 0 !important; margin: 0 !important; }
+        .yea-wrapper { max-width: 100%; }
+    }
+</style>
+
+<div class="container-fluid py-3">
+
+    <!-- Controls -->
+    <div class="no-print mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <a href="/Accounts" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i> Back to Accounts
+            </a>
+            @if (_availableYearEnds.Any())
+            {
+                <div class="d-flex align-items-center gap-2">
+                    <label class="mb-0 fw-semibold">Year ending:</label>
+                    <select class="form-select form-select-sm" style="width: auto;"
+                            value="@_selectedYearEnd.ToString("yyyy-MM-dd")"
+                            @onchange="OnYearChanged">
+                        @foreach (var ye in _availableYearEnds)
+                        {
+                            <option value="@ye.ToString("yyyy-MM-dd")">
+                                @ye.ToString("d MMMM yyyy")
+                            </option>
+                        }
+                    </select>
+                </div>
+            }
+            @if (IsAlreadyFinalised)
+            {
+                <span class="badge bg-success fs-6"><i class="bi bi-lock-fill me-1"></i> Finalised</span>
+            }
+            else if (CanFinalise && _report != null)
+            {
+                <button class="btn btn-warning btn-sm" @onclick="OpenFinaliseModal">
+                    <i class="bi bi-check2-circle me-1"></i> Finalise Year End
+                </button>
+            }
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="window.print()">
+            <i class="bi bi-printer"></i> Print / Save as PDF
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_finaliseSuccess))
+    {
+        <div class="alert alert-success no-print d-flex align-items-center gap-2">
+            <i class="bi bi-check-circle-fill"></i>
+            @_finaliseSuccess
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger no-print">@_errorMessage</div>
+    }
+
+    @if (!string.IsNullOrEmpty(_finaliseError))
+    {
+        <div class="alert alert-danger no-print">@_finaliseError</div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+        </div>
+    }
+    else if (_report != null && _config != null)
+    {
+        <div class="yea-wrapper">
+
+            <!-- Header -->
+            <div class="yea-header">
+                <div class="yea-logo">
+                    <img src="/unitLogoWhite.png" alt="Unit logo" />
+                </div>
+                <div class="yea-title">
+                    <h2>@_config.UnitName</h2>
+                    <p>@YearLabel(_selectedYearEnd)</p>
+                </div>
+            </div>
+
+            <table class="yea-table">
+
+                <!-- Column headers -->
+                <tr class="yea-col-headers">
+                    <td class="col-name"></td>
+                    <td class="col-this">This Year</td>
+                    <td class="col-last">Last Year</td>
+                </tr>
+
+                <!-- ===== Receipts [In] ===== -->
+                <tr class="yea-section-heading">
+                    <td class="col-name" colspan="3">Receipts [In]</td>
+                </tr>
+                @foreach (var row in _report.IncomeRows)
+                {
+                    <tr>
+                        <td class="col-name">@row.Name</td>
+                        <td class="col-this @AmountClass(row.ThisYear)">@FormatMoney(row.ThisYear)</td>
+                        <td class="col-last @AmountClass(row.LastYear)">@FormatMoney(row.LastYear)</td>
+                    </tr>
+                }
+                <tr class="yea-totals">
+                    <td class="col-name">Totals</td>
+                    <td class="col-this @AmountClass(_report.TotalIncomeThisYear)">@FormatMoney(_report.TotalIncomeThisYear)</td>
+                    <td class="col-last @AmountClass(_report.TotalIncomeLastYear)">@FormatMoney(_report.TotalIncomeLastYear)</td>
+                </tr>
+
+                <!-- ===== Payments [Out] ===== -->
+                <tr class="yea-section-heading">
+                    <td class="col-name" colspan="3">Payments [Out]</td>
+                </tr>
+                @foreach (var row in _report.ExpenseRows)
+                {
+                    <tr>
+                        <td class="col-name">@row.Name</td>
+                        <td class="col-this @AmountClass(row.ThisYear)">@FormatMoney(row.ThisYear)</td>
+                        <td class="col-last @AmountClass(row.LastYear)">@FormatMoney(row.LastYear)</td>
+                    </tr>
+                }
+                <tr class="yea-totals">
+                    <td class="col-name">Totals</td>
+                    <td class="col-this @AmountClass(_report.TotalExpenseThisYear)">@FormatMoney(_report.TotalExpenseThisYear)</td>
+                    <td class="col-last @AmountClass(_report.TotalExpenseLastYear)">@FormatMoney(_report.TotalExpenseLastYear)</td>
+                </tr>
+
+                <!-- ===== Surplus / Deficit ===== -->
+                <tr class="yea-surplus">
+                    <td class="col-name">
+                        Surplus or <span style="color:#c00;">(deficit)</span> for the year
+                    </td>
+                    <td class="col-this @AmountClass(_report.SurplusThisYear)">
+                        @if (_report.SurplusThisYear < 0)
+                        {
+                            <span class="amt-negative">(@FormatMoney(-_report.SurplusThisYear))</span>
+                        }
+                        else
+                        {
+                            @FormatMoney(_report.SurplusThisYear)
+                        }
+                    </td>
+                    <td class="col-last @AmountClass(_report.SurplusLastYear)">
+                        @if (_report.SurplusLastYear < 0)
+                        {
+                            <span class="amt-negative">(@FormatMoney(-_report.SurplusLastYear))</span>
+                        }
+                        else
+                        {
+                            @FormatMoney(_report.SurplusLastYear)
+                        }
+                    </td>
+                </tr>
+
+                <!-- ===== Balances brought forward ===== -->
+                <tr class="yea-section-label">
+                    <td class="col-name" colspan="3">Balances brought forward</td>
+                </tr>
+                @foreach (var row in _report.BroughtForwardRows)
+                {
+                    <tr class="yea-asset-row">
+                        <td class="col-name">@row.Name</td>
+                        <td class="col-this @AmountClass(row.ThisYear)">@FormatMoney(row.ThisYear)</td>
+                        <td class="col-last @AmountClass(row.LastYear)">@FormatMoney(row.LastYear)</td>
+                    </tr>
+                }
+                <tr class="yea-asset-total">
+                    <td class="col-name"></td>
+                    <td class="col-this @AmountClass(_report.TotalBroughtForwardThisYear)">@FormatMoney(_report.TotalBroughtForwardThisYear)</td>
+                    <td class="col-last @AmountClass(_report.TotalBroughtForwardLastYear)">@FormatMoney(_report.TotalBroughtForwardLastYear)</td>
+                </tr>
+
+                <!-- ===== Balances in hand at year end ===== -->
+                <tr class="yea-section-label">
+                    <td class="col-name" colspan="3">Balances in hand at year end</td>
+                </tr>
+                @foreach (var row in _report.AtYearEndRows)
+                {
+                    <tr class="yea-asset-row">
+                        <td class="col-name">@row.Name</td>
+                        <td class="col-this @AmountClass(row.ThisYear)">@FormatMoney(row.ThisYear)</td>
+                        <td class="col-last @AmountClass(row.LastYear)">@FormatMoney(row.LastYear)</td>
+                    </tr>
+                }
+                <tr class="yea-asset-total">
+                    <td class="col-name"></td>
+                    <td class="col-this @AmountClass(_report.TotalAtYearEndThisYear)">@FormatMoney(_report.TotalAtYearEndThisYear)</td>
+                    <td class="col-last @AmountClass(_report.TotalAtYearEndLastYear)">@FormatMoney(_report.TotalAtYearEndLastYear)</td>
+                </tr>
+
+            </table>
+
+            <!-- Footer -->
+            <div class="yea-footer">
+                <div class="sig-line">
+                    <div class="sig-field"><strong>Prepared by:</strong> <span></span></div>
+                    <div class="sig-field"><strong>Signature &amp; Date:</strong> <span></span></div>
+                </div>
+                <p>
+                    Reviewer's Certificate: The above statements agree with the records and vouchers of
+                    @_config.UnitName for the financial year ended
+                    <strong>@FormatDate(_selectedYearEnd)</strong>
+                </p>
+                <div class="sig-line">
+                    <div class="sig-field"><strong>Reviewed by:</strong> <span></span></div>
+                    <div class="sig-field"><strong>Signature &amp; Date:</strong> <span></span></div>
+                </div>
+            </div>
+
+        </div>
+    }
+
+    <!-- ===== Modal 1: Are you sure? ===== -->
+    @if (_showModal1 && _preview != null)
+    {
+        <div class="modal fade show d-block no-print" tabindex="-1" style="background:rgba(0,0,0,.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning">
+                        <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Finalise Year End?</h5>
+                        <button type="button" class="btn-close" @onclick="CloseModals"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>You are about to finalise the financial year ending <strong>@FormatDate(_preview.YearEnd)</strong>.</p>
+                        <table class="table table-sm mb-3">
+                            <tbody>
+                                <tr>
+                                    <td>Total Income</td>
+                                    <td class="text-end fw-semibold">@FormatMoney(_preview.TotalIncome)</td>
+                                </tr>
+                                <tr>
+                                    <td>Total Expenses</td>
+                                    <td class="text-end fw-semibold">@FormatMoney(_preview.TotalExpenses)</td>
+                                </tr>
+                                <tr class="table-@(_preview.NetSurplus >= 0 ? "success" : "danger")">
+                                    <td><strong>@(_preview.NetSurplus >= 0 ? "Surplus" : "Deficit") for the Year</strong></td>
+                                    <td class="text-end fw-bold">@FormatMoney(Math.Abs(_preview.NetSurplus))</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="alert alert-warning mb-0">
+                            <i class="bi bi-lock-fill me-1"></i>
+                            After finalising, <strong>no transactions can be posted on or before @FormatDate(_preview.YearEnd)</strong>.
+                            This action is permanent.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                        <button class="btn btn-warning" @onclick="ProceedToJournal">
+                            Show closing journal <i class="bi bi-arrow-right ms-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- ===== Modal 2: Closing journal preview ===== -->
+    @if (_showModal2 && _preview != null)
+    {
+        <div class="modal fade show d-block no-print" tabindex="-1" style="background:rgba(0,0,0,.5);">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title"><i class="bi bi-journal-text me-2"></i>Closing Journal Preview</h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseModals"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted mb-2">Date: <strong>@FormatDate(_preview.YearEnd)</strong></p>
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Account</th>
+                                    <th class="text-end">Debit</th>
+                                    <th class="text-end">Credit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var line in _preview.JournalLines)
+                                {
+                                    <tr>
+                                        <td>@line.AccountName</td>
+                                        <td class="text-end">@(line.Debit.HasValue ? FormatMoney(line.Debit) : string.Empty)</td>
+                                        <td class="text-end">@(line.Credit.HasValue ? FormatMoney(line.Credit) : string.Empty)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <div class="alert alert-danger mb-0">
+                            <i class="bi bi-exclamation-octagon-fill me-1"></i>
+                            <strong>This cannot be undone.</strong> Once confirmed, all P&amp;L accounts will be zeroed
+                            and the period will be permanently locked.
+                        </div>
+                        @if (!string.IsNullOrEmpty(_finaliseError))
+                        {
+                            <div class="alert alert-danger mt-2 mb-0">@_finaliseError</div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" @onclick="BackToModal1" disabled="@_isFinalising">
+                            <i class="bi bi-arrow-left me-1"></i> Back
+                        </button>
+                        <button class="btn btn-danger" @onclick="ConfirmFinalise" disabled="@_isFinalising">
+                            @if (_isFinalising)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                <span>Finalising…</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check-circle me-1"></i>
+                                <span>Confirm &amp; Finalise</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+</div>

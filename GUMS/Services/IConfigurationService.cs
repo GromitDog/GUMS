@@ -8,4 +8,5 @@ public interface IConfigurationService
     Task<UnitConfiguration> UpdateConfigurationAsync(UnitConfiguration configuration);
     Task<bool> IsConfiguredAsync();
     Task EnsureDefaultConfigurationAsync();
+    Task SetAccountsLockedUntilAsync(DateTime? lockedUntil);
 }
