@@ -94,6 +94,21 @@
                                 <div class="form-text">Which income account should this payment be credited to?</div>
                             </div>
 
+                            @if (_meetings.Any())
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">Link to event <span class="text-muted fw-normal">(optional)</span></label>
+                                    <select class="form-select" @bind="_model.MeetingId">
+                                        <option value="">-- Not linked to an event --</option>
+                                        @foreach (var m in _meetings)
+                                        {
+                                            <option value="@m.Id">@m.Title (@m.Date.ToString("d MMM yyyy"))</option>
+                                        }
+                                    </select>
+                                    <div class="form-text">Link this payment to a costed event so it appears in Event Accounts.</div>
+                                </div>
+                            }
+
                             <div class="mb-3">
                                 <label class="form-label">Notes</label>
                                 <textarea class="form-control" rows="2" @bind="_model.Notes"

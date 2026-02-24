@@ -1,0 +1,380 @@
+@page "/Accounts/Budget"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Unit Budget - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-calculator"></i> Unit Budget</h2>
+        <div class="d-flex align-items-center gap-2">
+            <label class="form-label mb-0 text-muted">Financial year ending:</label>
+            <select class="form-select form-select-sm" style="width: auto;" @onchange="OnYearChanged">
+                @foreach (var yearEnd in _availableYearEnds)
+                {
+                    <option value="@yearEnd.ToString("yyyy-MM-dd")" selected="@(yearEnd == _selectedYearEnd)">
+                        @(yearEnd.AddYears(-1).AddDays(1).ToString("d MMM yyyy")) – @yearEnd.ToString("d MMM yyyy")
+                    </option>
+                }
+            </select>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="() => _successMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading budget...</p>
+        </div>
+    }
+    else if (_summary != null)
+    {
+        <!-- Stats row -->
+        <div class="row mb-4 g-3">
+            <div class="col-md-3">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-1">Active Girls</h6>
+                        <h2 class="mb-0" style="color: var(--gg-primary-blue);">@_summary.ActiveGirlCount</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-1">Active Members</h6>
+                        <h2 class="mb-0" style="color: var(--gg-primary-blue);">@_summary.ActivePersonCount</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-1">Terms / Meeting weeks</h6>
+                        <h2 class="mb-0" style="color: var(--gg-primary-blue);">@_summary.TermCount <small class="text-muted fs-6">/ @_summary.MeetingWeeks wks</small></h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100 text-center" style="background-color: var(--gg-dark-navy); color: white;">
+                    <div class="card-body">
+                        <h6 class="mb-1">Suggested termly subs</h6>
+                        <h2 class="mb-0">£@_summary.SuggestedTermlySubs.ToString("N2")</h2>
+                        <small class="opacity-75">per girl per term</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Budget Items -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center" style="background-color: var(--gg-primary-blue); color: white;">
+                <h5 class="mb-0"><i class="bi bi-list-ul"></i> Budget Items</h5>
+                @if (!_showAddForm && _editingItemId == null)
+                {
+                    <button class="btn btn-sm btn-light" @onclick="ShowAddForm">
+                        <i class="bi bi-plus-circle"></i> Add item
+                    </button>
+                }
+            </div>
+            <div class="card-body">
+                @if (!_summary.Lines.Any() && !_showAddForm)
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-calculator" style="font-size: 2rem;"></i>
+                        <p class="mt-2 mb-2">No budget items yet.</p>
+                        <button class="btn btn-primary" @onclick="ShowAddForm">
+                            <i class="bi bi-plus-circle"></i> Add your first cost
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th>Frequency</th>
+                                    <th>Allocation</th>
+                                    <th class="text-end">Unit cost</th>
+                                    <th class="text-end">Annual total</th>
+                                    <th class="text-end">Per girl/yr</th>
+                                    <th>Expense account</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var line in _summary.Lines)
+                                {
+                                    @if (_editingItemId == line.Id)
+                                    {
+                                        <!-- Inline edit row -->
+                                        <tr class="table-light">
+                                            <td>
+                                                <input type="text" class="form-control form-control-sm" @bind="_editItem.Description" maxlength="200" />
+                                            </td>
+                                            <td>
+                                                <select class="form-select form-select-sm" @bind="_editItem.Frequency">
+                                                    <option value="@BudgetFrequency.Yearly">Yearly</option>
+                                                    <option value="@BudgetFrequency.Termly">Per term</option>
+                                                    <option value="@BudgetFrequency.Weekly">Per week</option>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <select class="form-select form-select-sm" @bind="_editItem.Allocation">
+                                                    <option value="@BudgetAllocation.Fixed">Fixed</option>
+                                                    <option value="@BudgetAllocation.PerGirl">Per girl</option>
+                                                    <option value="@BudgetAllocation.PerPerson">Per person</option>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text">£</span>
+                                                    <input type="number" class="form-control" @bind="_editItem.Amount" step="0.01" min="0" />
+                                                </div>
+                                            </td>
+                                            <td colspan="2"></td>
+                                            <td>
+                                                <select class="form-select form-select-sm" value="@_editItem.ExpenseAccountId"
+                                                        @onchange="e => _editItem.ExpenseAccountId = int.TryParse(e.Value?.ToString(), out var i) ? i : null">
+                                                    <option value="">-- None --</option>
+                                                    @foreach (var acct in _expenseAccounts)
+                                                    {
+                                                        <option value="@acct.Id">@acct.Name</option>
+                                                    }
+                                                </select>
+                                            </td>
+                                            <td class="text-end">
+                                                <button class="btn btn-sm btn-primary me-1" @onclick="SaveEditItem" disabled="@_isSaving">
+                                                    <i class="bi bi-check-lg"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-secondary" @onclick="CancelForms">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td>@line.Description</td>
+                                            <td><span class="badge bg-secondary">@FrequencyLabel(line.Frequency)</span></td>
+                                            <td><span class="badge bg-info text-dark">@AllocationLabel(line.Allocation)</span></td>
+                                            <td class="text-end">£@line.UnitAmount.ToString("N2")</td>
+                                            <td class="text-end"><strong>£@line.AnnualTotal.ToString("N2")</strong></td>
+                                            <td class="text-end">£@line.PerGirlContribution.ToString("N2")</td>
+                                            <td>@(line.ExpenseAccountName ?? "-")</td>
+                                            <td class="text-end">
+                                                @if (_budget != null)
+                                                {
+                                                    var item = _budget.Items.FirstOrDefault(i => i.Id == line.Id);
+                                                    if (item != null)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditItem(item)" title="Edit">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteItem(line.Id)" title="Delete" disabled="@_isSaving">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    }
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                            @if (_summary.Lines.Any())
+                            {
+                                <tfoot>
+                                    <tr class="table-dark">
+                                        <td colspan="4"><strong>Total</strong></td>
+                                        <td class="text-end"><strong>£@_summary.TotalAnnualCost.ToString("N2")</strong></td>
+                                        <td class="text-end"><strong>£@_summary.TotalPerGirlAnnual.ToString("N2")</strong></td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </tfoot>
+                            }
+                        </table>
+                    </div>
+                }
+
+                @if (_showAddForm)
+                {
+                    <hr />
+                    <h6>Add cost item</h6>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label">Description</label>
+                            <input type="text" class="form-control" @bind="_newItem.Description" maxlength="200" placeholder="e.g. Hall hire" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Frequency</label>
+                            <select class="form-select" @bind="_newItem.Frequency">
+                                <option value="@BudgetFrequency.Yearly">Yearly</option>
+                                <option value="@BudgetFrequency.Termly">Per term</option>
+                                <option value="@BudgetFrequency.Weekly">Per week</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Allocation</label>
+                            <select class="form-select" @bind="_newItem.Allocation">
+                                <option value="@BudgetAllocation.Fixed">Fixed</option>
+                                <option value="@BudgetAllocation.PerGirl">Per girl</option>
+                                <option value="@BudgetAllocation.PerPerson">Per person</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Unit cost</label>
+                            <div class="input-group">
+                                <span class="input-group-text">£</span>
+                                <input type="number" class="form-control" @bind="_newItem.Amount" step="0.01" min="0" />
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Expense account</label>
+                            <select class="form-select" value="@_newItem.ExpenseAccountId"
+                                    @onchange="e => _newItem.ExpenseAccountId = int.TryParse(e.Value?.ToString(), out var i) ? i : null">
+                                <option value="">-- None --</option>
+                                @foreach (var acct in _expenseAccounts)
+                                {
+                                    <option value="@acct.Id">@acct.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12 d-flex gap-2">
+                            <button class="btn btn-primary" @onclick="SaveNewItem" disabled="@_isSaving">
+                                <i class="bi bi-plus-circle"></i> Add
+                            </button>
+                            <button class="btn btn-secondary" @onclick="CancelForms">Cancel</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Subs breakdown -->
+        @if (_summary.Lines.Any() && _summary.ActiveGirlCount > 0 && _summary.TermCount > 0)
+        {
+            <div class="card mb-4">
+                <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Subs Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Cost item</th>
+                                    <th class="text-end">Per girl/yr</th>
+                                    <th class="text-end">% of total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var line in _summary.Lines)
+                                {
+                                    var pct = _summary.TotalPerGirlAnnual > 0
+                                        ? line.PerGirlContribution / _summary.TotalPerGirlAnnual * 100
+                                        : 0;
+                                    <tr>
+                                        <td>@line.Description</td>
+                                        <td class="text-end">£@line.PerGirlContribution.ToString("N2")</td>
+                                        <td class="text-end">@pct.ToString("N1")%</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-dark">
+                                    <td><strong>Total</strong></td>
+                                    <td class="text-end"><strong>£@_summary.TotalPerGirlAnnual.ToString("N2")/girl/year</strong></td>
+                                    <td class="text-end"></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-center py-2">
+                                        £@_summary.TotalPerGirlAnnual.ToString("N2") ÷ @_summary.TermCount terms =
+                                        <strong style="color: var(--gg-dark-navy); font-size: 1.1rem;">
+                                            £@_summary.SuggestedTermlySubs.ToString("N2") per girl per term
+                                        </strong>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Budget vs Actual -->
+        @if (_summary.ActualComparison.Any())
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Budget vs Actual</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        Actual figures are for the selected financial year and only include items linked to an expense account.
+                    </p>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Cost item</th>
+                                    <th class="text-end">Budgeted</th>
+                                    <th class="text-end">Actual spend</th>
+                                    <th class="text-end">Variance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var line in _summary.ActualComparison)
+                                {
+                                    <tr>
+                                        <td>@line.Description</td>
+                                        <td class="text-end">£@line.Budgeted.ToString("N2")</td>
+                                        <td class="text-end">£@line.Actual.ToString("N2")</td>
+                                        <td class="text-end @(line.Variance >= 0 ? "text-success" : "text-danger")">
+                                            <strong>@(line.Variance >= 0 ? "+" : "")£@line.Variance.ToString("N2")</strong>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-dark">
+                                    <td><strong>Total</strong></td>
+                                    <td class="text-end"><strong>£@_summary.ActualComparison.Sum(l => l.Budgeted).ToString("N2")</strong></td>
+                                    <td class="text-end"><strong>£@_summary.ActualComparison.Sum(l => l.Actual).ToString("N2")</strong></td>
+                                    @{
+                                        var totalVariance = _summary.ActualComparison.Sum(l => l.Variance);
+                                    }
+                                    <td class="text-end @(totalVariance >= 0 ? "text-success" : "text-danger")">
+                                        <strong>@(totalVariance >= 0 ? "+" : "")£@totalVariance.ToString("N2")</strong>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>

@@ -11,10 +11,12 @@ public partial class CreatePayment
     [Inject] private IPaymentService PaymentService { get; set; } = default!;
     [Inject] private IPersonService PersonService { get; set; } = default!;
     [Inject] private IAccountingService AccountingService { get; set; } = default!;
+    [Inject] private IMeetingService MeetingService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
     private List<Person> _members = new();
     private List<Account> _incomeAccounts = new();
+    private List<Meeting> _meetings = new();
     private CreatePaymentModel _model = new();
 
     private bool _isLoading = true;
@@ -30,6 +32,12 @@ public partial class CreatePayment
                 .ToList();
 
             _incomeAccounts = await AccountingService.GetAccountsByTypeAsync(AccountType.Income);
+
+            _meetings = (await MeetingService.GetAllAsync())
+                .Where(m => m.CostPerAttendee.HasValue && m.CostPerAttendee > 0)
+                .OrderByDescending(m => m.Date)
+                .Take(30)
+                .ToList();
         }
         catch (Exception ex)
         {
@@ -82,7 +90,8 @@ public partial class CreatePayment
                 Status = PaymentStatus.Pending,
                 Reference = _model.Reference.Trim(),
                 Notes = string.IsNullOrWhiteSpace(_model.Notes) ? null : _model.Notes.Trim(),
-                IncomeAccountId = _model.IncomeAccountId
+                IncomeAccountId = _model.IncomeAccountId,
+                MeetingId = _model.MeetingId
             };
 
             var result = await PaymentService.CreateAsync(payment);
@@ -125,5 +134,7 @@ public partial class CreatePayment
         public string? Notes { get; set; }
 
         public int? IncomeAccountId { get; set; }
+
+        public int? MeetingId { get; set; }
     }
 }

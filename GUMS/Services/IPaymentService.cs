@@ -88,6 +88,16 @@ public interface IPaymentService
     /// </summary>
     Task<int> GetEligibleMembersCountForTermAsync(int termId);
 
+    /// <summary>
+    /// Links or unlinks a payment to a meeting. Works on paid payments.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage)> SetMeetingLinkAsync(int paymentId, int? meetingId);
+
+    /// <summary>
+    /// Gets paid Other-type payments that have no meeting link (candidates for manual linking).
+    /// </summary>
+    Task<List<Payment>> GetUnlinkedPaidOtherPaymentsAsync();
+
     // ===== Activity Payments =====
 
     /// <summary>

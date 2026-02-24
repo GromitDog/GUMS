@@ -1285,17 +1285,25 @@ public class AccountingService : IAccountingService
             MeetingTitle = meeting?.Title ?? "Unknown"
         };
 
-        // Get income: payments linked to this meeting
+        // Get income: payments linked to this meeting where any amount has been received
         var payments = await _context.Payments
             .AsNoTracking()
-            .Where(p => p.MeetingId == meetingId && p.Status == PaymentStatus.Paid)
+            .Where(p => p.MeetingId == meetingId && p.AmountPaid > 0)
             .ToListAsync();
 
-        foreach (var payment in payments)
+        // Look up member names for the income breakdown
+        var membershipNumbers = payments.Select(p => p.MembershipNumber).Distinct().ToList();
+        var members = await _context.Persons
+            .AsNoTracking()
+            .Where(p => membershipNumbers.Contains(p.MembershipNumber))
+            .ToDictionaryAsync(p => p.MembershipNumber, p => p.FullName);
+
+        foreach (var payment in payments.OrderBy(p => members.GetValueOrDefault(p.MembershipNumber) ?? p.MembershipNumber))
         {
+            var name = members.GetValueOrDefault(payment.MembershipNumber) ?? payment.MembershipNumber;
             summary.IncomeBreakdown.Add(new EventIncomeBreakdown
             {
-                Description = $"Payment - {payment.Reference}",
+                Description = name,
                 Amount = payment.AmountPaid
             });
         }

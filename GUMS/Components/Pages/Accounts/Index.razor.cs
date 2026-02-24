@@ -7,10 +7,12 @@ namespace GUMS.Components.Pages.Accounts;
 public partial class Index
 {
     [Inject] private IAccountingService AccountingService { get; set; } = default!;
+    [Inject] private IUnitBudgetService UnitBudgetService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
     private List<Account> _accounts = new();
     private AccountingDashboardStats _dashboardStats = new();
+    private UnitBudgetSummary? _budgetSummary;
 
     private bool _isLoading = true;
     private string _successMessage = string.Empty;
@@ -44,6 +46,19 @@ public partial class Index
         {
             _accounts = await AccountingService.GetAccountsAsync();
             _dashboardStats = await AccountingService.GetDashboardStatsAsync();
+
+            // Load budget summary for current financial year (null-safe)
+            try
+            {
+                _budgetSummary = await UnitBudgetService.GetBudgetSummaryAsync(_dashboardStats.FinancialYearEnd);
+                // Only keep if there are actual items configured
+                if (!_budgetSummary.Lines.Any())
+                    _budgetSummary = null;
+            }
+            catch
+            {
+                _budgetSummary = null;
+            }
         }
         catch (Exception ex)
         {

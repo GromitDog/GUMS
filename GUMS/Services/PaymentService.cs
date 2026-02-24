@@ -294,6 +294,31 @@ public class PaymentService : IPaymentService
                            !existingMembershipNumbers.Contains(p.MembershipNumber));
     }
 
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage)> SetMeetingLinkAsync(int paymentId, int? meetingId)
+    {
+        var payment = await _context.Payments.FindAsync(paymentId);
+        if (payment == null)
+            return (false, "Payment not found.");
+
+        payment.MeetingId = meetingId;
+        await _context.SaveChangesAsync();
+
+        return (true, string.Empty);
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<Payment>> GetUnlinkedPaidOtherPaymentsAsync()
+    {
+        return await _context.Payments
+            .AsNoTracking()
+            .Where(p => p.PaymentType == PaymentType.Other
+                && p.MeetingId == null
+                && p.AmountPaid > 0)
+            .OrderByDescending(p => p.PaymentDate)
+            .ToListAsync();
+    }
+
     // ===== Activity Payments =====
 
     /// <inheritdoc/>

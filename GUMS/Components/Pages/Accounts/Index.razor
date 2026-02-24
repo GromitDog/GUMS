@@ -205,6 +205,36 @@
             </div>
         </div>
 
+        <!-- Annual Budget widget (only shown if budget items exist) -->
+        @if (_budgetSummary != null)
+        {
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="mb-1"><i class="bi bi-calculator"></i> Annual Budget</h5>
+                            <div class="text-muted small mb-2">@_budgetSummary.YearStart.ToString("d MMM yyyy") – @_budgetSummary.YearEnd.ToString("d MMM yyyy")</div>
+                            <div>Budgeted spend: <strong>£@_budgetSummary.TotalAnnualCost.ToString("N2")</strong></div>
+                            @if (_budgetSummary.ActualComparison.Any())
+                            {
+                                <div>Actual spend: <strong>£@_budgetSummary.ActualComparison.Sum(l => l.Actual).ToString("N2")</strong></div>
+                            }
+                        </div>
+                        <div class="text-end">
+                            <a href="/Accounts/Budget" class="btn btn-sm btn-outline-primary mb-2">View Budget</a>
+                            @if (_budgetSummary.SuggestedTermlySubs > 0)
+                            {
+                                <div class="text-muted small">Suggested subs</div>
+                                <div class="fw-bold fs-5" style="color: var(--gg-dark-navy);">
+                                    £@_budgetSummary.SuggestedTermlySubs.ToString("N2")/term
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
         <!-- Quick Actions -->
         @if (_dashboardStats.CashOnHand > 0 || _dashboardStats.ChequesPending > 0)
         {

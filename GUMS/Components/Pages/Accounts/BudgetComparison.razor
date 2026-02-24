@@ -48,7 +48,7 @@
                 <div class="card h-100">
                     <div class="card-body text-center">
                         <h6 class="text-muted">Budgeted (Mid)</h6>
-                        <h2 class="text-primary">@_comparison.TotalBudgeted.ToString("C")</h2>
+                        <h2 style="color: var(--gg-primary-blue);">@_comparison.TotalBudgeted.ToString("C")</h2>
                     </div>
                 </div>
             </div>
@@ -61,7 +61,7 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card h-100 @(_comparison.TotalVariance >= 0 ? "border-success" : "border-danger")">
+                <div class="card h-100" style="border-color: @(_comparison.TotalVariance >= 0 ? "var(--gg-success)" : "var(--gg-error)") !important;">
                     <div class="card-body text-center">
                         <h6 class="text-muted">Variance</h6>
                         <h2 class="@(_comparison.TotalVariance >= 0 ? "text-success" : "text-danger")">
@@ -113,7 +113,7 @@
                                 }
                             </tbody>
                             <tfoot>
-                                <tr class="table-light fw-bold">
+                                <tr class="fw-bold" style="border-top: 2px solid var(--gg-dark-navy);">
                                     <td>Total</td>
                                     <td class="text-end">@_comparison.TotalBudgeted.ToString("C")</td>
                                     <td class="text-end">@_comparison.TotalActual.ToString("C")</td>

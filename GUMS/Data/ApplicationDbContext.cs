@@ -29,6 +29,8 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     public DbSet<ExpenseClaim> ExpenseClaims { get; set; }
     public DbSet<EventBudget> EventBudgets { get; set; }
     public DbSet<EventBudgetItem> EventBudgetItems { get; set; }
+    public DbSet<UnitBudget> UnitBudgets { get; set; }
+    public DbSet<UnitBudgetItem> UnitBudgetItems { get; set; }
 
     // Programme management DbSets
     public DbSet<BadgeDefinition> BadgeDefinitions { get; set; }
@@ -412,6 +414,33 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
                 .WithMany()
                 .HasForeignKey(i => i.ExpenseAccountId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // UnitBudget configuration
+        modelBuilder.Entity<UnitBudget>(entity =>
+        {
+            entity.HasKey(ub => ub.Id);
+            entity.HasIndex(ub => ub.FinancialYearEnd).IsUnique();
+
+            entity.HasMany(ub => ub.Items)
+                .WithOne(i => i.UnitBudget)
+                .HasForeignKey(i => i.UnitBudgetId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // UnitBudgetItem configuration
+        modelBuilder.Entity<UnitBudgetItem>(entity =>
+        {
+            entity.HasKey(i => i.Id);
+            entity.HasIndex(i => i.UnitBudgetId);
+
+            entity.Property(i => i.Amount).HasPrecision(18, 2);
+            entity.Property(i => i.Description).IsRequired();
+
+            entity.HasOne(i => i.ExpenseAccount)
+                .WithMany()
+                .HasForeignKey(i => i.ExpenseAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // BankReconciliation configuration
