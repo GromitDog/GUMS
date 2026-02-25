@@ -184,7 +184,16 @@
                             <td>
                                 @if (row.IsNonStandardDay)
                                 {
-                                    <strong>@row.Date.ToString("ddd") @FormatDate(row.Date)</strong>
+                                    <strong>
+                                        @if (row.EndDate.HasValue)
+                                        {
+                                            @FormatDateRange(row.Date, row.EndDate.Value)
+                                        }
+                                        else
+                                        {
+                                            @($"{row.Date.ToString("ddd")} {FormatDate(row.Date)}")
+                                        }
+                                    </strong>
                                 }
                                 else
                                 {

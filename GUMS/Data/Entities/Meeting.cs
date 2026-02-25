@@ -25,6 +25,16 @@ public class Meeting
 
     public string? Description { get; set; }
 
+    /// <summary>
+    /// Notes for the printed programme visible to parents/girls (e.g. "wear old clothes").
+    /// </summary>
+    public string? ProgrammeNotes { get; set; }
+
+    /// <summary>
+    /// Internal notes for leaders only (e.g. "no hall", "adult won't be present").
+    /// </summary>
+    public string? LeaderNotes { get; set; }
+
     [Required]
     [MaxLength(200)]
     public string LocationName { get; set; } = string.Empty;

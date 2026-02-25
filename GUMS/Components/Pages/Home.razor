@@ -226,13 +226,13 @@
 
         <!-- Accounts Card -->
         <div class="col-md-4">
-            <div class="card @(_reconciliationOverdue ? "border-danger" : "")">
+            <div class="card @(_reconciliationOverdue ? "border-warning" : "")">
                 <div class="card-body">
                     <h5 class="card-title">
                         Accounts
                         @if (_reconciliationOverdue)
                         {
-                            <span class="badge bg-danger ms-2">Action needed</span>
+                            <span class="badge bg-warning ms-2">Action needed</span>
                         }
                     </h5>
                     @if (_isLoading)
@@ -251,7 +251,7 @@
                             </p>
                             @if (_lastReconciliationDate.HasValue)
                             {
-                                <p class="card-text mb-1 @(_reconciliationOverdue ? "text-danger" : "")">
+                                <p class="card-text mb-1 @(_reconciliationOverdue ? "text-warning" : "")">
                                     @if (_reconciliationOverdue)
                                     {
                                         <i class="bi bi-exclamation-triangle"></i>
@@ -261,12 +261,12 @@
                             }
                             else
                             {
-                                <p class="card-text mb-1 text-danger">
+                                <p class="card-text mb-1 text-warning">
                                     <i class="bi bi-exclamation-triangle"></i> Never reconciled
                                 </p>
                             }
                         </div>
-                        <a href="/Accounts" class="btn @(_reconciliationOverdue ? "btn-danger" : "btn-primary")">
+                        <a href="/Accounts" class="btn @(_reconciliationOverdue ? "btn-warning" : "btn-primary")">
                             @if (_reconciliationOverdue)
                             {
                                 <span>Reconcile Now</span>

@@ -131,6 +131,24 @@
                                 }
                             </div>
 
+                            @if (!string.IsNullOrEmpty(meeting.LeaderNotes))
+                            {
+                                <div class="col-md-12">
+                                    <div class="alert mb-0 py-2" style="background-color: #fff8e1; border-color: #ffc107; border-left: 4px solid #ffc107;">
+                                        <strong><i class="bi bi-exclamation-circle me-1" style="color: #d97706;"></i>Leader Notes</strong>
+                                        <p class="mb-0 mt-1">@meeting.LeaderNotes</p>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(meeting.ProgrammeNotes))
+                            {
+                                <div class="col-md-12">
+                                    <h6 class="text-muted mb-2"><i class="bi bi-printer me-1"></i>Programme Notes</h6>
+                                    <p class="mb-0">@meeting.ProgrammeNotes</p>
+                                </div>
+                            }
+
                             @if (!string.IsNullOrEmpty(meeting.Description))
                             {
                                 <div class="col-md-12">

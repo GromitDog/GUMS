@@ -83,7 +83,19 @@
 
                             <div class="col-md-12">
                                 <label class="form-label">Description (Optional)</label>
-                                <InputTextArea class="form-control" @bind-Value="_meeting.Description" rows="3" placeholder="Any additional notes about this meeting" />
+                                <InputTextArea class="form-control" @bind-Value="_meeting.Description" rows="3" placeholder="Planning notes (internal use only)" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Programme Notes (Optional)</label>
+                                <InputTextArea class="form-control" @bind-Value="_meeting.ProgrammeNotes" rows="2" placeholder="e.g. wear old clothes, bring a toilet roll tube" />
+                                <div class="form-text">Appears on the printed programme.</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Leader Notes (Optional)</label>
+                                <InputTextArea class="form-control" @bind-Value="_meeting.LeaderNotes" rows="2" placeholder="e.g. no hall, adult won't be present" />
+                                <div class="form-text">Internal — not shown to parents or girls.</div>
                             </div>
                         </div>
 

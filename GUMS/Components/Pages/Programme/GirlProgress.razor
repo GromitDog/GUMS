@@ -29,240 +29,433 @@
     }
     else
     {
+        <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h2>@(_progress.Name ?? MembershipNumber)</h2>
                 <p class="text-muted mb-0">
                     @if (_progress.Section.HasValue)
                     {
-                        <span class="badge bg-info">@_progress.Section</span>
+                        <span class="badge" style="background-color: var(--gg-primary-blue); color: white;">@_progress.Section</span>
                     }
                     <span class="ms-2">@MembershipNumber</span>
                 </p>
             </div>
         </div>
 
-        <!-- Award Summary -->
+        <!-- Journey to Gold -->
         <div class="card mb-4">
+            <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
+                <h5 class="mb-0" style="color: white;"><i class="bi bi-trophy"></i> Journey to Gold</h5>
+            </div>
             <div class="card-body">
-                <div class="d-flex justify-content-around text-center">
-                    <div>
-                        <h3 class="mb-0">@_progress.Awards.ThemeAwardsEarned / 6</h3>
-                        <small class="text-muted">Theme Awards</small>
+                <div class="row g-2 mb-3">
+                    <div class="col-4">
+                        <div class="text-center py-3 rounded"
+                             style="background-color: @(_progress.Awards.BronzeEarned ? "#CD7F32" : "#f0f0f0");
+                                    color: @(_progress.Awards.BronzeEarned ? "white" : "#888");
+                                    border: 2px solid @(_progress.Awards.BronzeEarned ? "#CD7F32" : "#dee2e6");">
+                            <i class="bi @(_progress.Awards.BronzeEarned ? "bi-award-fill" : "bi-award")" style="font-size: 1.5rem;"></i>
+                            <div class="fw-bold mt-1">Bronze</div>
+                            <small>@(_progress.Awards.BronzeEarned ? "Earned ✓" : "2 theme awards")</small>
+                        </div>
                     </div>
-                    <div>
-                        <h3 class="mb-0 @(_progress.Awards.BronzeEarned ? "text-warning" : "text-muted")">
-                            @(_progress.Awards.BronzeEarned ? "Earned" : "—")
-                        </h3>
-                        <small class="text-muted">Bronze</small>
+                    <div class="col-4">
+                        <div class="text-center py-3 rounded"
+                             style="background-color: @(_progress.Awards.SilverEarned ? "#A0A0A0" : "#f0f0f0");
+                                    color: @(_progress.Awards.SilverEarned ? "white" : "#888");
+                                    border: 2px solid @(_progress.Awards.SilverEarned ? "#A0A0A0" : "#dee2e6");">
+                            <i class="bi @(_progress.Awards.SilverEarned ? "bi-award-fill" : "bi-award")" style="font-size: 1.5rem;"></i>
+                            <div class="fw-bold mt-1">Silver</div>
+                            <small>@(_progress.Awards.SilverEarned ? "Earned ✓" : "4 theme awards")</small>
+                        </div>
                     </div>
-                    <div>
-                        <h3 class="mb-0 @(_progress.Awards.SilverEarned ? "text-secondary" : "text-muted")">
-                            @(_progress.Awards.SilverEarned ? "Earned" : "—")
-                        </h3>
-                        <small class="text-muted">Silver</small>
-                    </div>
-                    <div>
-                        <h3 class="mb-0 @(_progress.Awards.GoldEarned ? "text-warning" : "text-muted")">
-                            @(_progress.Awards.GoldEarned ? "Earned" : "—")
-                        </h3>
-                        <small class="text-muted">Gold</small>
+                    <div class="col-4">
+                        <div class="text-center py-3 rounded"
+                             style="background-color: @(_progress.Awards.GoldEarned ? "#DAA520" : "#f0f0f0");
+                                    color: @(_progress.Awards.GoldEarned ? "white" : "#888");
+                                    border: 2px solid @(_progress.Awards.GoldEarned ? "#DAA520" : "#dee2e6");">
+                            <i class="bi @(_progress.Awards.GoldEarned ? "bi-award-fill" : "bi-award")" style="font-size: 1.5rem;"></i>
+                            <div class="fw-bold mt-1">Gold</div>
+                            <small>@(_progress.Awards.GoldEarned ? "Earned ✓" : "6 themes + challenge")</small>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Theme Progress Cards -->
+        <!-- Theme Overview Pips -->
+        <div class="d-flex gap-2 flex-wrap mb-4">
+            @foreach (var theme in _progress.ThemeProgress)
+            {
+                <div class="d-flex flex-column align-items-center px-3 py-2"
+                     style="@GetThemePipStyle(theme)">
+                    <i class="bi @GetThemePipIcon(theme)" style="font-size: 1.1rem;"></i>
+                    <span style="font-size: 0.7rem; font-weight: 600; margin-top: 3px; white-space: nowrap;">@theme.ThemeDisplayName</span>
+                </div>
+            }
+        </div>
+
+        <!-- Nearly there -->
+        @if (_nearCompleteBadges.Any() || _nearCompleteUmaThemes.Any())
+        {
+            <div class="card mb-4" style="border-color: #ffc107;">
+                <div class="card-header d-flex align-items-center gap-2" style="background-color: #fff8e1; border-color: #ffc107;">
+                    <i class="bi bi-lightning-charge-fill" style="color: #d97706;"></i>
+                    <h6 class="mb-0">Nearly there</h6>
+                </div>
+                <div class="card-body py-2 px-3">
+                    @foreach (var item in _nearCompleteBadges)
+                    {
+                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom"
+                             role="button" style="cursor: pointer;"
+                             @onclick="() => OpenModal(item.ThemeEnum)">
+                            <span>
+                                <i class="bi bi-patch-check me-1 text-muted"></i>
+                                <strong>@item.BadgeName</strong>
+                                <span class="text-muted ms-1 small">(@item.ThemeName · @(item.IsInterest ? "Interest Badge" : "Skills Builder"))</span>
+                            </span>
+                            <span class="badge ms-2" style="background-color: var(--gg-dark-navy);">@item.Completed/@item.Required clauses</span>
+                        </div>
+                    }
+                    @foreach (var item in _nearCompleteUmaThemes)
+                    {
+                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom"
+                             role="button" style="cursor: pointer;"
+                             @onclick="() => OpenModal(item.ThemeEnum)">
+                            <span>
+                                <i class="bi bi-clock me-1 text-muted"></i>
+                                <strong>@item.ThemeName</strong>
+                                <span class="text-muted ms-1 small">UMA minutes</span>
+                            </span>
+                            <span class="badge ms-2" style="background-color: var(--gg-dark-navy);">@item.MinutesCompleted/@item.MinutesRequired min</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Theme Cards — always open, compact -->
         <div class="row">
             @foreach (var theme in _progress.ThemeProgress)
             {
+                var startedSkills = theme.SkillsBuilders.Where(b => b.ClausesCompleted > 0).ToList();
+                var startedInterest = theme.InterestBadges.Where(b => b.ClausesCompleted > 0).ToList();
                 <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card h-100 @(theme.ThemeAwardEarned ? "border-success" : "")">
-                        <div class="card-header text-white" style="background-color: @Badges.GetThemeColor(theme.Theme);">
+                    <div class="card h-100">
+                        <div class="card-header"
+                             style="background-color: @Badges.GetThemeColor(theme.Theme);">
                             <div class="d-flex justify-content-between align-items-center">
-                                <strong>@theme.ThemeDisplayName</strong>
-                                @if (theme.ThemeAwardEarned)
-                                {
-                                    <span class="badge bg-light text-success">Theme Award Earned</span>
-                                }
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <!-- Skills Builder -->
-                            <h6 class="mb-2">
-                                Skills Builders
-                                @if (theme.HasCompletedSkillsBuilder)
-                                {
-                                    <i class="bi bi-check-circle-fill text-success"></i>
-                                }
-                            </h6>
-                            @if (theme.SkillsBuilders.Any())
-                            {
-                                @foreach (var badge in theme.SkillsBuilders)
-                                {
-                                    <div class="mb-1">
-                                        <div class="d-flex justify-content-between align-items-center"
-                                             role="button" @onclick="() => ToggleBadgeExpanded(badge.BadgeDefinitionId)">
-                                            <small>
-                                                <i class="bi @(IsBadgeExpanded(badge.BadgeDefinitionId) ? "bi-chevron-down" : "bi-chevron-right") me-1"></i>
-                                                @badge.BadgeName
-                                            </small>
-                                            <small class="@(badge.IsComplete ? "text-success fw-bold" : "text-muted")">
-                                                @badge.ClausesCompleted/@badge.RequiredCompletions
-                                            </small>
-                                        </div>
-                                        <div class="progress" style="height: 6px;">
-                                            <div class="progress-bar @(badge.IsComplete ? "bg-success" : "bg-primary")"
-                                                 style="width: @(badge.RequiredCompletions > 0 ? Math.Min(100, badge.ClausesCompleted * 100 / badge.RequiredCompletions) : 0)%"></div>
-                                        </div>
-                                        @if (IsBadgeExpanded(badge.BadgeDefinitionId) && badge.Clauses.Any())
-                                        {
-                                            <div class="ms-3 mt-1">
-                                                @foreach (var clause in badge.Clauses)
-                                                {
-                                                    var clauseId = clause.BadgeClauseId;
-                                                    var isCompleted = clause.Completed;
-                                                    <div class="form-check form-check-sm">
-                                                        <input class="form-check-input" type="checkbox"
-                                                               checked="@isCompleted"
-                                                               disabled="@_isSaving"
-                                                               @onchange="() => ToggleClauseCompletion(clauseId, !isCompleted)"
-                                                               id="clause-@clauseId" />
-                                                        <label class="form-check-label small" for="clause-@clauseId">
-                                                            @clause.Name
-                                                        </label>
-                                                    </div>
-                                                }
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                            }
-                            else
-                            {
-                                <small class="text-muted">No skills builders for this theme</small>
-                            }
-
-                            <hr class="my-2" />
-
-                            <!-- Interest Badges -->
-                            <h6 class="mb-2">
-                                Interest Badges
-                                @if (theme.HasCompletedInterestBadge)
-                                {
-                                    <i class="bi bi-check-circle-fill text-success"></i>
-                                }
-                            </h6>
-                            @if (theme.InterestBadges.Any())
-                            {
-                                @foreach (var badge in theme.InterestBadges)
-                                {
-                                    <div class="mb-1">
-                                        <div class="d-flex justify-content-between align-items-center"
-                                             role="button" @onclick="() => ToggleBadgeExpanded(badge.BadgeDefinitionId)">
-                                            <small>
-                                                <i class="bi @(IsBadgeExpanded(badge.BadgeDefinitionId) ? "bi-chevron-down" : "bi-chevron-right") me-1"></i>
-                                                @badge.BadgeName
-                                            </small>
-                                            <small class="@(badge.IsComplete ? "text-success fw-bold" : "text-muted")">
-                                                @badge.ClausesCompleted/@badge.RequiredCompletions
-                                            </small>
-                                        </div>
-                                        <div class="progress" style="height: 6px;">
-                                            <div class="progress-bar @(badge.IsComplete ? "bg-success" : "bg-info")"
-                                                 style="width: @(badge.RequiredCompletions > 0 ? Math.Min(100, badge.ClausesCompleted * 100 / badge.RequiredCompletions) : 0)%"></div>
-                                        </div>
-                                        @if (IsBadgeExpanded(badge.BadgeDefinitionId) && badge.Clauses.Any())
-                                        {
-                                            <div class="ms-3 mt-1">
-                                                @foreach (var clause in badge.Clauses)
-                                                {
-                                                    var clauseId = clause.BadgeClauseId;
-                                                    var isCompleted = clause.Completed;
-                                                    <div class="form-check form-check-sm">
-                                                        <input class="form-check-input" type="checkbox"
-                                                               checked="@isCompleted"
-                                                               disabled="@_isSaving"
-                                                               @onchange="() => ToggleClauseCompletion(clauseId, !isCompleted)"
-                                                               id="clause-@clauseId" />
-                                                        <label class="form-check-label small" for="clause-@clauseId">
-                                                            @clause.Name
-                                                        </label>
-                                                    </div>
-                                                }
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                            }
-                            else
-                            {
-                                <small class="text-muted">No interest badges for this theme</small>
-                            }
-
-                            <hr class="my-2" />
-
-                            <!-- UMA Hours -->
-                            <h6 class="mb-2">
-                                UMA Hours
-                                @if (theme.HasRequiredUmaMinutes)
-                                {
-                                    <i class="bi bi-check-circle-fill text-success"></i>
-                                }
-                            </h6>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small>@theme.UmaMinutesCompleted / @theme.UmaMinutesRequired minutes</small>
-                            </div>
-                            <div class="progress" style="height: 6px;">
-                                <div class="progress-bar @(theme.HasRequiredUmaMinutes ? "bg-success" : "bg-warning")"
-                                     style="width: @(theme.UmaMinutesRequired > 0 ? Math.Min(100, theme.UmaMinutesCompleted * 100 / theme.UmaMinutesRequired) : 0)%"></div>
-                            </div>
-                            @if (_umasByTheme.TryGetValue(theme.Theme, out var umas) && umas.Any())
-                            {
-                                <div class="mt-2">
-                                    @foreach (var uma in umas)
+                                <strong style="color: white;">@theme.ThemeDisplayName</strong>
+                                <div class="d-flex align-items-center gap-1">
+                                    <i class="bi @(theme.HasCompletedSkillsBuilder ? "bi-check-circle-fill" : "bi-circle")"
+                                       style="color: rgba(255,255,255,0.85);" title="Skills Builder"></i>
+                                    <i class="bi @(theme.HasCompletedInterestBadge ? "bi-check-circle-fill" : "bi-circle")"
+                                       style="color: rgba(255,255,255,0.85);" title="Interest Badge"></i>
+                                    <i class="bi @(theme.HasRequiredUmaMinutes ? "bi-check-circle-fill" : "bi-circle")"
+                                       style="color: rgba(255,255,255,0.85);" title="UMA minutes"></i>
+                                    @if (theme.ThemeAwardEarned)
                                     {
-                                        var umaId = uma.Id;
-                                        var isUmaCompleted = _completedUmaIds.Contains(umaId);
-                                        var isStandalone = _standaloneCompletedUmaIds.Contains(umaId);
-                                        var isMeetingBased = isUmaCompleted && !isStandalone;
-                                        <div class="form-check form-check-sm">
-                                            <input class="form-check-input" type="checkbox"
-                                                   checked="@isUmaCompleted"
-                                                   disabled="@(_isSaving || isMeetingBased)"
-                                                   @onchange="() => ToggleUmaCompletion(umaId, !isUmaCompleted)"
-                                                   id="uma-@umaId" />
-                                            <label class="form-check-label small @(isMeetingBased ? "text-muted" : "")" for="uma-@umaId">
-                                                @uma.Name (@uma.Minutes min)
-                                                @if (isMeetingBased)
-                                                {
-                                                    <i class="bi bi-calendar-check" title="Completed at a meeting"></i>
-                                                }
-                                            </label>
-                                        </div>
+                                        <span class="badge bg-white ms-1"
+                                              style="color: @Badges.GetThemeColor(theme.Theme); font-size: 0.65rem;">
+                                            Award ✓
+                                        </span>
                                     }
                                 </div>
-                            }
+                            </div>
+                        </div>
+
+                        <div class="card-body py-2 px-3">
+                            <!-- Skills Builder -->
+                            <div class="mb-2">
+                                <span class="small fw-semibold text-muted text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.05em;">Skills Builder</span>
+                                @if (theme.HasCompletedSkillsBuilder)
+                                {
+                                    <i class="bi bi-check-circle-fill text-success ms-1" style="font-size: 0.75rem;"></i>
+                                }
+                                @if (startedSkills.Any())
+                                {
+                                    @foreach (var badge in startedSkills)
+                                    {
+                                        <div class="mt-1">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small>
+                                                    @if (badge.IsComplete)
+                                                    {
+                                                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                                                    }
+                                                    @badge.BadgeName
+                                                </small>
+                                                <small class="@(badge.IsComplete ? "text-success fw-bold" : "text-muted")">@badge.ClausesCompleted/@badge.RequiredCompletions</small>
+                                            </div>
+                                            <div class="progress" style="height: 4px;">
+                                                <div class="progress-bar @(badge.IsComplete ? "bg-success" : "")"
+                                                     style="width: @(badge.RequiredCompletions > 0 ? Math.Min(100, badge.ClausesCompleted * 100 / badge.RequiredCompletions) : 0)%;
+                                                            @(badge.IsComplete ? "" : "background-color: var(--gg-primary-blue);")"></div>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="text-muted mt-1" style="font-size: 0.75rem;">Not started</div>
+                                }
+                            </div>
+
+                            <hr class="my-2" />
+
+                            <!-- Interest Badge -->
+                            <div class="mb-2">
+                                <span class="small fw-semibold text-muted text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.05em;">Interest Badge</span>
+                                @if (theme.HasCompletedInterestBadge)
+                                {
+                                    <i class="bi bi-check-circle-fill text-success ms-1" style="font-size: 0.75rem;"></i>
+                                }
+                                @if (startedInterest.Any())
+                                {
+                                    @foreach (var badge in startedInterest)
+                                    {
+                                        <div class="mt-1">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small>
+                                                    @if (badge.IsComplete)
+                                                    {
+                                                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                                                    }
+                                                    @badge.BadgeName
+                                                </small>
+                                                <small class="@(badge.IsComplete ? "text-success fw-bold" : "text-muted")">@badge.ClausesCompleted/@badge.RequiredCompletions</small>
+                                            </div>
+                                            <div class="progress" style="height: 4px;">
+                                                <div class="progress-bar @(badge.IsComplete ? "bg-success" : "")"
+                                                     style="width: @(badge.RequiredCompletions > 0 ? Math.Min(100, badge.ClausesCompleted * 100 / badge.RequiredCompletions) : 0)%;
+                                                            @(badge.IsComplete ? "" : "background-color: var(--gg-primary-blue);")"></div>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="text-muted mt-1" style="font-size: 0.75rem;">Not started</div>
+                                }
+                            </div>
+
+                            <hr class="my-2" />
+
+                            <!-- UMA Hours — total only -->
+                            <div>
+                                <span class="small fw-semibold text-muted text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.05em;">UMA Hours</span>
+                                @if (theme.HasRequiredUmaMinutes)
+                                {
+                                    <i class="bi bi-check-circle-fill text-success ms-1" style="font-size: 0.75rem;"></i>
+                                }
+                                <div class="d-flex justify-content-between align-items-center mt-1">
+                                    <small class="@(theme.HasRequiredUmaMinutes ? "text-success fw-bold" : "text-muted")">
+                                        @theme.UmaMinutesCompleted / @theme.UmaMinutesRequired min
+                                    </small>
+                                </div>
+                                <div class="progress" style="height: 4px;">
+                                    <div class="progress-bar @(theme.HasRequiredUmaMinutes ? "bg-success" : "")"
+                                         style="width: @(theme.UmaMinutesRequired > 0 ? Math.Min(100, theme.UmaMinutesCompleted * 100 / theme.UmaMinutesRequired) : 0)%;
+                                                @(theme.HasRequiredUmaMinutes ? "" : "background-color: #ffc107;")"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-footer py-1 px-3" style="background: transparent;">
+                            <button class="btn btn-sm btn-link p-0 text-muted text-decoration-none"
+                                    @onclick="() => OpenModal(theme.Theme)">
+                                <i class="bi bi-pencil-square me-1"></i><small>Record manual completions</small>
+                            </button>
                         </div>
                     </div>
                 </div>
             }
         </div>
 
-        <!-- Gold Challenge -->
-        <div class="card mt-2">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                    <strong>Gold Challenge</strong>
-                    <p class="text-muted mb-0">Required for Gold Award (in addition to 6 Theme Awards)</p>
-                </div>
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" role="switch"
-                           checked="@_progress.Awards.GoldChallengeComplete"
-                           @onchange="ToggleGoldChallenge"
-                           style="width: 3em; height: 1.5em;" />
+        <!-- Gold Challenge — only shown once 6 theme awards are earned -->
+        @if (_progress.Awards.ThemeAwardsEarned >= 6)
+        {
+            <div class="card mt-2" style="border-color: @(_progress.Awards.GoldChallengeComplete ? "var(--gg-success)" : "#ffc107");">
+                <div class="card-body d-flex justify-content-between align-items-center"
+                     style="background-color: @(_progress.Awards.GoldChallengeComplete ? "rgba(38,176,80,0.08)" : "#fff8e1");">
+                    <div>
+                        <strong>
+                            <i class="bi bi-star-fill me-2" style="color: #d97706;"></i>Gold Challenge
+                        </strong>
+                        <p class="text-muted small mb-0">
+                            @(_progress.Awards.GoldChallengeComplete
+                                ? "Completed — Gold Award earned!"
+                                : "Complete the Gold Challenge to earn the Gold Award.")
+                        </p>
+                    </div>
+                    <div class="form-check form-switch ms-3">
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               checked="@_progress.Awards.GoldChallengeComplete"
+                               @onchange="ToggleGoldChallenge"
+                               style="width: 3em; height: 1.5em;" />
+                    </div>
                 </div>
             </div>
-        </div>
+        }
     }
 </div>
+
+<!-- Manual Completions Modal -->
+@if (_modalTheme.HasValue && ModalThemeProgress is { } modalTheme)
+{
+    <!-- Backdrop -->
+    <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1040;"
+         @onclick="CloseModal"></div>
+
+    <!-- Modal panel -->
+    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                z-index: 1050; width: min(640px, 95vw); max-height: 85vh;
+                overflow-y: auto; border-radius: 8px;"
+         class="shadow-lg"
+         @onclick:stopPropagation="true">
+        <div class="card mb-0">
+            <div class="card-header d-flex justify-content-between align-items-center"
+                 style="background-color: @Badges.GetThemeColor(modalTheme.Theme); position: sticky; top: 0; z-index: 1;">
+                <h5 class="mb-0" style="color: white;">@modalTheme.ThemeDisplayName — Manual Completions</h5>
+                <button class="btn-close btn-close-white" @onclick="CloseModal"></button>
+            </div>
+
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Tick activities completed outside of meetings — e.g. at home or transferred from another unit.
+                    Activities earned at meetings are shown greyed out and cannot be changed here.
+                </p>
+
+                <!-- Skills Builders -->
+                @if (modalTheme.SkillsBuilders.Any())
+                {
+                    <h6 class="mb-2">Skills Builders</h6>
+                    @foreach (var badge in modalTheme.SkillsBuilders)
+                    {
+                        var expanded = IsBadgeExpanded(badge.BadgeDefinitionId);
+                        <div class="mb-1 border rounded px-2 py-1">
+                            <div class="d-flex justify-content-between align-items-center"
+                                 role="button" style="cursor: pointer;"
+                                 @onclick="() => ToggleBadgeExpanded(badge.BadgeDefinitionId)">
+                                <span class="small">
+                                    <i class="bi @(expanded ? "bi-chevron-down" : "bi-chevron-right") me-1 text-muted"></i>
+                                    @if (badge.IsComplete) { <i class="bi bi-check-circle-fill text-success me-1"></i> }
+                                    @badge.BadgeName
+                                </span>
+                                <small class="@(badge.IsComplete ? "text-success fw-bold" : "text-muted") ms-2">@badge.ClausesCompleted/@badge.RequiredCompletions</small>
+                            </div>
+                            <div class="progress my-1" style="height: 3px;">
+                                <div class="progress-bar @(badge.IsComplete ? "bg-success" : "")"
+                                     style="width: @(badge.RequiredCompletions > 0 ? Math.Min(100, badge.ClausesCompleted * 100 / badge.RequiredCompletions) : 0)%;
+                                            @(badge.IsComplete ? "" : "background-color: var(--gg-primary-blue);")"></div>
+                            </div>
+                            @if (expanded)
+                            {
+                                <div class="pt-1 pb-1">
+                                    @foreach (var clause in badge.Clauses)
+                                    {
+                                        var clauseId = clause.BadgeClauseId;
+                                        var isCompleted = clause.Completed;
+                                        <div class="form-check form-check-sm ms-2">
+                                            <input class="form-check-input" type="checkbox"
+                                                   checked="@isCompleted"
+                                                   disabled="@_isSaving"
+                                                   @onchange="() => ToggleClauseCompletion(clauseId, !isCompleted)"
+                                                   id="m-clause-@clauseId" />
+                                            <label class="form-check-label small" for="m-clause-@clauseId">@clause.Name</label>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+
+                <!-- Interest Badges -->
+                @if (modalTheme.InterestBadges.Any())
+                {
+                    <hr class="my-2" />
+                    <h6 class="mb-2">Interest Badges</h6>
+                    @foreach (var badge in modalTheme.InterestBadges)
+                    {
+                        var expanded = IsBadgeExpanded(badge.BadgeDefinitionId);
+                        <div class="mb-1 border rounded px-2 py-1">
+                            <div class="d-flex justify-content-between align-items-center"
+                                 role="button" style="cursor: pointer;"
+                                 @onclick="() => ToggleBadgeExpanded(badge.BadgeDefinitionId)">
+                                <span class="small">
+                                    <i class="bi @(expanded ? "bi-chevron-down" : "bi-chevron-right") me-1 text-muted"></i>
+                                    @if (badge.IsComplete) { <i class="bi bi-check-circle-fill text-success me-1"></i> }
+                                    @badge.BadgeName
+                                </span>
+                                <small class="@(badge.IsComplete ? "text-success fw-bold" : "text-muted") ms-2">@badge.ClausesCompleted/@badge.RequiredCompletions</small>
+                            </div>
+                            <div class="progress my-1" style="height: 3px;">
+                                <div class="progress-bar @(badge.IsComplete ? "bg-success" : "")"
+                                     style="width: @(badge.RequiredCompletions > 0 ? Math.Min(100, badge.ClausesCompleted * 100 / badge.RequiredCompletions) : 0)%;
+                                            @(badge.IsComplete ? "" : "background-color: var(--gg-primary-blue);")"></div>
+                            </div>
+                            @if (expanded)
+                            {
+                                <div class="pt-1 pb-1">
+                                    @foreach (var clause in badge.Clauses)
+                                    {
+                                        var clauseId = clause.BadgeClauseId;
+                                        var isCompleted = clause.Completed;
+                                        <div class="form-check form-check-sm ms-2">
+                                            <input class="form-check-input" type="checkbox"
+                                                   checked="@isCompleted"
+                                                   disabled="@_isSaving"
+                                                   @onchange="() => ToggleClauseCompletion(clauseId, !isCompleted)"
+                                                   id="m-clause-@clauseId" />
+                                            <label class="form-check-label small" for="m-clause-@clauseId">@clause.Name</label>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+
+                <!-- UMA Minutes -->
+                @if (_umasByTheme.TryGetValue(modalTheme.Theme, out var umas) && umas.Any())
+                {
+                    <hr class="my-2" />
+                    <h6 class="mb-1">UMA Activities</h6>
+                    <p class="text-muted small mb-2">Total: @modalTheme.UmaMinutesCompleted / @modalTheme.UmaMinutesRequired min</p>
+                    @foreach (var uma in umas)
+                    {
+                        var umaId = uma.Id;
+                        var isUmaCompleted = _completedUmaIds.Contains(umaId);
+                        var isStandalone = _standaloneCompletedUmaIds.Contains(umaId);
+                        var isMeetingBased = isUmaCompleted && !isStandalone;
+                        <div class="form-check form-check-sm">
+                            <input class="form-check-input" type="checkbox"
+                                   checked="@isUmaCompleted"
+                                   disabled="@(_isSaving || isMeetingBased)"
+                                   @onchange="() => ToggleUmaCompletion(umaId, !isUmaCompleted)"
+                                   id="m-uma-@umaId" />
+                            <label class="form-check-label small @(isMeetingBased ? "text-muted" : "")" for="m-uma-@umaId">
+                                @uma.Name (@uma.Minutes min)
+                                @if (isMeetingBased)
+                                {
+                                    <i class="bi bi-calendar-check ms-1" title="Completed at a meeting"></i>
+                                }
+                                @if (isStandalone && isUmaCompleted)
+                                {
+                                    <i class="bi bi-pencil ms-1 text-muted" title="Manually recorded"></i>
+                                }
+                            </label>
+                        </div>
+                    }
+                }
+            </div>
+
+            <div class="card-footer d-flex justify-content-end" style="position: sticky; bottom: 0; background: white;">
+                <button class="btn btn-secondary" @onclick="CloseModal">Done</button>
+            </div>
+        </div>
+    </div>
+}

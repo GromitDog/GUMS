@@ -81,16 +81,16 @@ public partial class Timetable
             {
                 foreach (var m in weekMeetings)
                 {
-                    var isNonStandard = m.Date.DayOfWeek != _config.MeetingDayOfWeek;
+                    var isNonStandard = m.Date.DayOfWeek != _config.MeetingDayOfWeek || m.EndDate.HasValue;
                     _rows.Add(new TimetableRow(
                         m.Date, false, isNonStandard, false, false,
-                        m.Title, BuildOtherDetails(m)));
+                        m.Title, BuildOtherDetails(m), m.EndDate));
                 }
             }
             else
             {
                 _rows.Add(new TimetableRow(current, true, false, false, false,
-                    $"No {sectionName}", string.Empty));
+                    $"No {sectionName}", string.Empty, null));
             }
 
             current = current.AddDays(7);
@@ -101,7 +101,7 @@ public partial class Timetable
         while (postTermSlot.DayOfWeek != _config.MeetingDayOfWeek)
             postTermSlot = postTermSlot.AddDays(1);
         _rows.Add(new TimetableRow(postTermSlot, true, false, true, false,
-            $"No {sectionName}", string.Empty));
+            $"No {sectionName}", string.Empty, null));
 
         // Any meetings in the holiday gap before the next term starts
         var nextTerm = _allTerms
@@ -115,10 +115,10 @@ public partial class Timetable
 
         foreach (var m in holidayMeetings.OrderBy(m => m.Date))
         {
-            var isNonStandard = m.Date.DayOfWeek != _config.MeetingDayOfWeek;
+            var isNonStandard = m.Date.DayOfWeek != _config.MeetingDayOfWeek || m.EndDate.HasValue;
             _rows.Add(new TimetableRow(
                 m.Date, false, isNonStandard, false, false,
-                m.Title, BuildOtherDetails(m)));
+                m.Title, BuildOtherDetails(m), m.EndDate));
         }
 
         // Rule 6: first meeting of next term (diary date)
@@ -130,10 +130,10 @@ public partial class Timetable
 
             if (firstMeeting != null)
             {
-                var isNonStandard = firstMeeting.Date.DayOfWeek != _config.MeetingDayOfWeek;
+                var isNonStandard = firstMeeting.Date.DayOfWeek != _config.MeetingDayOfWeek || firstMeeting.EndDate.HasValue;
                 _rows.Add(new TimetableRow(
                     firstMeeting.Date, false, isNonStandard, false, true,
-                    firstMeeting.Title, "First meeting back"));
+                    firstMeeting.Title, "First meeting back", firstMeeting.EndDate));
             }
             else
             {
@@ -143,7 +143,7 @@ public partial class Timetable
                     firstSlot = firstSlot.AddDays(1);
                 _rows.Add(new TimetableRow(
                     firstSlot, false, false, false, true,
-                    nextTerm.Name, "First meeting back"));
+                    nextTerm.Name, "First meeting back", null));
             }
         }
     }
@@ -165,8 +165,8 @@ public partial class Timetable
         if (locationDiffers)
             parts.Add(m.LocationName);
 
-        if (!string.IsNullOrWhiteSpace(m.Description))
-            parts.Add(m.Description);
+        if (!string.IsNullOrWhiteSpace(m.ProgrammeNotes))
+            parts.Add(m.ProgrammeNotes);
 
         return string.Join(" ", parts);
     }
@@ -177,6 +177,17 @@ public partial class Timetable
         if (h == 0) h = 12;
         var suffix = t.Hour < 12 ? "am" : "pm";
         return t.Minute == 0 ? $"{h}{suffix}" : $"{h}:{t.Minute:00}{suffix}";
+    }
+
+    internal static string FormatDateRange(DateTime start, DateTime end)
+    {
+        var months = new[] { "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                  "Jul", "Aug", "Sept", "Oct", "Nov", "Dec" };
+        var startPart = $"{start.ToString("ddd")} {start.Day}";
+        var endPart   = $"{end.ToString("ddd")} {end.Day} {months[end.Month]}";
+        if (start.Month == end.Month)
+            return $"{startPart} - {endPart}";
+        return $"{startPart} {months[start.Month]} - {endPart}";
     }
 
     internal static string FormatDate(DateTime date)
@@ -203,4 +214,5 @@ public record TimetableRow(
     bool IsPostTerm,
     bool IsNextTerm,
     string Title,
-    string OtherDetails);
+    string OtherDetails,
+    DateTime? EndDate);
