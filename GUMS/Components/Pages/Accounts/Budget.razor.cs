@@ -32,7 +32,7 @@ public partial class Budget
     {
         var config = await ConfigurationService.GetConfigurationAsync();
         _availableYearEnds = GenerateAvailableYearEnds(config);
-        _selectedYearEnd = _availableYearEnds.FirstOrDefault(d => d <= DateTime.Today);
+        _selectedYearEnd = _availableYearEnds.Where(d => d >= DateTime.Today).Min();
 
         _expenseAccounts = await AccountingService.GetExpenseAccountsAsync();
 

@@ -171,19 +171,24 @@ public class BudgetService : IBudgetService
         if (budget == null)
             return null;
 
-        var girlCount = await _context.Persons
-            .CountAsync(p => p.IsActive && !p.IsDataRemoved && p.PersonType == PersonType.Girl);
+        // Use actual attendance rather than estimates
+        var attendees = await _context.Attendances
+            .AsNoTracking()
+            .Where(a => a.MeetingId == meetingId && a.Attended)
+            .Join(_context.Persons,
+                a => a.MembershipNumber,
+                p => p.MembershipNumber,
+                (a, p) => new { p.PersonType })
+            .ToListAsync();
 
-        var adultCount = await _context.Persons
-            .CountAsync(p => p.IsActive && !p.IsDataRemoved && p.PersonType == PersonType.Leader);
+        var girlCount = attendees.Count(a => a.PersonType == PersonType.Girl);
+        var adultCount = attendees.Count(a => a.PersonType == PersonType.Leader);
 
         var actualExpenses = await _context.Expenses
             .AsNoTracking()
             .Include(e => e.ExpenseAccount)
             .Where(e => e.MeetingId == meetingId)
             .ToListAsync();
-
-        var midGirls = (int)Math.Round(girlCount * 0.75m);
 
         var result = new BudgetVsActual
         {
@@ -202,7 +207,7 @@ public class BudgetService : IBudgetService
         foreach (var accountId in allAccountIds)
         {
             var budgetItems = budget.Items.Where(i => i.ExpenseAccountId == accountId).ToList();
-            var budgeted = CalculateScenarioTotal(budgetItems, midGirls, adultCount);
+            var budgeted = CalculateScenarioTotal(budgetItems, girlCount, adultCount);
             var actual = actualExpenses.Where(e => e.ExpenseAccountId == accountId).Sum(e => e.Amount);
             var categoryName = budgetItems.FirstOrDefault()?.ExpenseAccount?.Name
                 ?? actualExpenses.FirstOrDefault(e => e.ExpenseAccountId == accountId)?.ExpenseAccount?.Name
@@ -224,7 +229,7 @@ public class BudgetService : IBudgetService
             result.Lines.Add(new BudgetVsActualLine
             {
                 Category = "Uncategorised",
-                Budgeted = CalculateScenarioTotal(uncategorizedBudgetItems, midGirls, adultCount),
+                Budgeted = CalculateScenarioTotal(uncategorizedBudgetItems, girlCount, adultCount),
                 Actual = 0
             });
         }

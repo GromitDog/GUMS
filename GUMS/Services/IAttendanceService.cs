@@ -175,6 +175,7 @@ public class AttendanceStats
     public int SignedUp { get; set; }
     public int ConsentEmailReceived { get; set; }
     public int ConsentFormReceived { get; set; }
+    public int ConsentDeclined { get; set; }
     public int OutstandingConsent { get; set; }
     public bool HasBeenRecorded { get; set; }
 

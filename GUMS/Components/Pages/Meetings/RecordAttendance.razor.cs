@@ -149,11 +149,15 @@ public partial class RecordAttendance
     private void ToggleConsentEmail(Attendance record, bool received)
     {
         record.ConsentEmailReceived = received;
-        if (received && !record.ConsentEmailDate.HasValue)
+        if (received)
         {
-            record.ConsentEmailDate = DateTime.Today;
+            if (!record.ConsentEmailDate.HasValue)
+                record.ConsentEmailDate = DateTime.Today;
+            // Clearing Declined — they're on the yes path
+            record.ConsentDeclined = false;
+            record.ConsentDeclinedDate = null;
         }
-        else if (!received)
+        else
         {
             record.ConsentEmailDate = null;
         }
@@ -162,13 +166,36 @@ public partial class RecordAttendance
     private void ToggleConsentForm(Attendance record, bool received)
     {
         record.ConsentFormReceived = received;
-        if (received && !record.ConsentFormDate.HasValue)
+        if (received)
         {
-            record.ConsentFormDate = DateTime.Today;
+            if (!record.ConsentFormDate.HasValue)
+                record.ConsentFormDate = DateTime.Today;
+            // Clearing Declined — form received means yes
+            record.ConsentDeclined = false;
+            record.ConsentDeclinedDate = null;
         }
-        else if (!received)
+        else
         {
             record.ConsentFormDate = null;
+        }
+    }
+
+    private void ToggleConsentDeclined(Attendance record, bool declined)
+    {
+        record.ConsentDeclined = declined;
+        if (declined)
+        {
+            if (!record.ConsentDeclinedDate.HasValue)
+                record.ConsentDeclinedDate = DateTime.Today;
+            // Clear yes-path fields — they're not coming
+            record.ConsentEmailReceived = false;
+            record.ConsentEmailDate = null;
+            record.ConsentFormReceived = false;
+            record.ConsentFormDate = null;
+        }
+        else
+        {
+            record.ConsentDeclinedDate = null;
         }
     }
 

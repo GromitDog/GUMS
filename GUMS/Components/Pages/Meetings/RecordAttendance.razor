@@ -76,21 +76,24 @@
                         }
                         @if (requiresConsent)
                         {
+                            var formsIn = girlAttendanceRecords.Count(a => a.ConsentFormReceived);
+                            var declined = girlAttendanceRecords.Count(a => a.ConsentDeclined);
+                            var notResponded = girlAttendanceRecords.Count - formsIn - declined;
                             <div class="d-flex justify-content-around text-center">
                                 <div>
-                                    <h4 class="mb-0 text-primary">@girlAttendanceRecords.Count(a => a.ConsentEmailReceived || a.ConsentFormReceived)</h4>
-                                    <small class="text-muted">Attending</small>
-                                </div>
-                                <div>
-                                    <h4 class="mb-0 text-success">@girlAttendanceRecords.Count(a => a.ConsentFormReceived)</h4>
+                                    <h4 class="mb-0 text-success">@formsIn</h4>
                                     <small class="text-muted">Forms In</small>
                                 </div>
                                 <div>
-                                    <h4 class="mb-0 text-warning">@girlAttendanceRecords.Count(a => a.ConsentEmailReceived && !a.ConsentFormReceived)</h4>
-                                    <small class="text-muted">Forms Outstanding</small>
+                                    <h4 class="mb-0 text-muted">@declined</h4>
+                                    <small class="text-muted">Declined</small>
                                 </div>
                                 <div>
-                                    <h4 class="mb-0 text-muted">@girlAttendanceRecords.Count</h4>
+                                    <h4 class="mb-0 text-warning">@notResponded</h4>
+                                    <small class="text-muted">Not Responded</small>
+                                </div>
+                                <div>
+                                    <h4 class="mb-0">@girlAttendanceRecords.Count</h4>
                                     <small class="text-muted">Total Girls</small>
                                 </div>
                             </div>
@@ -135,8 +138,9 @@
                                     <thead>
                                         <tr>
                                             <th>Member</th>
-                                            <th class="text-center">Email Received</th>
-                                            <th class="text-center">Form Received</th>
+                                            <th class="text-center">Email</th>
+                                            <th class="text-center">Form In</th>
+                                            <th class="text-center">Declined</th>
                                             <th>Status</th>
                                         </tr>
                                     </thead>
@@ -156,18 +160,27 @@
                                                            checked="@record.ConsentFormReceived"
                                                            @onchange="@(e => ToggleConsentForm(record, (bool)(e.Value ?? false)))" />
                                                 </td>
+                                                <td class="text-center">
+                                                    <input type="checkbox" class="form-check-input"
+                                                           checked="@record.ConsentDeclined"
+                                                           @onchange="@(e => ToggleConsentDeclined(record, (bool)(e.Value ?? false)))" />
+                                                </td>
                                                 <td>
                                                     @if (record.ConsentFormReceived)
                                                     {
-                                                        <span class="badge bg-success">Complete</span>
+                                                        <span class="badge bg-success">Consented</span>
+                                                    }
+                                                    else if (record.ConsentDeclined)
+                                                    {
+                                                        <span class="badge bg-secondary">Declined</span>
                                                     }
                                                     else if (record.ConsentEmailReceived)
                                                     {
-                                                        <span class="badge bg-warning">Form Outstanding</span>
+                                                        <span class="badge bg-warning text-dark">Form Outstanding</span>
                                                     }
                                                     else
                                                     {
-                                                        <span class="badge bg-secondary">Not Started</span>
+                                                        <span class="badge bg-light text-dark border">Not Started</span>
                                                     }
                                                 </td>
                                             </tr>
@@ -176,19 +189,28 @@
                                 </table>
                             </div>
 
+                            @{
+                                var allGirlRecords = attendanceRecords.Where(a => memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == PersonType.Girl).ToList();
+                                var consentFormsIn = allGirlRecords.Count(r => r.ConsentFormReceived);
+                                var consentDeclinedCount = allGirlRecords.Count(r => r.ConsentDeclined);
+                                var consentResponded = consentFormsIn + consentDeclinedCount;
+                                var consentToChase = allGirlRecords.Count - consentResponded;
+                            }
                             <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-light rounded">
                                 <div>
-                                    <strong>Summary:</strong>
-                                    @{
-                                        var allGirlRecords = attendanceRecords.Where(a => memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == PersonType.Girl).ToList();
-                                        var consentFormsComplete = allGirlRecords.Count(r => r.ConsentFormReceived);
-                                    }
-                                    <span class="ms-2">@consentFormsComplete/@allGirlRecords.Count forms received</span>
+                                    <strong>@consentResponded / @allGirlRecords.Count responded</strong>
+                                    <span class="text-muted ms-2">(@consentFormsIn consented, @consentDeclinedCount declined)</span>
                                 </div>
-                                @if (allGirlRecords.Count - consentFormsComplete > 0)
+                                @if (consentToChase > 0)
                                 {
-                                    <span class="text-warning">
-                                        <i class="bi bi-exclamation-triangle"></i> @(allGirlRecords.Count - consentFormsComplete) outstanding
+                                    <span class="text-warning fw-semibold">
+                                        <i class="bi bi-exclamation-triangle"></i> @consentToChase still to chase
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-success fw-semibold">
+                                        <i class="bi bi-check-circle"></i> Everyone has responded
                                     </span>
                                 }
                             </div>

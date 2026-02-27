@@ -3,6 +3,7 @@ using System;
 using GUMS.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GUMS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260225212042_AddConsentDeclined")]
+    partial class AddConsentDeclined
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -102,12 +105,6 @@ namespace GUMS.Migrations
 
                     b.Property<bool>("ConsentFormReceived")
                         .HasColumnType("INTEGER");
-
-                    b.Property<bool>("ConsentDeclined")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime?>("ConsentDeclinedDate")
-                        .HasColumnType("TEXT");
 
                     b.Property<int>("MeetingId")
                         .HasColumnType("INTEGER");

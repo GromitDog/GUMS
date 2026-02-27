@@ -27,6 +27,10 @@ public class Attendance
 
     public DateTime? ConsentFormDate { get; set; }
 
+    public bool ConsentDeclined { get; set; } = false;
+
+    public DateTime? ConsentDeclinedDate { get; set; }
+
     public string? Notes { get; set; }
 
     /// <summary>

@@ -101,6 +101,8 @@ public class AttendanceService : IAttendanceService
             existingRecord.ConsentEmailDate = attendance.ConsentEmailDate;
             existingRecord.ConsentFormReceived = attendance.ConsentFormReceived;
             existingRecord.ConsentFormDate = attendance.ConsentFormDate;
+            existingRecord.ConsentDeclined = attendance.ConsentDeclined;
+            existingRecord.ConsentDeclinedDate = attendance.ConsentDeclinedDate;
             existingRecord.Notes = attendance.Notes;
             existingRecord.NightsAway = attendance.NightsAway;
 
@@ -170,6 +172,8 @@ public class AttendanceService : IAttendanceService
                 existing.ConsentEmailDate = record.ConsentEmailDate;
                 existing.ConsentFormReceived = record.ConsentFormReceived;
                 existing.ConsentFormDate = record.ConsentFormDate;
+                existing.ConsentDeclined = record.ConsentDeclined;
+                existing.ConsentDeclinedDate = record.ConsentDeclinedDate;
                 existing.Notes = record.Notes;
                 existing.NightsAway = record.NightsAway;
             }
@@ -388,7 +392,8 @@ public class AttendanceService : IAttendanceService
             SignedUp = records.Count(r => r.SignedUp),
             ConsentEmailReceived = records.Count(r => r.ConsentEmailReceived),
             ConsentFormReceived = records.Count(r => r.ConsentFormReceived),
-            OutstandingConsent = records.Count(r => r.ConsentEmailReceived && !r.ConsentFormReceived),
+            ConsentDeclined = records.Count(r => r.ConsentDeclined),
+            OutstandingConsent = records.Count(r => r.ConsentEmailReceived && !r.ConsentFormReceived && !r.ConsentDeclined),
             HasBeenRecorded = records.Any()
         };
     }

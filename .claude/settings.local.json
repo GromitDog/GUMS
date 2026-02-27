@@ -43,7 +43,11 @@
       "Bash(powershell.exe -Command:*)",
       "Bash(dotnet ef dbcontext script:*)",
       "WebFetch(domain:)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(cd C:\\\\Users\\\\amyjm\\\\RiderProjects\\\\GUMS\\\\GUMS\\\\Data\\\\Entities:*)",
+      "Bash(cd \"C:\\\\Users\\\\amyjm\\\\RiderProjects\\\\GUMS\" && sqlite3 GUMS/gums.db \"SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;\" 2>&1)",
+      "Bash(powershell:*)",
+      "Bash(dotnet script:*)"
     ]
   }
 }
