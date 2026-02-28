@@ -1,0 +1,168 @@
+@page "/Inventory/Stock/Adjust/{StockItemId:int}"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Record Transaction - GUMS</PageTitle>
+
+<div class="container-fluid py-4" style="max-width: 620px;">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/Inventory">Inventory</a></li>
+            <li class="breadcrumb-item"><a href="/Inventory/Stock/@StockItemId">@(_item?.Name ?? "Stock Item")</a></li>
+            <li class="breadcrumb-item active">Record Transaction</li>
+        </ol>
+    </nav>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status"></div>
+        </div>
+    }
+    else if (_item == null)
+    {
+        <div class="alert alert-warning">Stock item not found.</div>
+    }
+    else
+    {
+        <h2>Record Transaction</h2>
+        <p class="text-muted">
+            <strong>@_item.Name</strong> — currently <strong>@_item.CurrentQuantity</strong> in stock.
+        </p>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Transaction Type <span class="text-danger">*</span></label>
+                    <select class="form-select" @bind="_txnType" @bind:after="OnTypeChanged">
+                        <option value="@StockTransactionType.Purchase">Purchase (stock received)</option>
+                        <option value="@StockTransactionType.ManualIn">Manual In (returned, donated, etc.)</option>
+                        <option value="@StockTransactionType.ManualOut">Manual Out (lost, damaged)</option>
+                        <option value="@StockTransactionType.VisitorAward">Visitor Award</option>
+                        <option value="@StockTransactionType.Adjustment">Stocktake Adjustment</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control"
+                           value="@_date.ToString("yyyy-MM-dd")"
+                           @onchange="e => DateTime.TryParse(e.Value?.ToString(), out _date)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">
+                        Quantity <span class="text-danger">*</span>
+                        <small class="text-muted ms-2">(@QuantityHint)</small>
+                    </label>
+                    <input type="number" class="form-control" min="1" @bind="_quantity" />
+                </div>
+
+                @if (_txnType == StockTransactionType.Purchase)
+                {
+                    <div class="mb-3">
+                        <label class="form-label">Unit Cost (£)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">£</span>
+                            <input type="number" class="form-control" step="0.01" min="0"
+                                   value="@_unitCost"
+                                   @onchange="e => _unitCost = decimal.TryParse(e.Value?.ToString(), out var d) ? d : null"
+                                   placeholder="@(_item.UnitCost.HasValue ? _item.UnitCost.Value.ToString("N2") : "0.00")" />
+                        </div>
+                        <div class="form-text">Leave blank to use the item's stored unit cost (@(_item.UnitCost.HasValue ? $"£{_item.UnitCost:N2}" : "none set")).</div>
+                    </div>
+
+                    @if (_canCreateClaim)
+                    {
+                        <div class="mb-3 p-3 border rounded bg-light">
+                            <div class="form-check mb-2">
+                                <input type="checkbox" class="form-check-input" id="createClaim"
+                                       @bind="_createExpenseClaim" />
+                                <label class="form-check-label fw-semibold" for="createClaim">
+                                    Create expense claim
+                                    <small class="text-muted fw-normal ms-1">
+                                        (total: £@((_effectiveCost!.Value * _quantity).ToString("N2")))
+                                    </small>
+                                </label>
+                            </div>
+
+                            @if (_createExpenseClaim)
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">Expense Account <span class="text-danger">*</span></label>
+                                    <select class="form-select" value="@_expenseAccountId"
+                                            @onchange="e => _expenseAccountId = int.TryParse(e.Value?.ToString(), out var i) ? i : 0">
+                                        <option value="0">-- Select account --</option>
+                                        @foreach (var acct in _expenseAccounts)
+                                        {
+                                            <option value="@acct.Id">@acct.Name</option>
+                                        }
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Add to claim</label>
+                                    <select class="form-select" @bind="_addToClaimId">
+                                        <option value="0">— Create new claim —</option>
+                                        @foreach (var claim in _draftClaims)
+                                        {
+                                            <option value="@claim.Id">@claim.ClaimedBy — @claim.TotalAmount.ToString("C") (draft)</option>
+                                        }
+                                    </select>
+                                </div>
+
+                                @if (_addToClaimId == 0)
+                                {
+                                    <div class="mb-2">
+                                        <label class="form-label">Claimed by <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" @bind="_claimedBy"
+                                               placeholder="Leader's name" maxlength="200" />
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
+                }
+
+                <div class="mb-3">
+                    <label class="form-label">
+                        Notes @(_notesRequired ? "" : "(optional)")
+                        @if (_notesRequired) { <span class="text-danger">*</span> }
+                    </label>
+                    <textarea class="form-control" rows="2" @bind="_notes" maxlength="500"
+                              placeholder="@NotesPlaceholder"></textarea>
+                </div>
+
+                @if (_txnType == StockTransactionType.Adjustment)
+                {
+                    <div class="alert alert-info small">
+                        <i class="bi bi-info-circle"></i>
+                        For a stocktake: enter a <strong>positive</strong> number to add stock,
+                        or a <strong>negative</strong> number to reduce it.
+                        The quantity is the <em>change</em>, not the new absolute count.
+                    </div>
+                }
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" @onclick="Save" disabled="@_isSaving">
+                        @if (_isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        <i class="bi bi-check-lg"></i> Record
+                    </button>
+                    <a href="/Inventory/Stock/@StockItemId" class="btn btn-secondary">Cancel</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>

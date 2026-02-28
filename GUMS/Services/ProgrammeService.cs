@@ -10,10 +10,12 @@ public class ProgrammeService : IProgrammeService
     public static readonly int[] NightsAwayMilestones = { 1, 5, 10, 15, 20, 25, 30 };
 
     private readonly ApplicationDbContext _context;
+    private readonly IInventoryService _inventory;
 
-    public ProgrammeService(ApplicationDbContext context)
+    public ProgrammeService(ApplicationDbContext context, IInventoryService inventory)
     {
         _context = context;
+        _inventory = inventory;
     }
 
     // ===== Activity Completions =====
@@ -455,13 +457,17 @@ public class ProgrammeService : IProgrammeService
         if (exists)
             return (true, string.Empty);
 
-        _context.AwardedBadges.Add(new AwardedBadge
+        var awarded = new AwardedBadge
         {
             MembershipNumber = membershipNumber,
             BadgeDefinitionId = badgeDefinitionId,
             DateAwarded = DateTime.Today
-        });
+        };
+        _context.AwardedBadges.Add(awarded);
         await _context.SaveChangesAsync();
+
+        await _inventory.TryDecrementForBadgeAsync(badgeDefinitionId, awarded.Id);
+
         return (true, string.Empty);
     }
 
@@ -552,6 +558,9 @@ public class ProgrammeService : IProgrammeService
         }
 
         await _context.SaveChangesAsync();
+
+        await _inventory.TryDecrementForLevelAsync(level);
+
         return (true, string.Empty);
     }
 
@@ -572,6 +581,8 @@ public class ProgrammeService : IProgrammeService
             DateAwarded = DateTime.Today
         });
         await _context.SaveChangesAsync();
+
+        await _inventory.TryDecrementForNightsAwayAsync(milestone);
         return (true, string.Empty);
     }
 

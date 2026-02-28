@@ -1,0 +1,148 @@
+@page "/Inventory/Stock/New"
+@page "/Inventory/Stock/Edit/{Id:int}"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>@(_isNew ? "New Stock Item" : "Edit Stock Item") - GUMS</PageTitle>
+
+<div class="container-fluid py-4" style="max-width: 700px;">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/Inventory">Inventory</a></li>
+            <li class="breadcrumb-item active">@(_isNew ? "New Stock Item" : "Edit Stock Item")</li>
+        </ol>
+    </nav>
+
+    <h2>@(_isNew ? "Add Stock Item" : "Edit Stock Item")</h2>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status"></div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" @bind="_item.Name" maxlength="200"
+                           placeholder="e.g. Guide Skills Builder – My Wellbeing" />
+                </div>
+
+                @if (_isNew)
+                {
+                    <div class="mb-3">
+                        <label class="form-label">Stock Type <span class="text-danger">*</span></label>
+                        <select class="form-select" @bind="_item.StockType" @bind:after="OnStockTypeChanged">
+                            <option value="@BadgeStockType.SkillsBuilder">Skills Builder</option>
+                            <option value="@BadgeStockType.InterestBadge">Interest Badge</option>
+                            <option value="@BadgeStockType.FunBadge">Fun Badge</option>
+                            <option value="@BadgeStockType.ThemeAward">Theme Award (Bronze/Silver/Gold)</option>
+                            <option value="@BadgeStockType.NightsAway">Nights Away</option>
+                            <option value="@BadgeStockType.Other">Other</option>
+                        </select>
+                    </div>
+
+                    @if (_item.StockType is BadgeStockType.SkillsBuilder or BadgeStockType.InterestBadge or BadgeStockType.FunBadge)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Link to Badge Definition</label>
+                            <select class="form-select" value="@_item.BadgeDefinitionId"
+                                    @onchange="e => _item.BadgeDefinitionId = int.TryParse(e.Value?.ToString(), out var i) ? i : null">
+                                <option value="">-- None (link later) --</option>
+                                @foreach (var badge in _filteredBadges)
+                                {
+                                    <option value="@badge.Id">@badge.Name</option>
+                                }
+                            </select>
+                            <div class="form-text">Links this stock item to badge award tracking for auto-decrement.</div>
+                        </div>
+                    }
+
+                    @if (_item.StockType == BadgeStockType.ThemeAward)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Award Level <span class="text-danger">*</span></label>
+                            <select class="form-select" @bind="_item.ThemeAwardLevel">
+                                <option value="">-- Select --</option>
+                                <option value="@ThemeAwardLevel.Bronze">Bronze</option>
+                                <option value="@ThemeAwardLevel.Silver">Silver</option>
+                                <option value="@ThemeAwardLevel.Gold">Gold</option>
+                            </select>
+                        </div>
+                    }
+
+                    @if (_item.StockType == BadgeStockType.NightsAway)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Milestone (nights) <span class="text-danger">*</span></label>
+                            <select class="form-select" value="@_item.NightsAwayTier"
+                                    @onchange="e => _item.NightsAwayTier = int.TryParse(e.Value?.ToString(), out var i) ? i : null">
+                                <option value="">-- Select --</option>
+                                @foreach (var tier in _nightsTiers)
+                                {
+                                    <option value="@tier">@tier nights</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                }
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Unit Cost (£)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">£</span>
+                            <input type="number" class="form-control" step="0.01" min="0"
+                                   value="@_item.UnitCost"
+                                   @onchange="e => _item.UnitCost = decimal.TryParse(e.Value?.ToString(), out var d) ? d : null" />
+                        </div>
+                        <div class="form-text">Leave blank if free or not tracked.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Reorder Threshold</label>
+                        <input type="number" class="form-control" min="0"
+                               value="@_item.ReorderThreshold"
+                               @onchange="e => _item.ReorderThreshold = int.TryParse(e.Value?.ToString(), out var i) ? i : null" />
+                        <div class="form-text">Show low-stock warning below this quantity.</div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-control" rows="2" @bind="_item.Notes" maxlength="500"></textarea>
+                </div>
+
+                @if (!_isNew)
+                {
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="isActive" @bind="_item.IsActive" />
+                        <label class="form-check-label" for="isActive">Active</label>
+                    </div>
+                }
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" @onclick="Save" disabled="@_isSaving">
+                        @if (_isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        <i class="bi bi-check-lg"></i> @(_isNew ? "Create" : "Save")
+                    </button>
+                    <a href="/Inventory" class="btn btn-secondary">Cancel</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>

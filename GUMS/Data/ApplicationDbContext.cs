@@ -43,6 +43,10 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     public DbSet<NightsAwayBadge> NightsAwayBadges { get; set; }
     public DbSet<BankReconciliation> BankReconciliations { get; set; }
 
+    // Inventory DbSets
+    public DbSet<BadgeStockItem> BadgeStockItems { get; set; }
+    public DbSet<BadgeStockTransaction> BadgeStockTransactions { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -441,6 +445,40 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
                 .WithMany()
                 .HasForeignKey(i => i.ExpenseAccountId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // BadgeStockItem configuration
+        modelBuilder.Entity<BadgeStockItem>(entity =>
+        {
+            entity.HasKey(i => i.Id);
+            entity.HasIndex(i => i.StockType);
+            entity.HasIndex(i => i.BadgeDefinitionId);
+            entity.HasIndex(i => i.IsActive);
+
+            entity.Property(i => i.Name).IsRequired();
+            entity.Property(i => i.UnitCost).HasPrecision(18, 2);
+
+            entity.HasOne(i => i.BadgeDefinition)
+                .WithMany()
+                .HasForeignKey(i => i.BadgeDefinitionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasMany(i => i.Transactions)
+                .WithOne(t => t.BadgeStockItem)
+                .HasForeignKey(t => t.BadgeStockItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // BadgeStockTransaction configuration
+        modelBuilder.Entity<BadgeStockTransaction>(entity =>
+        {
+            entity.HasKey(t => t.Id);
+            entity.HasIndex(t => t.BadgeStockItemId);
+            entity.HasIndex(t => t.TransactionDate);
+            entity.HasIndex(t => t.TransactionType);
+
+            entity.Property(t => t.UnitCost).HasPrecision(18, 2);
+            entity.Property(t => t.TotalCost).HasPrecision(18, 2);
         });
 
         // BankReconciliation configuration

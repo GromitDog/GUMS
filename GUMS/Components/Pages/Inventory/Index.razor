@@ -1,0 +1,115 @@
+@page "/Inventory"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Badge Inventory - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-box-seam"></i> Badge Inventory</h2>
+        <a href="/Inventory/Stock/New" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Add Stock Item
+        </a>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        @if (_alerts.Any())
+        {
+            <div class="alert alert-warning mb-4">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong>@_alerts.Count stock item@(_alerts.Count != 1 ? "s" : "") below reorder threshold.</strong>
+                @{
+                    var shortfalls = _alerts.Count(a => a.IsShortfall);
+                }
+                @if (shortfalls > 0)
+                {
+                    <span class="ms-1">@shortfalls out of stock.</span>
+                }
+            </div>
+        }
+
+        @foreach (var group in _groups)
+        {
+            <div class="card mb-4">
+                <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
+                    <h5 class="mb-0"><i class="bi bi-tag"></i> @group.Key</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th class="text-center">In Stock</th>
+                                    <th class="text-center">Reorder At</th>
+                                    <th class="text-end">Unit Cost</th>
+                                    <th class="text-center">Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in group)
+                                {
+                                    var alertItem = _alerts.FirstOrDefault(a => a.StockItemId == item.Id);
+                                    var rowClass = alertItem != null
+                                        ? (alertItem.IsShortfall ? "table-danger" : "table-warning")
+                                        : "";
+                                    <tr class="@rowClass">
+                                        <td>@item.Name</td>
+                                        <td class="text-center fw-bold">@item.CurrentQuantity</td>
+                                        <td class="text-center text-muted">@(item.ReorderThreshold?.ToString() ?? "—")</td>
+                                        <td class="text-end">@(item.UnitCost.HasValue ? $"£{item.UnitCost:N2}" : "—")</td>
+                                        <td class="text-center">
+                                            @if (alertItem?.IsShortfall == true)
+                                            {
+                                                <span class="badge bg-danger">Out of stock</span>
+                                            }
+                                            else if (alertItem != null)
+                                            {
+                                                <span class="badge bg-warning text-dark">Low stock</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success">OK</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <a href="/Inventory/Stock/@item.Id" class="btn btn-sm btn-outline-primary me-1" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="/Inventory/Stock/Edit/@item.Id" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (!_items.Any())
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-box-seam" style="font-size: 3rem;"></i>
+                <p class="mt-3 mb-2">No stock items yet.</p>
+                <a href="/Inventory/Stock/New" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add your first stock item
+                </a>
+            </div>
+        }
+    }
+</div>
