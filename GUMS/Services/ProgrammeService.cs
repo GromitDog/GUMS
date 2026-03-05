@@ -525,6 +525,9 @@ public class ProgrammeService : IProgrammeService
             DateAwarded = DateTime.Today
         });
         await _context.SaveChangesAsync();
+
+        await _inventory.TryDecrementForThemeAwardAsync(theme);
+
         return (true, string.Empty);
     }
 
@@ -850,6 +853,111 @@ public class ProgrammeService : IProgrammeService
         Section.Ranger => 240,
         _ => 180
     };
+
+    public async Task<List<AwardDue>> GetProjectedAwardsForCurrentTermAsync()
+    {
+        var today = DateTime.Today;
+
+        // Get the current term
+        var currentTerm = await _context.Terms
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.StartDate <= today && t.EndDate >= today);
+
+        if (currentTerm == null)
+            return new List<AwardDue>();
+
+        // Badge clause IDs that appear in future meetings still to come this term
+        var futurePlannedClauseIds = await _context.MeetingActivities
+            .AsNoTracking()
+            .Where(a => a.MeetingId.HasValue
+                     && a.BadgeClauseId.HasValue
+                     && a.Meeting!.Date > today
+                     && a.Meeting!.Date <= currentTerm.EndDate)
+            .Select(a => a.BadgeClauseId!.Value)
+            .Distinct()
+            .ToHashSetAsync();
+
+        if (!futurePlannedClauseIds.Any())
+            return new List<AwardDue>();
+
+        // Only badges that have at least one clause appearing in future meetings
+        var allBadges = await _context.BadgeDefinitions
+            .Include(b => b.Clauses)
+            .AsNoTracking()
+            .ToListAsync();
+
+        var relevantBadges = allBadges
+            .Where(b => b.Clauses.Any(c => futurePlannedClauseIds.Contains(c.Id)))
+            .ToList();
+
+        if (!relevantBadges.Any())
+            return new List<AwardDue>();
+
+        // Active girls
+        var girls = await _context.Persons
+            .AsNoTracking()
+            .Where(p => p.IsActive && !p.IsDataRemoved && p.PersonType == PersonType.Girl)
+            .ToListAsync();
+
+        // Awarded badge IDs per girl (to skip already-awarded badges)
+        var awardedRows = await _context.AwardedBadges
+            .AsNoTracking()
+            .Select(a => new { a.MembershipNumber, a.BadgeDefinitionId })
+            .ToListAsync();
+
+        var awardedByGirl = awardedRows
+            .GroupBy(a => a.MembershipNumber)
+            .ToDictionary(g => g.Key, g => g.Select(a => a.BadgeDefinitionId).ToHashSet());
+
+        // Current clause completions per girl (all activities, including standalone)
+        var completionRows = await _context.ActivityCompletions
+            .AsNoTracking()
+            .Where(c => c.Completed && c.MeetingActivity.BadgeClauseId.HasValue)
+            .Select(c => new { c.MembershipNumber, ClauseId = c.MeetingActivity.BadgeClauseId!.Value })
+            .ToListAsync();
+
+        var completionsByGirl = completionRows
+            .GroupBy(x => x.MembershipNumber)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.ClauseId).ToHashSet());
+
+        var projected = new List<AwardDue>();
+
+        foreach (var girl in girls)
+        {
+            var completedClauses = completionsByGirl.GetValueOrDefault(girl.MembershipNumber, new HashSet<int>());
+            var awarded = awardedByGirl.GetValueOrDefault(girl.MembershipNumber, new HashSet<int>());
+
+            foreach (var badge in relevantBadges)
+            {
+                if (awarded.Contains(badge.Id))
+                    continue;
+
+                var clauseIds = badge.Clauses.Select(c => c.Id).ToHashSet();
+                var currentCount = clauseIds.Count(id => completedClauses.Contains(id));
+
+                // Already complete — skip (these appear in GetAwardsDueAsync instead)
+                if (currentCount >= badge.RequiredCompletions)
+                    continue;
+
+                // Would complete if the girl attended all remaining meetings
+                var projectedCount = clauseIds.Count(id => completedClauses.Contains(id) || futurePlannedClauseIds.Contains(id));
+
+                if (projectedCount >= badge.RequiredCompletions)
+                {
+                    projected.Add(new AwardDue
+                    {
+                        MembershipNumber = girl.MembershipNumber,
+                        Name = girl.FullName,
+                        AwardName = badge.Name,
+                        AwardType = "Badge",
+                        BadgeDefinitionId = badge.Id
+                    });
+                }
+            }
+        }
+
+        return projected;
+    }
 
     public static string GetThemeDisplayName(Theme theme) => theme switch
     {

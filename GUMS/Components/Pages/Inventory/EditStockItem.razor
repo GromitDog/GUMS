@@ -73,13 +73,27 @@
                     @if (_item.StockType == BadgeStockType.ThemeAward)
                     {
                         <div class="mb-3">
-                            <label class="form-label">Award Level <span class="text-danger">*</span></label>
-                            <select class="form-select" @bind="_item.ThemeAwardLevel">
-                                <option value="">-- Select --</option>
-                                <option value="@ThemeAwardLevel.Bronze">Bronze</option>
-                                <option value="@ThemeAwardLevel.Silver">Silver</option>
-                                <option value="@ThemeAwardLevel.Gold">Gold</option>
+                            <label class="form-label">Individual Theme Award</label>
+                            <select class="form-select" @bind="_item.AwardTheme" @bind:after="OnAwardThemeChanged">
+                                <option value="">-- Not an individual theme badge --</option>
+                                <option value="@Theme.KnowMyself">Know Myself</option>
+                                <option value="@Theme.ExpressMyself">Express Myself</option>
+                                <option value="@Theme.BeWell">Be Well</option>
+                                <option value="@Theme.HaveAdventures">Have Adventures</option>
+                                <option value="@Theme.TakeAction">Take Action</option>
+                                <option value="@Theme.SkillsForMyFuture">Skills For My Future</option>
                             </select>
+                            <div class="form-text">Badge given when a girl completes a single theme.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Level Award</label>
+                            <select class="form-select" @bind="_item.ThemeAwardLevel" @bind:after="OnThemeAwardLevelChanged">
+                                <option value="">-- Not a level badge --</option>
+                                <option value="@ThemeAwardLevel.Bronze">Bronze (2 themes)</option>
+                                <option value="@ThemeAwardLevel.Silver">Silver (4 themes)</option>
+                                <option value="@ThemeAwardLevel.Gold">Gold (6 themes)</option>
+                            </select>
+                            <div class="form-text">Badge given when a girl reaches Bronze, Silver or Gold.</div>
                         </div>
                     }
 

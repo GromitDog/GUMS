@@ -1,5 +1,6 @@
 @page "/Programme/Awards"
 @using Microsoft.AspNetCore.Authorization
+@using GUMS.Data.Enums
 @attribute [Authorize]
 @rendermode InteractiveServer
 
@@ -23,73 +24,202 @@
             </div>
         </div>
     }
-    else if (!_awards.Any())
-    {
-        <div class="text-center py-5">
-            <i class="bi bi-trophy" style="font-size: 3rem; color: #ccc;"></i>
-            <p class="text-muted mt-2">No awards currently due.</p>
-        </div>
-    }
     else
     {
-        <div class="card">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>Girl</th>
-                                <th>Award</th>
-                                <th>Type</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var award in _awards)
-                            {
-                                <tr>
-                                    <td>
-                                        <a href="/Programme/Progress/@award.MembershipNumber">
-                                            @(award.Name ?? award.MembershipNumber)
-                                        </a>
-                                    </td>
-                                    <td><strong>@award.AwardName</strong></td>
-                                    <td>
-                                        @switch (award.AwardType)
-                                        {
-                                            case "Badge":
-                                                <span class="badge bg-primary">Badge</span>
-                                                break;
-                                            case "ThemeAward":
-                                                <span class="badge bg-success">Theme Award</span>
-                                                break;
-                                            case "Bronze":
-                                                <span class="badge" style="background-color: #CD7F32;">Bronze</span>
-                                                break;
-                                            case "Silver":
-                                                <span class="badge bg-secondary">Silver</span>
-                                                break;
-                                            case "Gold":
-                                                <span class="badge bg-warning">Gold</span>
-                                                break;
-                                            case "NightsAway":
-                                                <span class="badge bg-indigo" style="background-color: #6610f2;"><i class="bi bi-moon-stars"></i> Nights Away</span>
-                                                break;
-                                        }
-                                    </td>
-                                    <td class="text-end">
-                                        <button class="btn btn-sm btn-outline-success"
-                                                disabled="@_isSaving"
-                                                @onclick="() => MarkAwarded(award)">
-                                            <i class="bi bi-check-lg"></i> Mark Awarded
-                                        </button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+        var shortfallRows = _stockSummary.Where(r => r.IsTracked && r.Shortfall > 0).ToList();
+
+        if (shortfallRows.Any())
+        {
+            <div class="alert alert-warning d-flex align-items-start gap-2 mb-4">
+                <i class="bi bi-exclamation-triangle-fill fs-5 mt-1"></i>
+                <div>
+                    <strong>Stock shortfall</strong> — you may not have enough badges to give out.
+                    <ul class="mb-0 mt-1">
+                        @foreach (var row in shortfallRows)
+                        {
+                            <li>
+                                <strong>@row.AwardName</strong>: need @row.TotalNeeded, have @row.InStock
+                                (@row.Shortfall short)
+                            </li>
+                        }
+                    </ul>
                 </div>
             </div>
-        </div>
+        }
+
+        if (!_awards.Any())
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-trophy" style="font-size: 3rem; color: #ccc;"></i>
+                <p class="text-muted mt-2">No awards currently due.</p>
+            </div>
+        }
+        else
+        {
+            <div class="card mb-4">
+                <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                    <h5 class="mb-0"><i class="bi bi-trophy"></i> Ready to Award</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Girl</th>
+                                    <th>Award</th>
+                                    <th>Type</th>
+                                    <th>Stock</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var award in _awards)
+                                {
+                                    var stockRow = GetStockForAward(award);
+                                    <tr>
+                                        <td>
+                                            <a href="/Programme/Progress/@award.MembershipNumber">
+                                                @(award.Name ?? award.MembershipNumber)
+                                            </a>
+                                        </td>
+                                        <td><strong>@award.AwardName</strong></td>
+                                        <td>
+                                            @switch (award.AwardType)
+                                            {
+                                                case "Badge":
+                                                    <span class="badge bg-primary">Badge</span>
+                                                    break;
+                                                case "ThemeAward":
+                                                    <span class="badge bg-success">Theme Award</span>
+                                                    break;
+                                                case "Bronze":
+                                                    <span class="badge" style="background-color: #CD7F32;">Bronze</span>
+                                                    break;
+                                                case "Silver":
+                                                    <span class="badge bg-secondary">Silver</span>
+                                                    break;
+                                                case "Gold":
+                                                    <span class="badge bg-warning">Gold</span>
+                                                    break;
+                                                case "NightsAway":
+                                                    <span class="badge bg-indigo" style="background-color: #6610f2;"><i class="bi bi-moon-stars"></i> Nights Away</span>
+                                                    break;
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (stockRow == null || !stockRow.IsTracked)
+                                            {
+                                                <span class="text-muted small">—</span>
+                                            }
+                                            else if (stockRow.InStock == 0)
+                                            {
+                                                <span class="badge bg-danger"><i class="bi bi-x-circle"></i> No stock</span>
+                                            }
+                                            else if (stockRow.InStock < stockRow.TotalNeeded)
+                                            {
+                                                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> @stockRow.InStock in stock</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success"><i class="bi bi-check-circle"></i> @stockRow.InStock in stock</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-outline-success"
+                                                    disabled="@_isSaving"
+                                                    @onclick="() => MarkAwarded(award)">
+                                                <i class="bi bi-check-lg"></i> Mark Awarded
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        var forecastRows = _stockSummary.Where(r => r.TotalNeeded > 0).ToList();
+
+        if (forecastRows.Any())
+        {
+            <div class="card">
+                <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
+                    <h5 class="mb-0">
+                        <i class="bi bi-box-seam"></i> Stock Forecast
+                        <small class="fw-normal ms-2 opacity-75">based on this term's planned programme</small>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Award</th>
+                                    <th class="text-center">Due Now</th>
+                                    <th class="text-center">Predicted This Term</th>
+                                    <th class="text-center">Total Needed</th>
+                                    <th class="text-center">In Stock</th>
+                                    <th class="text-center">Shortfall</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in forecastRows)
+                                {
+                                    <tr class="@(row.IsTracked && row.Shortfall > 0 ? "table-danger" : "")">
+                                        <td><strong>@row.AwardName</strong></td>
+                                        <td class="text-center">@row.CurrentlyDue</td>
+                                        <td class="text-center text-muted">
+                                            @(row.ProjectedAdditional > 0 ? $"+{row.ProjectedAdditional}" : "—")
+                                        </td>
+                                        <td class="text-center fw-bold">@row.TotalNeeded</td>
+                                        <td class="text-center">
+                                            @(row.IsTracked ? row.InStock.ToString() : "—")
+                                        </td>
+                                        <td class="text-center">
+                                            @if (!row.IsTracked)
+                                            {
+                                                <span class="text-muted small">Not tracked</span>
+                                            }
+                                            else if (row.Shortfall > 0)
+                                            {
+                                                <span class="text-danger fw-bold">@row.Shortfall short</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-success"><i class="bi bi-check-lg"></i></span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (row.StockItemId.HasValue)
+                                            {
+                                                <a href="/Inventory/Stock/@row.StockItemId" class="btn btn-sm btn-outline-secondary">
+                                                    <i class="bi bi-box-seam"></i> Stock
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a href="/Inventory/Stock/New" class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-plus"></i> Add stock
+                                                </a>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @if (_projectedAwards.Any())
+                {
+                    <div class="card-footer text-muted small">
+                        <i class="bi bi-info-circle"></i>
+                        "Predicted This Term" assumes all active members attend every remaining meeting in the current term.
+                    </div>
+                }
+            </div>
+        }
     }
 </div>

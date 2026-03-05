@@ -47,6 +47,7 @@ public partial class EditStockItem
                 StockType = existing.StockType,
                 BadgeDefinitionId = existing.BadgeDefinitionId,
                 ThemeAwardLevel = existing.ThemeAwardLevel,
+                AwardTheme = existing.AwardTheme,
                 NightsAwayTier = existing.NightsAwayTier,
                 UnitCost = existing.UnitCost,
                 ReorderThreshold = existing.ReorderThreshold,
@@ -63,8 +64,21 @@ public partial class EditStockItem
     {
         _item.BadgeDefinitionId = null;
         _item.ThemeAwardLevel = null;
+        _item.AwardTheme = null;
         _item.NightsAwayTier = null;
         FilterBadges();
+    }
+
+    private void OnAwardThemeChanged()
+    {
+        if (_item.AwardTheme.HasValue)
+            _item.ThemeAwardLevel = null;
+    }
+
+    private void OnThemeAwardLevelChanged()
+    {
+        if (_item.ThemeAwardLevel.HasValue)
+            _item.AwardTheme = null;
     }
 
     private void FilterBadges()

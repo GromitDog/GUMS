@@ -34,6 +34,14 @@ public interface IProgrammeService
     Task<HashSet<int>> GetAllCompletedUmaIdsAsync(string membershipNumber);
     Task<HashSet<int>> GetStandaloneCompletedUmaIdsAsync(string membershipNumber);
 
+    // ===== Stock Forecast =====
+    /// <summary>
+    /// Returns badges that would be newly completed by end of the current term
+    /// if all active members attended all remaining planned meetings,
+    /// excluding badges already in the currently-due list.
+    /// </summary>
+    Task<List<AwardDue>> GetProjectedAwardsForCurrentTermAsync();
+
     // ===== Term Balance =====
     Task<TermBalance> GetTermBalanceAsync(int termId);
 }

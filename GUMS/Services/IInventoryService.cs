@@ -24,6 +24,7 @@ public interface IInventoryService
 
     // Award hooks — auto-decrement, floor at 0
     Task TryDecrementForBadgeAsync(int badgeDefinitionId, int awardedBadgeId);
+    Task TryDecrementForThemeAwardAsync(Theme theme);
     Task TryDecrementForLevelAsync(string level);
     Task TryDecrementForNightsAwayAsync(int milestone);
 

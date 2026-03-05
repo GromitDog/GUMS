@@ -86,6 +86,16 @@ public class InventoryService : IInventoryService
                 return (false, $"A stock item already exists for the {item.ThemeAwardLevel} award.", null);
         }
 
+        if (item.StockType == BadgeStockType.ThemeAward && item.AwardTheme.HasValue)
+        {
+            var duplicate = await _context.BadgeStockItems
+                .AnyAsync(i => i.StockType == BadgeStockType.ThemeAward
+                             && i.AwardTheme == item.AwardTheme
+                             && i.IsActive);
+            if (duplicate)
+                return (false, $"A stock item already exists for the {item.AwardTheme} theme award.", null);
+        }
+
         if (item.StockType == BadgeStockType.NightsAway && item.NightsAwayTier.HasValue)
         {
             var duplicate = await _context.BadgeStockItems
@@ -245,6 +255,30 @@ public class InventoryService : IInventoryService
             Quantity = -1,
             TransactionType = StockTransactionType.Award,
             AwardedBadgeId = awardedBadgeId,
+            CreatedDate = DateTime.UtcNow
+        });
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task TryDecrementForThemeAwardAsync(Theme theme)
+    {
+        var item = await _context.BadgeStockItems
+            .FirstOrDefaultAsync(i => i.StockType == BadgeStockType.ThemeAward
+                                   && i.AwardTheme == theme
+                                   && i.IsActive);
+
+        if (item == null || item.CurrentQuantity <= 0)
+            return;
+
+        item.CurrentQuantity--;
+        _context.BadgeStockTransactions.Add(new BadgeStockTransaction
+        {
+            BadgeStockItemId = item.Id,
+            TransactionDate = DateTime.Today,
+            Quantity = -1,
+            TransactionType = StockTransactionType.Award,
+            Notes = $"{theme} Theme Award",
             CreatedDate = DateTime.UtcNow
         });
 

@@ -171,10 +171,10 @@ public class BudgetService : IBudgetService
         if (budget == null)
             return null;
 
-        // Use actual attendance rather than estimates
+        // Use consent forms received as the basis for budgeted costs (meaningful before the register is done)
         var attendees = await _context.Attendances
             .AsNoTracking()
-            .Where(a => a.MeetingId == meetingId && a.Attended)
+            .Where(a => a.MeetingId == meetingId && a.ConsentFormReceived)
             .Join(_context.Persons,
                 a => a.MembershipNumber,
                 p => p.MembershipNumber,
@@ -190,10 +190,25 @@ public class BudgetService : IBudgetService
             .Where(e => e.MeetingId == meetingId)
             .ToListAsync();
 
+        // Income: expected vs received — include Activity and Other payments linked to this meeting
+        var costPerAttendee = budget.Meeting.CostPerAttendee;
+        var activityPayments = await _context.Payments
+            .AsNoTracking()
+            .Where(p => p.MeetingId == meetingId
+                     && p.Status != PaymentStatus.Cancelled
+                     && p.Status != PaymentStatus.Refunded)
+            .ToListAsync();
+
         var result = new BudgetVsActual
         {
             MeetingId = meetingId,
-            MeetingTitle = budget.Meeting.Title
+            MeetingTitle = budget.Meeting.Title,
+            CostPerAttendee = costPerAttendee,
+            ConsentedGirlCount = girlCount,
+            ConsentedAdultCount = adultCount,
+            ExpectedIncome = costPerAttendee.HasValue ? costPerAttendee.Value * (girlCount + adultCount) : 0,
+            PaidCount = activityPayments.Count(p => p.Status == PaymentStatus.Paid),
+            ActualIncome = activityPayments.Where(p => p.Status == PaymentStatus.Paid).Sum(p => p.AmountPaid)
         };
 
         // Group budget items by expense account

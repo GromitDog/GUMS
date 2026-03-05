@@ -19,6 +19,9 @@ public class BadgeStockItem
 
     public ThemeAwardLevel? ThemeAwardLevel { get; set; }
 
+    /// <summary>Individual theme award badge (Know Myself, Be Well, etc.) — set instead of ThemeAwardLevel.</summary>
+    public Theme? AwardTheme { get; set; }
+
     public int? NightsAwayTier { get; set; }
 
     public decimal? UnitCost { get; set; }

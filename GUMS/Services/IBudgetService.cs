@@ -37,6 +37,19 @@ public class BudgetVsActual
 {
     public int MeetingId { get; set; }
     public string MeetingTitle { get; set; } = string.Empty;
+
+    // Income
+    public decimal? CostPerAttendee { get; set; }
+    public int ConsentedGirlCount { get; set; }
+    public int ConsentedAdultCount { get; set; }
+    public int TotalConsented => ConsentedGirlCount + ConsentedAdultCount;
+    public decimal ExpectedIncome { get; set; }
+    public int PaidCount { get; set; }
+    public decimal ActualIncome { get; set; }
+    public decimal IncomeVariance => ActualIncome - ExpectedIncome;
+    public bool HasIncome => (CostPerAttendee.HasValue && CostPerAttendee > 0) || PaidCount > 0;
+
+    // Costs
     public decimal TotalBudgeted { get; set; }
     public decimal TotalActual { get; set; }
     public decimal TotalVariance => TotalBudgeted - TotalActual;
