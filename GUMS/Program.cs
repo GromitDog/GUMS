@@ -74,6 +74,7 @@ builder.Services.AddScoped<IProgrammeService, ProgrammeService>();
 builder.Services.AddScoped<IReconciliationService, ReconciliationService>();
 builder.Services.AddScoped<IUnitBudgetService, UnitBudgetService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<IHomeContactService, HomeContactService>();
 
 // Add services to the container.
 builder.Services.AddRazorPages();

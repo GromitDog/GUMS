@@ -1,0 +1,497 @@
+@page "/Meetings/{MeetingId:int}/HomeContact"
+@using GUMS.Data.Entities
+@using GUMS.Services
+@rendermode InteractiveServer
+
+<PageTitle>Home Contact Sheet - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Home</a></li>
+            <li class="breadcrumb-item"><a href="/Meetings">Meetings</a></li>
+            @if (_meeting != null)
+            {
+                <li class="breadcrumb-item"><a href="/Meetings/@MeetingId">@_meeting.Title</a></li>
+            }
+            <li class="breadcrumb-item active">Home Contact Sheet</li>
+        </ol>
+    </nav>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border" style="color: var(--gg-primary-blue);" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (_meeting != null)
+    {
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="bi bi-file-earmark-medical"></i> Home Contact Sheet</h2>
+                <p class="text-muted mb-0">
+                    <strong>@_meeting.Title</strong> &mdash;
+                    @_meeting.Date.ToString("dddd d MMMM yyyy")
+                    @if (_meeting.EndDate.HasValue)
+                    {
+                        <text> to @_meeting.EndDate.Value.ToString("dddd d MMMM yyyy")</text>
+                    }
+                    &mdash; @_meeting.LocationName
+                </p>
+            </div>
+            <button class="btn btn-lg btn-success" @onclick="ShowGenerate">
+                <i class="bi bi-download"></i> Generate &amp; Download
+            </button>
+        </div>
+
+        <!-- Home Contact(s) -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #D4A017; color: white;">
+                <h5 class="mb-0"><i class="bi bi-telephone-forward"></i> Home Contact(s)</h5>
+                <button class="btn btn-sm btn-light" @onclick="ShowAddHomeContact">
+                    <i class="bi bi-plus-lg"></i> Add
+                </button>
+            </div>
+            <div class="card-body p-0">
+                @if (_homeContacts.Count == 0)
+                {
+                    <div class="text-center py-4">
+                        <i class="bi bi-exclamation-circle text-warning" style="font-size: 2rem;"></i>
+                        <p class="mt-2 mb-0">No home contacts assigned yet. Add at least one before generating the document.</p>
+                    </div>
+                }
+                else
+                {
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Phone</th>
+                                <th>Notes</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var hc in _homeContacts)
+                            {
+                                <tr>
+                                    <td class="align-middle"><strong>@hc.Name</strong></td>
+                                    <td class="align-middle">@hc.Phone</td>
+                                    <td class="align-middle text-muted">@(hc.Notes ?? "")</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditHomeContact(hc)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDeleteHC(hc)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+
+        <!-- Attendees & Emergency Contacts -->
+        <div class="card mb-4">
+            <div class="card-header text-white" style="background-color: var(--gg-primary-blue);">
+                <h5 class="mb-0"><i class="bi bi-people-fill"></i> Attendees &amp; Emergency Contacts (@_attendees.Count)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="font-size: 0.9rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Contact 1</th>
+                                <th>Relationship</th>
+                                <th>Phone</th>
+                                <th>Contact 2</th>
+                                <th>Relationship</th>
+                                <th>Phone</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var attendee in _attendees)
+                            {
+                                <tr>
+                                    <td class="align-middle">
+                                        @if (attendee.IsLeader)
+                                        {
+                                            <span class="badge bg-primary me-1">Leader</span>
+                                        }
+                                        <strong>@attendee.FullName</strong>
+                                        @if (attendee.HasOverrides)
+                                        {
+                                            <span class="badge bg-warning text-dark ms-1" title="Emergency contacts overridden for this event">
+                                                <i class="bi bi-pencil-fill"></i> edited
+                                            </span>
+                                        }
+                                    </td>
+                                    @if (attendee.EmergencyContacts.Count > 0)
+                                    {
+                                        var c1 = attendee.EmergencyContacts[0];
+                                        <td class="align-middle">@c1.ContactName</td>
+                                        <td class="align-middle">@c1.Relationship</td>
+                                        <td class="align-middle">@c1.PrimaryPhone</td>
+                                    }
+                                    else
+                                    {
+                                        <td class="align-middle text-danger" colspan="3"><i class="bi bi-exclamation-triangle"></i> No contacts</td>
+                                    }
+                                    @if (attendee.EmergencyContacts.Count > 1)
+                                    {
+                                        var c2 = attendee.EmergencyContacts[1];
+                                        <td class="align-middle">@c2.ContactName</td>
+                                        <td class="align-middle">@c2.Relationship</td>
+                                        <td class="align-middle">@c2.PrimaryPhone</td>
+                                    }
+                                    else
+                                    {
+                                        <td class="align-middle text-muted" colspan="3">—</td>
+                                    }
+                                    <td class="text-end text-nowrap">
+                                        <button class="btn btn-sm btn-outline-warning" @onclick="() => ShowOverrides(attendee)" title="Edit contacts for this event">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        @if (attendee.HasOverrides)
+                                        {
+                                            <button class="btn btn-sm btn-outline-secondary ms-1" @onclick="() => ResetToDefaults(attendee)" title="Reset to default contacts">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional People -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center text-white" style="background-color: var(--gg-primary-blue);">
+                <h5 class="mb-0"><i class="bi bi-person-plus"></i> Additional People</h5>
+                <button class="btn btn-sm btn-light" @onclick="ShowAddPerson">
+                    <i class="bi bi-plus-lg"></i> Add
+                </button>
+            </div>
+            <div class="card-body p-0">
+                @if (_additionalPeople.Count == 0)
+                {
+                    <div class="text-center py-3 text-muted">
+                        <p class="mb-0">No additional people. Add visitors, volunteers' children, site contacts, etc.</p>
+                    </div>
+                }
+                else
+                {
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Phone</th>
+                                <th>Emergency Contact</th>
+                                <th>EC Phone</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var person in _additionalPeople)
+                            {
+                                <tr>
+                                    <td class="align-middle">@person.Name</td>
+                                    <td class="align-middle text-muted">@(person.Role ?? "—")</td>
+                                    <td class="align-middle">@(person.Phone ?? "—")</td>
+                                    <td class="align-middle">@(person.EmergencyContactName ?? "—")</td>
+                                    <td class="align-middle">@(person.EmergencyContactPhone ?? "—")</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditAdditionalPerson(person)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDeletePerson(person)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- ═══ MODALS ═══ -->
+
+    <!-- Add/Edit Home Contact Modal -->
+    @if (_showAddHC)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header" style="background-color: #D4A017; color: white;">
+                        <h5 class="modal-title">
+                            <i class="bi bi-telephone-forward"></i> @(_editingHC.Id == 0 ? "Add" : "Edit") Home Contact
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CancelAddHC"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Name</label>
+                            <input type="text" class="form-control" @bind="_editingHC.Name" placeholder="e.g. Jane Smith" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Phone</label>
+                            <input type="tel" class="form-control" @bind="_editingHC.Phone" placeholder="e.g. 07700 900123" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Notes <span class="text-muted">(optional)</span></label>
+                            <input type="text" class="form-control" @bind="_editingHC.Notes" placeholder="e.g. Available until 10pm" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelAddHC">Cancel</button>
+                        <button type="button" class="btn btn-primary" @onclick="SaveHomeContact" disabled="@_isSaving">
+                            @if (_isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Override Emergency Contacts Modal -->
+    @if (_showOverrideModal && _overridePerson != null)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header text-white" style="background-color: var(--gg-dark-navy);">
+                        <h5 class="modal-title">
+                            <i class="bi bi-person-lines-fill"></i> Emergency Contacts for @_overridePerson.FullName
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CancelOverrides"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted mb-3">Edit emergency contacts for this event only. These will override the default contacts stored in the system.</p>
+                        @for (int i = 0; i < _editingOverrides.Count; i++)
+                        {
+                            var idx = i;
+                            <div class="card mb-3">
+                                <div class="card-header py-2">
+                                    <strong>Contact @(idx + 1)</strong>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-2">
+                                        <div class="col-md-4">
+                                            <label class="form-label">Name</label>
+                                            <input type="text" class="form-control" @bind="_editingOverrides[idx].ContactName" />
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Relationship</label>
+                                            <input type="text" class="form-control" @bind="_editingOverrides[idx].Relationship" />
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Primary Phone</label>
+                                            <input type="tel" class="form-control" @bind="_editingOverrides[idx].PrimaryPhone" />
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">Alt Phone</label>
+                                            <input type="tel" class="form-control" @bind="_editingOverrides[idx].SecondaryPhone" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelOverrides">Cancel</button>
+                        <button type="button" class="btn btn-primary" @onclick="SaveOverrides" disabled="@_isSaving">
+                            @if (_isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            Save Contacts
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Add/Edit Additional Person Modal -->
+    @if (_showAddPerson)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header text-white" style="background-color: var(--gg-primary-blue);">
+                        <h5 class="modal-title">
+                            <i class="bi bi-person-plus"></i> @(_editingPerson.Id == 0 ? "Add" : "Edit") Additional Person
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CancelAddPerson"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Name</label>
+                                <input type="text" class="form-control" @bind="_editingPerson.Name" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Role</label>
+                                <input type="text" class="form-control" @bind="_editingPerson.Role" placeholder="e.g. Visitor, Site Manager" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Phone</label>
+                                <input type="tel" class="form-control" @bind="_editingPerson.Phone" />
+                            </div>
+                        </div>
+                        <hr />
+                        <h6>Emergency Contact</h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Contact Name</label>
+                                <input type="text" class="form-control" @bind="_editingPerson.EmergencyContactName" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Relationship</label>
+                                <input type="text" class="form-control" @bind="_editingPerson.EmergencyContactRelationship" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Phone</label>
+                                <input type="tel" class="form-control" @bind="_editingPerson.EmergencyContactPhone" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelAddPerson">Cancel</button>
+                        <button type="button" class="btn btn-primary" @onclick="SaveAdditionalPerson" disabled="@_isSaving">
+                            @if (_isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Delete Home Contact Confirmation -->
+    @if (_showDeleteHC)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill"></i> Remove Home Contact</h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CancelDeleteHC"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Remove <strong>@_hcToDelete?.Name</strong> as a home contact for this event?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelDeleteHC">Cancel</button>
+                        <button type="button" class="btn btn-danger" @onclick="DeleteHomeContact">
+                            <i class="bi bi-trash"></i> Remove
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Delete Additional Person Confirmation -->
+    @if (_showDeletePerson)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill"></i> Remove Person</h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CancelDeletePerson"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Remove <strong>@_personToDelete?.Name</strong> from the additional people list?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelDeletePerson">Cancel</button>
+                        <button type="button" class="btn btn-danger" @onclick="DeleteAdditionalPerson">
+                            <i class="bi bi-trash"></i> Remove
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Generate Document Modal -->
+    @if (_showGenerateModal)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header text-white" style="background-color: var(--gg-dark-navy);">
+                        <h5 class="modal-title">
+                            <i class="bi bi-shield-lock"></i> Generate Home Contact Sheet
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CancelGenerate"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted">The document will be password-protected. Choose a password to share securely with those who need access.</p>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" @bind="_docPassword" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" @bind="_docPasswordConfirm" />
+                        </div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Minimum 6 characters with uppercase, lowercase, and a digit. The password is not stored.
+                        </small>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelGenerate">Cancel</button>
+                        <button type="button" class="btn btn-success" @onclick="GenerateDocument" disabled="@_isGenerating">
+                            @if (_isGenerating)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            <i class="bi bi-download"></i> Generate &amp; Download
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

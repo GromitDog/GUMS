@@ -1,0 +1,217 @@
+@page "/Configuration/Users"
+@rendermode InteractiveServer
+
+<PageTitle>User Management - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Home</a></li>
+            <li class="breadcrumb-item active">User Management</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-people"></i> User Management</h2>
+        <button class="btn btn-primary" @onclick="ShowAddForm">
+            <i class="bi bi-person-plus"></i> Add User
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border" style="color: var(--gg-primary-blue);" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-header text-white" style="background-color: var(--gg-primary-blue);">
+                <h5 class="mb-0"><i class="bi bi-people-fill"></i> Users (@_users.Count)</h5>
+            </div>
+            <div class="card-body p-0">
+                @if (_users.Count == 0)
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-person-x" style="font-size: 2rem;"></i>
+                        <p class="mt-2">No users found.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Email</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var user in _users)
+                                {
+                                    <tr>
+                                        <td class="align-middle">
+                                            <i class="bi bi-person-circle me-2"></i>
+                                            @user.Email
+                                            @if (user.Id == _currentUserId)
+                                            {
+                                                <span class="badge bg-primary ms-2">you</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-outline-warning me-1" @onclick="() => ShowResetPassword(user)" title="Reset Password">
+                                                <i class="bi bi-key"></i> Reset Password
+                                            </button>
+                                            @if (user.Id != _currentUserId)
+                                            {
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(user)" title="Delete User">
+                                                    <i class="bi bi-trash"></i> Delete
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Add User Modal -->
+    @if (_showAddForm)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header text-white" style="background-color: var(--gg-primary-blue);">
+                        <h5 class="modal-title">
+                            <i class="bi bi-person-plus"></i> Add User
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CancelAddForm"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" @bind="_newEmail" placeholder="leader@example.com" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Temporary Password</label>
+                            <input type="password" class="form-control" @bind="_newPassword" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" @bind="_newPasswordConfirm" />
+                        </div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Password must be at least 8 characters with uppercase, lowercase, digit, and special character.
+                        </small>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelAddForm">Cancel</button>
+                        <button type="button" class="btn btn-primary" @onclick="AddUser" disabled="@_isSaving">
+                            @if (_isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            <i class="bi bi-person-plus"></i> Add User
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Delete Confirmation Modal -->
+    @if (_showDeleteConfirm)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Confirm Deletion
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CancelDelete"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete the user <strong>@_userToDelete?.Email</strong>?</p>
+                        <p class="text-muted">This action cannot be undone. The user will no longer be able to log in.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                        <button type="button" class="btn btn-danger" @onclick="DeleteUser" disabled="@_isDeleting">
+                            @if (_isDeleting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            <i class="bi bi-trash"></i> Delete User
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Reset Password Modal -->
+    @if (_showResetPassword)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header text-white" style="background-color: var(--gg-dark-navy);">
+                        <h5 class="modal-title">
+                            <i class="bi bi-key"></i> Reset Password
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CancelResetPassword"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Resetting password for <strong>@_userToReset?.Email</strong></p>
+                        <div class="mb-3">
+                            <label class="form-label">New Password</label>
+                            <input type="password" class="form-control" @bind="_resetPassword" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" @bind="_resetPasswordConfirm" />
+                        </div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Password must be at least 8 characters with uppercase, lowercase, digit, and special character.
+                        </small>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelResetPassword">Cancel</button>
+                        <button type="button" class="btn btn-primary" @onclick="ResetPassword" disabled="@_isSaving">
+                            @if (_isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            <i class="bi bi-key"></i> Reset Password
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

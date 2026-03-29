@@ -55,4 +55,16 @@ public class UnitConfiguration
     /// When set, no transactions may be posted on or before this date (year-end lock).
     /// </summary>
     public DateTime? AccountsLockedUntil { get; set; }
+
+    [MaxLength(200)]
+    public string? DistrictCommissionerName { get; set; }
+
+    [MaxLength(50)]
+    public string? DistrictCommissionerPhone { get; set; }
+
+    [MaxLength(200)]
+    public string? DivisionCommissionerName { get; set; }
+
+    [MaxLength(50)]
+    public string? DivisionCommissionerPhone { get; set; }
 }

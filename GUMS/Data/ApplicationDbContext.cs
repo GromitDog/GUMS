@@ -47,6 +47,11 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     public DbSet<BadgeStockItem> BadgeStockItems { get; set; }
     public DbSet<BadgeStockTransaction> BadgeStockTransactions { get; set; }
 
+    // Home Contact DbSets
+    public DbSet<EventHomeContact> EventHomeContacts { get; set; }
+    public DbSet<EventContactOverride> EventContactOverrides { get; set; }
+    public DbSet<EventAdditionalPerson> EventAdditionalPeople { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -479,6 +484,45 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
 
             entity.Property(t => t.UnitCost).HasPrecision(18, 2);
             entity.Property(t => t.TotalCost).HasPrecision(18, 2);
+        });
+
+        // EventHomeContact configuration
+        modelBuilder.Entity<EventHomeContact>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.MeetingId);
+
+            entity.HasOne(e => e.Meeting)
+                .WithMany()
+                .HasForeignKey(e => e.MeetingId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // EventContactOverride configuration
+        modelBuilder.Entity<EventContactOverride>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.MeetingId);
+            entity.HasIndex(e => new { e.MeetingId, e.MembershipNumber });
+
+            entity.Property(e => e.MembershipNumber).IsRequired();
+
+            entity.HasOne(e => e.Meeting)
+                .WithMany()
+                .HasForeignKey(e => e.MeetingId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // EventAdditionalPerson configuration
+        modelBuilder.Entity<EventAdditionalPerson>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.MeetingId);
+
+            entity.HasOne(e => e.Meeting)
+                .WithMany()
+                .HasForeignKey(e => e.MeetingId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // BankReconciliation configuration
