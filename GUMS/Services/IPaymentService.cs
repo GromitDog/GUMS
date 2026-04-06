@@ -194,6 +194,7 @@ public class MemberPaymentSummary
     public decimal TotalOwed { get; set; }
     public decimal TotalPaid { get; set; }
     public decimal TotalOutstanding { get; set; }
+    public decimal CreditBalance { get; set; }
 }
 
 /// <summary>

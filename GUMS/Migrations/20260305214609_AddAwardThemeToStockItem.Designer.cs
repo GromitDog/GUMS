@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GUMS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260304202526_AddAwardThemeToStockItem")]
+    [Migration("20260305214609_AddAwardThemeToStockItem")]
     partial class AddAwardThemeToStockItem
     {
         /// <inheritdoc />
@@ -302,6 +302,9 @@ namespace GUMS.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("AwardTheme")
                         .HasColumnType("INTEGER");
 
                     b.Property<int?>("BadgeDefinitionId")

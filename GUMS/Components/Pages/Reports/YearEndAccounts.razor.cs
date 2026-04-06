@@ -36,7 +36,9 @@ public partial class YearEndAccounts
     {
         _config = await ConfigurationService.GetConfigurationAsync();
         _availableYearEnds = GenerateAvailableYearEnds();
-        _selectedYearEnd = _availableYearEnds.FirstOrDefault(d => d <= DateTime.Today);
+        _selectedYearEnd = _availableYearEnds.LastOrDefault(d => d >= DateTime.Today);
+        if (_selectedYearEnd == default)
+            _selectedYearEnd = _availableYearEnds.FirstOrDefault();
         await LoadReport();
     }
 

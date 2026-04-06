@@ -47,6 +47,10 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     public DbSet<BadgeStockItem> BadgeStockItems { get; set; }
     public DbSet<BadgeStockTransaction> BadgeStockTransactions { get; set; }
 
+    // Credit DbSets
+    public DbSet<MemberCredit> MemberCredits { get; set; }
+    public DbSet<CreditTransaction> CreditTransactions { get; set; }
+
     // Home Contact DbSets
     public DbSet<EventHomeContact> EventHomeContacts { get; set; }
     public DbSet<EventContactOverride> EventContactOverrides { get; set; }
@@ -235,6 +239,7 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
             entity.Property(p => p.Amount).HasPrecision(18, 2);
             entity.Property(p => p.AmountPaid).HasPrecision(18, 2);
             entity.Property(p => p.RefundAmount).HasPrecision(18, 2);
+            entity.Property(p => p.CreditApplied).HasPrecision(18, 2);
 
             // NO foreign key to Person table - allows data to persist after Person removal
 
@@ -538,6 +543,42 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
             entity.HasMany(br => br.ReconciledLines)
                 .WithOne(tl => tl.BankReconciliation)
                 .HasForeignKey(tl => tl.BankReconciliationId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // MemberCredit configuration
+        modelBuilder.Entity<MemberCredit>(entity =>
+        {
+            entity.HasKey(mc => mc.Id);
+            entity.HasIndex(mc => mc.MembershipNumber).IsUnique();
+
+            entity.Property(mc => mc.MembershipNumber).IsRequired();
+            entity.Property(mc => mc.Balance).HasPrecision(18, 2);
+        });
+
+        // CreditTransaction configuration
+        modelBuilder.Entity<CreditTransaction>(entity =>
+        {
+            entity.HasKey(ct => ct.Id);
+            entity.HasIndex(ct => ct.MembershipNumber);
+            entity.HasIndex(ct => ct.Date);
+
+            entity.Property(ct => ct.MembershipNumber).IsRequired();
+            entity.Property(ct => ct.Amount).HasPrecision(18, 2);
+
+            entity.HasOne(ct => ct.SourcePayment)
+                .WithMany()
+                .HasForeignKey(ct => ct.SourcePaymentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(ct => ct.TargetPayment)
+                .WithMany()
+                .HasForeignKey(ct => ct.TargetPaymentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(ct => ct.Transaction)
+                .WithMany()
+                .HasForeignKey(ct => ct.TransactionId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
     }

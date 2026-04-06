@@ -102,6 +102,42 @@ public interface IAccountingService
         DateTime date,
         int? incomeAccountId = null);
 
+    // ===== Credit Operations =====
+
+    /// <summary>
+    /// Records the accounting entries when a payment is converted to credit.
+    /// Debit income account, Credit member credits liability account.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage, int? TransactionId)> RecordConvertToCreditEntryAsync(
+        int paymentId,
+        decimal amount,
+        PaymentType paymentType,
+        string description,
+        DateTime date,
+        int? incomeAccountId = null);
+
+    /// <summary>
+    /// Records the accounting entries when credit is applied to a pending payment.
+    /// Debit member credits liability account, Credit income account.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage, int? TransactionId)> RecordApplyCreditEntryAsync(
+        int targetPaymentId,
+        decimal amount,
+        PaymentType paymentType,
+        string description,
+        DateTime date,
+        int? incomeAccountId = null);
+
+    /// <summary>
+    /// Records the accounting entries when credit is refunded as cash.
+    /// Debit member credits liability account, Credit asset account.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage, int? TransactionId)> RecordRefundCreditEntryAsync(
+        decimal amount,
+        PaymentMethod refundMethod,
+        string description,
+        DateTime date);
+
     // ===== Banking Operations =====
 
     /// <summary>

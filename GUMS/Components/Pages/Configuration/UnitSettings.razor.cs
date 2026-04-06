@@ -19,7 +19,20 @@ public partial class UnitSettings
     private string _errorMessage = string.Empty;
     private string _successMessage = string.Empty;
     private void ClearError() => _errorMessage = string.Empty;
-    private void ClearSuccess() => _successMessage = string.Empty;
+
+    private void ClearSuccess()
+    {
+        _successMessage = string.Empty;
+    }
+
+    private async Task ShowSuccessToast(string message)
+    {
+        _successMessage = message;
+        StateHasChanged();
+        await Task.Delay(4000);
+        _successMessage = string.Empty;
+        StateHasChanged();
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -54,7 +67,7 @@ public partial class UnitSettings
         try
         {
             await ConfigService.UpdateConfigurationAsync(_config);
-            _successMessage = "Settings saved successfully!";
+            _ = ShowSuccessToast("Settings saved successfully!");
         }
         catch (Exception ex)
         {

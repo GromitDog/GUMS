@@ -53,21 +53,21 @@
                     </div>
                     <div class="card-body">
                         <div class="row text-center">
-                            <div class="col-md-3">
+                            <div class="col">
                                 <h4 class="mb-0">@_summary.TotalPayments</h4>
                                 <small class="text-muted">Total Payments</small>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col">
                                 <h4 class="mb-0 text-success">@_summary.TotalPaid.ToString("C")</h4>
                                 <small class="text-muted">Total Paid</small>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col">
                                 <h4 class="mb-0 @(_summary.TotalOutstanding > 0 ? "text-danger" : "text-success")">
                                     @_summary.TotalOutstanding.ToString("C")
                                 </h4>
                                 <small class="text-muted">Outstanding</small>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col">
                                 @if (_summary.OverduePayments > 0)
                                 {
                                     <h4 class="mb-0 text-danger">@_summary.OverduePayments</h4>
@@ -77,6 +77,18 @@
                                 {
                                     <h4 class="mb-0 text-success"><i class="bi bi-check-circle"></i></h4>
                                     <small class="text-muted">No Overdue</small>
+                                }
+                            </div>
+                            <div class="col">
+                                @if (_summary.CreditBalance > 0)
+                                {
+                                    <h4 class="mb-0" style="color: #ff9800;">@_summary.CreditBalance.ToString("C")</h4>
+                                    <small style="color: #ff9800;">Credit Available</small>
+                                }
+                                else
+                                {
+                                    <h4 class="mb-0 text-muted">@(0m.ToString("C"))</h4>
+                                    <small class="text-muted">Credit</small>
                                 }
                             </div>
                         </div>
@@ -91,9 +103,15 @@
                         </a>
                         @if (_summary.PendingPayments > 0)
                         {
-                            <a href="/Payments?search=@MembershipNumber&status=Pending" class="btn btn-warning">
+                            <a href="/Payments?search=@MembershipNumber&status=Pending" class="btn btn-warning mb-2">
                                 <i class="bi bi-cash"></i> View Pending Payments
                             </a>
+                        }
+                        @if (_summary.CreditBalance > 0)
+                        {
+                            <button class="btn btn-outline-warning" @onclick="ShowRefundCreditModal">
+                                <i class="bi bi-wallet2"></i> Refund Credit (@_summary.CreditBalance.ToString("C"))
+                            </button>
                         }
                     </div>
                 </div>
@@ -127,7 +145,7 @@
         else
         {
             <!-- Payment History Table -->
-            <div class="card">
+            <div class="card mb-4">
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-hover">
@@ -169,6 +187,11 @@
                                         </td>
                                         <td>
                                             @payment.Reference
+                                            @if (payment.CreditApplied > 0)
+                                            {
+                                                <br />
+                                                <small style="color: #ff9800;"><i class="bi bi-wallet2"></i> @payment.CreditApplied.ToString("C") from credit</small>
+                                            }
                                             @if (!string.IsNullOrEmpty(payment.Notes))
                                             {
                                                 <br />
@@ -212,17 +235,87 @@
                                         <td>
                                             @if (payment.Status == PaymentStatus.Pending)
                                             {
-                                                <a href="/Payments/RecordPayment/@payment.Id" class="btn btn-sm btn-success">
+                                                <a href="/Payments/RecordPayment/@payment.Id" class="btn btn-sm btn-success me-1">
                                                     <i class="bi bi-cash"></i> Pay
                                                 </a>
+                                                @if (_summary.CreditBalance > 0)
+                                                {
+                                                    <button class="btn btn-sm btn-outline-warning" @onclick="() => ShowApplyCreditModal(payment)"
+                                                            title="Apply credit to this payment">
+                                                        <i class="bi bi-wallet2"></i> Use Credit
+                                                    </button>
+                                                }
                                             }
                                             else if (payment.Status == PaymentStatus.Paid)
                                             {
-                                                <button class="btn btn-sm btn-outline-info" @onclick="() => ShowRefundConfirm(payment)"
-                                                        title="Refund payment">
+                                                <button class="btn btn-sm btn-outline-info me-1" @onclick="() => ShowRefundConfirm(payment)"
+                                                        title="Refund as cash">
                                                     <i class="bi bi-arrow-counterclockwise"></i> Refund
                                                 </button>
+                                                <button class="btn btn-sm btn-outline-warning" @onclick="() => ShowConvertToCreditModal(payment)"
+                                                        title="Convert to credit balance">
+                                                    <i class="bi bi-wallet2"></i> To Credit
+                                                </button>
                                             }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Credit History -->
+        @if (_creditHistory.Any())
+        {
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-wallet2"></i> Credit History</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th class="text-end">Amount</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var ct in _creditHistory)
+                                {
+                                    <tr>
+                                        <td>@ct.Date.ToString("dd MMM yyyy")</td>
+                                        <td>
+                                            @if (ct.Type == CreditTransactionType.Deposit)
+                                            {
+                                                <span class="badge" style="background-color: #ff9800; color: white;">Credit Added</span>
+                                            }
+                                            else if (ct.Type == CreditTransactionType.Applied)
+                                            {
+                                                <span class="badge bg-success">Applied to Payment</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-info text-white">Refunded</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            @if (ct.Amount > 0)
+                                            {
+                                                <span style="color: #ff9800;">+@ct.Amount.ToString("C")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">@ct.Amount.ToString("C")</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @ct.Notes
                                         </td>
                                     </tr>
                                 }
@@ -281,6 +374,141 @@
                                 <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                             }
                             <i class="bi bi-arrow-counterclockwise"></i> Refund Payment
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Convert to Credit Modal -->
+    @if (_showConvertToCreditModal && _paymentToConvert != null)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header" style="background-color: #ff9800; color: white;">
+                        <h5 class="modal-title">
+                            <i class="bi bi-wallet2"></i> Convert to Credit
+                        </h5>
+                        <button type="button" class="btn-close" @onclick="CancelConvertToCredit"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Convert <strong>@_paymentToConvert.Reference</strong> (paid @_paymentToConvert.AmountPaid.ToString("C")) to credit balance.</p>
+                        <p class="text-muted small">The amount will be added to this member's credit balance and can be applied to future payments or refunded later.</p>
+                        <div class="mb-3">
+                            <label class="form-label">Amount to Convert <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" @bind="_convertAmount" min="0.01"
+                                   max="@_paymentToConvert.AmountPaid" step="0.01" />
+                            <div class="form-text">Maximum: @_paymentToConvert.AmountPaid.ToString("C")</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Reason <span class="text-danger">*</span></label>
+                            <textarea class="form-control" rows="2" @bind="_convertReason"
+                                      placeholder="e.g., Event cancelled, parent requested credit..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelConvertToCredit">Close</button>
+                        <button type="button" class="btn text-white" style="background-color: #ff9800;" @onclick="ConvertToCredit"
+                                disabled="@(_isConverting || string.IsNullOrWhiteSpace(_convertReason) || _convertAmount <= 0 || _convertAmount > _paymentToConvert.AmountPaid)">
+                            @if (_isConverting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            <i class="bi bi-wallet2"></i> Convert to Credit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Apply Credit Modal -->
+    @if (_showApplyCreditModal && _paymentToApplyCredit != null)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header" style="background-color: #ff9800; color: white;">
+                        <h5 class="modal-title">
+                            <i class="bi bi-wallet2"></i> Apply Credit
+                        </h5>
+                        <button type="button" class="btn-close" @onclick="CancelApplyCredit"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Apply credit to <strong>@_paymentToApplyCredit.Reference</strong> (outstanding @_paymentToApplyCredit.OutstandingBalance.ToString("C")).</p>
+                        <p class="text-muted small">Available credit: <strong style="color: #ff9800;">@_summary.CreditBalance.ToString("C")</strong></p>
+                        <div class="mb-3">
+                            <label class="form-label">Amount to Apply <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" @bind="_applyCreditAmount" min="0.01"
+                                   max="@Math.Min(_summary.CreditBalance, _paymentToApplyCredit.OutstandingBalance)" step="0.01" />
+                            <div class="form-text">Maximum: @Math.Min(_summary.CreditBalance, _paymentToApplyCredit.OutstandingBalance).ToString("C")</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelApplyCredit">Close</button>
+                        <button type="button" class="btn text-white" style="background-color: #ff9800;" @onclick="ApplyCredit"
+                                disabled="@(_isApplyingCredit || _applyCreditAmount <= 0 || _applyCreditAmount > Math.Min(_summary.CreditBalance, _paymentToApplyCredit.OutstandingBalance))">
+                            @if (_isApplyingCredit)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            <i class="bi bi-wallet2"></i> Apply Credit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Refund Credit Modal -->
+    @if (_showRefundCreditModal)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header modal-header-refund">
+                        <h5 class="modal-title">
+                            <i class="bi bi-wallet2"></i> Refund Credit Balance
+                        </h5>
+                        <button type="button" class="btn-close" @onclick="CancelRefundCredit"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Refund credit balance of <strong style="color: #ff9800;">@_summary.CreditBalance.ToString("C")</strong> as cash.</p>
+                        <div class="mb-3">
+                            <label class="form-label">Refund Amount <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" @bind="_refundCreditAmount" min="0.01"
+                                   max="@_summary.CreditBalance" step="0.01" />
+                            <div class="form-text">Maximum: @_summary.CreditBalance.ToString("C")</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Refund Method <span class="text-danger">*</span></label>
+                            <select class="form-select" @bind="_refundCreditMethod">
+                                <option value="@PaymentMethod.Cash">Cash</option>
+                                <option value="@PaymentMethod.Cheque">Cheque</option>
+                                <option value="@PaymentMethod.BankTransfer">Bank Transfer</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Refund Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" @bind="_refundCreditDate" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Reason <span class="text-danger">*</span></label>
+                            <textarea class="form-control" rows="2" @bind="_refundCreditReason"
+                                      placeholder="e.g., Parent requested cash refund..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelRefundCredit">Close</button>
+                        <button type="button" class="btn btn-info text-white" @onclick="RefundCredit"
+                                disabled="@(_isRefundingCredit || string.IsNullOrWhiteSpace(_refundCreditReason) || _refundCreditAmount <= 0 || _refundCreditAmount > _summary.CreditBalance)">
+                            @if (_isRefundingCredit)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            <i class="bi bi-wallet2"></i> Refund Credit
                         </button>
                     </div>
                 </div>

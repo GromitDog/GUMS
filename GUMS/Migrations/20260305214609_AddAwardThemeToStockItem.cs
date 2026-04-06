@@ -10,13 +10,19 @@ namespace GUMS.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-
+            migrationBuilder.AddColumn<int>(
+                name: "AwardTheme",
+                table: "BadgeStockItems",
+                type: "INTEGER",
+                nullable: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-
+            migrationBuilder.DropColumn(
+                name: "AwardTheme",
+                table: "BadgeStockItems");
         }
     }
 }

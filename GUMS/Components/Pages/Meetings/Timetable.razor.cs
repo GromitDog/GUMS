@@ -154,10 +154,17 @@ public partial class Timetable
 
         var parts = new List<string>();
 
-        var timeDiffers = m.StartTime != _config.DefaultMeetingStartTime
-                       || m.EndTime != _config.DefaultMeetingEndTime;
-        if (timeDiffers)
-            parts.Add($"{FormatTime(m.StartTime)}-{FormatTime(m.EndTime)}");
+        if (m.EndDate.HasValue)
+        {
+            parts.Add(FormatOvernightRange(m.Date, m.StartTime, m.EndDate.Value, m.EndTime));
+        }
+        else
+        {
+            var timeDiffers = m.StartTime != _config.DefaultMeetingStartTime
+                           || m.EndTime != _config.DefaultMeetingEndTime;
+            if (timeDiffers)
+                parts.Add($"{FormatTime(m.StartTime)}-{FormatTime(m.EndTime)}");
+        }
 
         var locationDiffers = !string.Equals(
             m.LocationName, _config.DefaultLocationName,
@@ -170,6 +177,23 @@ public partial class Timetable
 
         return string.Join(" ", parts);
     }
+
+    internal static string FormatOvernightRange(DateTime start, TimeOnly startTime, DateTime end, TimeOnly endTime)
+    {
+        var months = new[] { "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                  "Jul", "Aug", "Sept", "Oct", "Nov", "Dec" };
+        var startPart = $"{FormatTime(startTime)} {start:ddd} {start.Day}{Ordinal(start.Day)}";
+        var endPart   = $"{FormatTime(endTime)} {end:ddd} {end.Day}{Ordinal(end.Day)} {months[end.Month]}";
+        if (start.Month != end.Month)
+            startPart += $" {months[start.Month]}";
+        return $"{startPart} - {endPart}";
+    }
+
+    private static string Ordinal(int n) => (n % 100) switch
+    {
+        11 or 12 or 13 => "th",
+        _ => (n % 10) switch { 1 => "st", 2 => "nd", 3 => "rd", _ => "th" }
+    };
 
     internal static string FormatTime(TimeOnly t)
     {

@@ -26,6 +26,7 @@ public class AccountingService : IAccountingService
     public const string ActivitiesEventsExpenseCode = "5004";
     public const string BadgesAwardsExpenseCode = "5005";
     public const string OtherExpensesCode = "5099";
+    public const string MemberCreditsCode = "2001";
     public const string OpeningBalancesCode = "3001";
 
     public AccountingService(ApplicationDbContext context, ITermService termService, IConfigurationService configurationService)
@@ -459,6 +460,222 @@ public class AccountingService : IAccountingService
                 new TransactionLine
                 {
                     AccountId = incomeAccount.Id,
+                    Debit = amount,
+                    Credit = 0
+                },
+                new TransactionLine
+                {
+                    AccountId = assetAccount.Id,
+                    Debit = 0,
+                    Credit = amount
+                }
+            }
+        };
+
+        var result = await CreateTransactionAsync(transaction);
+        if (!result.Success)
+        {
+            return (false, result.ErrorMessage, null);
+        }
+
+        return (true, string.Empty, result.Transaction!.Id);
+    }
+
+    // ===== Credit Operations =====
+
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage, int? TransactionId)> RecordConvertToCreditEntryAsync(
+        int paymentId,
+        decimal amount,
+        PaymentType paymentType,
+        string description,
+        DateTime date,
+        int? incomeAccountId = null)
+    {
+        if (amount <= 0)
+        {
+            return (false, "Amount must be greater than zero.", null);
+        }
+
+        var creditsAccount = await GetAccountByCodeAsync(MemberCreditsCode);
+
+        // Determine income account
+        Account? incomeAccount;
+        if (incomeAccountId.HasValue)
+        {
+            incomeAccount = await GetAccountByIdAsync(incomeAccountId.Value);
+        }
+        else
+        {
+            var incomeAccountCode = paymentType switch
+            {
+                PaymentType.Subs => SubsIncomeCode,
+                PaymentType.Activity => ActivityIncomeCode,
+                PaymentType.Other => (string?)null,
+                _ => throw new ArgumentException($"Unknown payment type: {paymentType}")
+            };
+
+            if (incomeAccountCode == null)
+            {
+                return (false, "An income account must be selected for 'Other' payment types.", null);
+            }
+
+            incomeAccount = await GetAccountByCodeAsync(incomeAccountCode);
+        }
+
+        if (creditsAccount == null || incomeAccount == null)
+        {
+            return (false, "Required accounts not found. Please ensure default accounts have been created.", null);
+        }
+
+        // Debit income (reverse original income), Credit liability (owe parent)
+        var transaction = new Transaction
+        {
+            Date = date,
+            Description = description,
+            PaymentId = paymentId,
+            Lines = new List<TransactionLine>
+            {
+                new TransactionLine
+                {
+                    AccountId = incomeAccount.Id,
+                    Debit = amount,
+                    Credit = 0
+                },
+                new TransactionLine
+                {
+                    AccountId = creditsAccount.Id,
+                    Debit = 0,
+                    Credit = amount
+                }
+            }
+        };
+
+        var result = await CreateTransactionAsync(transaction);
+        if (!result.Success)
+        {
+            return (false, result.ErrorMessage, null);
+        }
+
+        return (true, string.Empty, result.Transaction!.Id);
+    }
+
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage, int? TransactionId)> RecordApplyCreditEntryAsync(
+        int targetPaymentId,
+        decimal amount,
+        PaymentType paymentType,
+        string description,
+        DateTime date,
+        int? incomeAccountId = null)
+    {
+        if (amount <= 0)
+        {
+            return (false, "Amount must be greater than zero.", null);
+        }
+
+        var creditsAccount = await GetAccountByCodeAsync(MemberCreditsCode);
+
+        // Determine income account
+        Account? incomeAccount;
+        if (incomeAccountId.HasValue)
+        {
+            incomeAccount = await GetAccountByIdAsync(incomeAccountId.Value);
+        }
+        else
+        {
+            var incomeAccountCode = paymentType switch
+            {
+                PaymentType.Subs => SubsIncomeCode,
+                PaymentType.Activity => ActivityIncomeCode,
+                PaymentType.Other => (string?)null,
+                _ => throw new ArgumentException($"Unknown payment type: {paymentType}")
+            };
+
+            if (incomeAccountCode == null)
+            {
+                return (false, "An income account must be selected for 'Other' payment types.", null);
+            }
+
+            incomeAccount = await GetAccountByCodeAsync(incomeAccountCode);
+        }
+
+        if (creditsAccount == null || incomeAccount == null)
+        {
+            return (false, "Required accounts not found. Please ensure default accounts have been created.", null);
+        }
+
+        // Debit liability (reduce what we owe), Credit income (recognise the income)
+        var transaction = new Transaction
+        {
+            Date = date,
+            Description = description,
+            PaymentId = targetPaymentId,
+            Lines = new List<TransactionLine>
+            {
+                new TransactionLine
+                {
+                    AccountId = creditsAccount.Id,
+                    Debit = amount,
+                    Credit = 0
+                },
+                new TransactionLine
+                {
+                    AccountId = incomeAccount.Id,
+                    Debit = 0,
+                    Credit = amount
+                }
+            }
+        };
+
+        var result = await CreateTransactionAsync(transaction);
+        if (!result.Success)
+        {
+            return (false, result.ErrorMessage, null);
+        }
+
+        return (true, string.Empty, result.Transaction!.Id);
+    }
+
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage, int? TransactionId)> RecordRefundCreditEntryAsync(
+        decimal amount,
+        PaymentMethod refundMethod,
+        string description,
+        DateTime date)
+    {
+        if (amount <= 0)
+        {
+            return (false, "Amount must be greater than zero.", null);
+        }
+
+        var creditsAccount = await GetAccountByCodeAsync(MemberCreditsCode);
+
+        var assetAccountCode = refundMethod switch
+        {
+            PaymentMethod.Cash => CashOnHandCode,
+            PaymentMethod.Cheque => ChequesPendingCode,
+            PaymentMethod.BankTransfer => BankAccountCode,
+            _ => throw new ArgumentException($"Unknown payment method: {refundMethod}")
+        };
+
+        var assetAccount = await GetAccountByCodeAsync(assetAccountCode);
+
+        if (creditsAccount == null || assetAccount == null)
+        {
+            return (false, "Required accounts not found. Please ensure default accounts have been created.", null);
+        }
+
+        // Debit liability (reduce what we owe), Credit asset (cash goes out)
+        var transaction = new Transaction
+        {
+            Date = date,
+            Description = description,
+            Lines = new List<TransactionLine>
+            {
+                new TransactionLine
+                {
+                    AccountId = creditsAccount.Id,
                     Debit = amount,
                     Credit = 0
                 },
@@ -1475,6 +1692,7 @@ public class AccountingService : IAccountingService
             new Account { Code = ActivitiesEventsExpenseCode, Name = "Activities & Events", Type = AccountType.Expense, IsSystem = false },
             new Account { Code = BadgesAwardsExpenseCode, Name = "Badges & Awards", Type = AccountType.Expense, IsSystem = false },
             new Account { Code = OtherExpensesCode, Name = "Other Expenses", Type = AccountType.Expense, IsSystem = false },
+            new Account { Code = MemberCreditsCode, Name = "Member Credits", Type = AccountType.Liability, IsSystem = true },
             new Account { Code = OpeningBalancesCode, Name = "Opening Balances", Type = AccountType.Equity, IsSystem = true }
         };
 

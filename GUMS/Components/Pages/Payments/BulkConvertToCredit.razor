@@ -1,0 +1,204 @@
+@page "/Payments/BulkConvertToCredit/{MeetingId:int}"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Bulk Convert to Credit - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Bulk Convert to Credit</h2>
+        <a href="/Payments" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Payments
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (_meeting != null)
+    {
+        <!-- Meeting Info -->
+        <div class="card mb-4">
+            <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                <h5 class="mb-0"><i class="bi bi-calendar-event"></i> @_meeting.Title</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Date:</strong> @_meeting.Date.ToString("dd MMMM yyyy")
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Cost per Attendee:</strong> @(_meeting.CostPerAttendee?.ToString("C") ?? "N/A")
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Paid Payments:</strong> @_paidPayments.Count
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (!_paidPayments.Any())
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No paid payments found for this meeting. There's nothing to convert.
+            </div>
+        }
+        else if (!_hasProcessed)
+        {
+            <!-- Preview Table -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Payments to Convert</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Member</th>
+                                    <th class="text-end">Amount Paid</th>
+                                    <th>Reference</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var payment in _paidPayments)
+                                {
+                                    <tr>
+                                        <td>@payment.MembershipNumber</td>
+                                        <td class="text-end">@payment.AmountPaid.ToString("C")</td>
+                                        <td>@payment.Reference</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-light fw-bold">
+                                    <td>Total</td>
+                                    <td class="text-end">@_paidPayments.Sum(p => p.AmountPaid).ToString("C")</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Options -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Reason <span class="text-danger">*</span></label>
+                        <textarea class="form-control" rows="2" @bind="_reason"
+                                  placeholder="e.g., Concert tickets not available, trip cancelled..."></textarea>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="autoApply" @bind="_autoApplyToSubs" />
+                        <label class="form-check-label" for="autoApply">
+                            Automatically apply credit to each member's oldest pending subs payment
+                        </label>
+                    </div>
+                    <button class="btn text-white" style="background-color: #ff9800;" @onclick="ProcessBulkConvert"
+                            disabled="@(_isProcessing || string.IsNullOrWhiteSpace(_reason))">
+                        @if (_isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span>Processing...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-wallet2"></i>
+                            <span>Convert All to Credit (@_paidPayments.Count payments)</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Results Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Results</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Member</th>
+                                    <th class="text-end">Credit Added</th>
+                                    <th class="text-end">Applied to Subs</th>
+                                    <th class="text-end">Remaining Credit</th>
+                                    <th>Status</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var result in _results)
+                                {
+                                    <tr class="@(result.Success ? "" : "table-warning")">
+                                        <td>@(result.MemberName ?? result.MembershipNumber)</td>
+                                        <td class="text-end" style="color: #ff9800;">@result.CreditAmount.ToString("C")</td>
+                                        <td class="text-end text-success">
+                                            @if (result.AppliedToSubs > 0)
+                                            {
+                                                @result.AppliedToSubs.ToString("C")
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            @if (result.RemainingCredit > 0)
+                                            {
+                                                <span style="color: #ff9800;">@result.RemainingCredit.ToString("C")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">@(0m.ToString("C"))</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (result.Success)
+                                            {
+                                                <span class="badge bg-success">Done</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning text-dark">Skipped</span>
+                                            }
+                                        </td>
+                                        <td>@result.Message</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>

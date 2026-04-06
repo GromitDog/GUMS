@@ -620,6 +620,12 @@ public class PaymentService : IPaymentService
 
         var today = DateTime.Today;
 
+        var creditBalance = await _context.MemberCredits
+            .AsNoTracking()
+            .Where(mc => mc.MembershipNumber == membershipNumber)
+            .Select(mc => mc.Balance)
+            .FirstOrDefaultAsync();
+
         return new MemberPaymentSummary
         {
             MembershipNumber = membershipNumber,
@@ -629,7 +635,8 @@ public class PaymentService : IPaymentService
             OverduePayments = payments.Count(p => p.Status == PaymentStatus.Pending && p.DueDate < today),
             TotalOwed = payments.Where(p => p.Status != PaymentStatus.Cancelled).Sum(p => p.Amount),
             TotalPaid = payments.Sum(p => p.AmountPaid),
-            TotalOutstanding = payments.Where(p => p.Status == PaymentStatus.Pending).Sum(p => p.OutstandingBalance)
+            TotalOutstanding = payments.Where(p => p.Status == PaymentStatus.Pending).Sum(p => p.OutstandingBalance),
+            CreditBalance = creditBalance
         };
     }
 

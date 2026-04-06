@@ -53,6 +53,12 @@ public class Payment
     /// </summary>
     public PaymentMethod? PaymentMethod { get; set; }
 
+    /// <summary>
+    /// How much of this payment was covered by member credit (rather than cash/cheque/transfer)
+    /// </summary>
+    [Range(0, 10000)]
+    public decimal CreditApplied { get; set; }
+
     // Refund tracking
     [Range(0, 10000)]
     public decimal RefundAmount { get; set; }

@@ -4,6 +4,23 @@
 
 <PageTitle>Unit Settings - GUMS</PageTitle>
 
+<style>
+    .toast-fixed {
+        position: fixed;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        z-index: 9999;
+        min-width: 280px;
+        max-width: 400px;
+        animation: slideInUp 0.25s ease-out;
+    }
+
+    @@keyframes slideInUp {
+        from { transform: translateY(100%); opacity: 0; }
+        to   { transform: translateY(0);   opacity: 1; }
+    }
+</style>
+
 <div class="container-fluid py-4">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
@@ -24,13 +41,6 @@
         </div>
     }
 
-    @if (!string.IsNullOrEmpty(_successMessage))
-    {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle-fill"></i> @_successMessage
-            <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
-        </div>
-    }
 
     @if (_isLoading)
     {
@@ -273,3 +283,11 @@
         </div>
     }
 </div>
+
+@if (!string.IsNullOrEmpty(_successMessage))
+{
+    <div class="toast-fixed alert alert-success alert-dismissible mb-0 shadow" role="alert">
+        <i class="bi bi-check-circle-fill me-1"></i> @_successMessage
+        <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+    </div>
+}
