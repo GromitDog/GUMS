@@ -145,7 +145,7 @@
                                     {
                                         <button type="button" class="btn btn-outline-secondary"
                                                 @onclick="() => SetAmount(Math.Round(_payment.OutstandingBalance / 2, 2))">
-                                            Pay Half (@(Math.Round(_payment.OutstandingBalance / 2, 2)).ToString("C"))
+                                            Pay Half (@Math.Round(_payment.OutstandingBalance / 2, 2).ToString("C"))
                                         </button>
                                     }
                                 </div>

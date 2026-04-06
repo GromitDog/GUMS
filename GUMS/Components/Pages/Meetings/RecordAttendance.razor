@@ -76,25 +76,30 @@
                         }
                         @if (requiresConsent)
                         {
-                            var formsIn = girlAttendanceRecords.Count(a => a.ConsentFormReceived);
-                            var declined = girlAttendanceRecords.Count(a => a.ConsentDeclined);
-                            var notResponded = girlAttendanceRecords.Count - formsIn - declined;
+                            var saidYes = girlAttendanceRecords.Count(a => a.ConsentFormReceived || a.ConsentEmailReceived);
+                            var saidNo = girlAttendanceRecords.Count(a => a.ConsentDeclined);
+                            var noAnswer = girlAttendanceRecords.Count(a => !a.ConsentEmailReceived && !a.ConsentFormReceived && !a.ConsentDeclined);
+                            var chaseForForms = girlAttendanceRecords.Count(a => a.ConsentEmailReceived && !a.ConsentFormReceived && !a.ConsentDeclined);
                             <div class="d-flex justify-content-around text-center">
                                 <div>
-                                    <h4 class="mb-0 text-success">@formsIn</h4>
-                                    <small class="text-muted">Forms In</small>
+                                    <h4 class="mb-0 text-success">@saidYes</h4>
+                                    <small class="text-muted">Said Yes</small>
                                 </div>
                                 <div>
-                                    <h4 class="mb-0 text-muted">@declined</h4>
+                                    <h4 class="mb-0 text-danger">@saidNo</h4>
                                     <small class="text-muted">Declined</small>
                                 </div>
                                 <div>
-                                    <h4 class="mb-0 text-warning">@notResponded</h4>
-                                    <small class="text-muted">Not Responded</small>
+                                    <h4 class="mb-0 @(noAnswer > 0 ? "text-secondary" : "")">@noAnswer</h4>
+                                    <small class="text-muted">No Answer</small>
+                                </div>
+                                <div>
+                                    <h4 class="mb-0 @(chaseForForms > 0 ? "text-warning" : "text-success")">@chaseForForms</h4>
+                                    <small class="text-muted">Chase Forms</small>
                                 </div>
                                 <div>
                                     <h4 class="mb-0">@girlAttendanceRecords.Count</h4>
-                                    <small class="text-muted">Total Girls</small>
+                                    <small class="text-muted">Total</small>
                                 </div>
                             </div>
                         }

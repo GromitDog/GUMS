@@ -11,8 +11,10 @@ public partial class MemberHistory
 
     [Inject] private IPaymentService PaymentService { get; set; } = default!;
     [Inject] private ICreditService CreditService { get; set; } = default!;
+    [Inject] private IPersonService PersonService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
+    private int? _personId;
     private MemberPaymentSummary _summary = new();
     private List<Payment> _payments = new();
     private List<Payment> _filteredPayments = new();
@@ -67,6 +69,9 @@ public partial class MemberHistory
             _summary = await PaymentService.GetMemberPaymentSummaryAsync(MembershipNumber);
             _payments = await PaymentService.GetByMembershipNumberAsync(MembershipNumber);
             _creditHistory = await CreditService.GetCreditHistoryAsync(MembershipNumber);
+
+            var person = await PersonService.GetByMembershipNumberAsync(MembershipNumber);
+            _personId = person?.Id;
             ApplyFilter();
         }
         catch (Exception ex)

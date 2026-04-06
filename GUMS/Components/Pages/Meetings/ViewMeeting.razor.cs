@@ -136,7 +136,7 @@ public partial class ViewMeeting
         if (!HasEventCost) return;
 
         attendees = await AttendanceService.GetAttendanceForMeetingAsync(MeetingId);
-        var consentedMembers = attendees.Where(a => a.ConsentFormReceived).ToList();
+        var consentedMembers = attendees.Where(a => a.ConsentFormReceived || a.ConsentEmailReceived).ToList();
 
         eventPaymentsCount = 0;
         consentedWithoutPayment = 0;
@@ -169,7 +169,7 @@ public partial class ViewMeeting
 
         try
         {
-            var consentedMembers = attendees.Where(a => a.ConsentFormReceived).ToList();
+            var consentedMembers = attendees.Where(a => a.ConsentFormReceived || a.ConsentEmailReceived).ToList();
             var created = 0;
 
             foreach (var a in consentedMembers)

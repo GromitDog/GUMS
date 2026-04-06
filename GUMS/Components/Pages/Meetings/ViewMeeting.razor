@@ -433,7 +433,7 @@
                             <button type="button" class="btn-close" @onclick="CancelGeneratePayments"></button>
                         </div>
                         <div class="modal-body">
-                            <p>This will create payment records for <strong>@consentedWithoutPayment</strong> member@(consentedWithoutPayment != 1 ? "s" : "") with consent forms for <strong>@meeting.Title</strong>.</p>
+                            <p>This will create payment records for <strong>@consentedWithoutPayment</strong> member@(consentedWithoutPayment != 1 ? "s" : "") who said yes for <strong>@meeting.Title</strong>.</p>
                             <p class="mb-1"><strong>Amount per person:</strong> £@meeting.CostPerAttendee.Value.ToString("F2")</p>
                             @if (meeting.PaymentDeadline.HasValue)
                             {

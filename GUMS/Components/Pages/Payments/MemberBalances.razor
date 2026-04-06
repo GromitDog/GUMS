@@ -1,0 +1,201 @@
+@page "/Payments/Balances"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Member Balances - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-people"></i> Member Balances</h2>
+        <a href="/Payments" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> All Payments
+        </a>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading balances...</p>
+        </div>
+    }
+    else
+    {
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h3 class="mb-0 text-danger">@TotalOutstanding.ToString("C")</h3>
+                        <p class="text-muted mb-0">Total Owed</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h3 class="mb-0" style="color: #ff9800;">@TotalCredit.ToString("C")</h3>
+                        <p class="text-muted mb-0">Total Credit Held</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h3 class="mb-0 text-danger">@CountOwing</h3>
+                        <p class="text-muted mb-0">Members Owing</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h3 class="mb-0 text-success">@CountClear</h3>
+                        <p class="text-muted mb-0">All Clear</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn @(_filterMode == "all" ? "btn-primary" : "btn-outline-primary")"
+                        @onclick='() => SetFilter("all")'>
+                    All (@_rows.Count)
+                </button>
+                <button type="button" class="btn @(_filterMode == "owing" ? "btn-primary" : "btn-outline-primary")"
+                        @onclick='() => SetFilter("owing")'>
+                    Owing (@CountOwing)
+                </button>
+                <button type="button" class="btn @(_filterMode == "credit" ? "btn-primary" : "btn-outline-primary")"
+                        @onclick='() => SetFilter("credit")'>
+                    Has Credit (@CountWithCredit)
+                </button>
+                <button type="button" class="btn @(_filterMode == "clear" ? "btn-primary" : "btn-outline-primary")"
+                        @onclick='() => SetFilter("clear")'>
+                    Clear (@CountClear)
+                </button>
+            </div>
+            <div style="width: 250px;">
+                <input type="text" class="form-control form-control-sm" placeholder="Search..."
+                       @bind="_searchTerm" @bind:event="oninput" @bind:after="ApplyFilters" />
+            </div>
+        </div>
+
+        @if (!_filteredRows.Any())
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No members match this filter.
+            </div>
+        }
+        else
+        {
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="cursor: pointer;" @onclick='() => SortBy("Name")'>
+                                        Name <i class="bi @SortIcon("Name") small"></i>
+                                    </th>
+                                    <th class="text-end" style="cursor: pointer;" @onclick='() => SortBy("Outstanding")'>
+                                        Owed <i class="bi @SortIcon("Outstanding") small"></i>
+                                    </th>
+                                    <th class="text-end" style="cursor: pointer;" @onclick='() => SortBy("Credit")'>
+                                        Credit <i class="bi @SortIcon("Credit") small"></i>
+                                    </th>
+                                    <th class="text-end" style="cursor: pointer;" @onclick='() => SortBy("Net")'>
+                                        Net <i class="bi @SortIcon("Net") small"></i>
+                                    </th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in _filteredRows)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a href="/Payments/MemberHistory/@row.MembershipNumber" class="text-decoration-none">
+                                                @row.Name
+                                            </a>
+                                        </td>
+                                        <td class="text-end">
+                                            @if (row.Outstanding > 0)
+                                            {
+                                                <strong class="text-danger">@row.Outstanding.ToString("C")</strong>
+                                                @if (row.OverdueCount > 0)
+                                                {
+                                                    <br />
+                                                    <small class="text-danger">@row.OverdueCount overdue</small>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">—</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            @if (row.CreditBalance > 0)
+                                            {
+                                                <strong style="color: #ff9800;">@row.CreditBalance.ToString("C")</strong>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">—</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            @if (row.NetPosition > 0)
+                                            {
+                                                <span style="color: #ff9800;">+@row.NetPosition.ToString("C")</span>
+                                            }
+                                            else if (row.NetPosition < 0)
+                                            {
+                                                <span class="text-danger">@row.NetPosition.ToString("C")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-success">@(0m.ToString("C"))</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (row.Outstanding == 0 && row.CreditBalance == 0)
+                                            {
+                                                <span class="badge bg-success"><i class="bi bi-check-circle"></i> Clear</span>
+                                            }
+                                            else if (row.OverdueCount > 0)
+                                            {
+                                                <span class="badge badge-gg-overdue">Overdue</span>
+                                            }
+                                            else if (row.Outstanding > 0)
+                                            {
+                                                <span class="badge badge-gg-pending">Pending</span>
+                                            }
+                                            else if (row.CreditBalance > 0)
+                                            {
+                                                <span class="badge" style="background-color: #ff9800; color: white;">Credit</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <a href="/Payments/MemberHistory/@row.MembershipNumber"
+                                               class="btn btn-sm btn-outline-primary" title="View payment history">
+                                                <i class="bi bi-clock-history"></i> History
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>

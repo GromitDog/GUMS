@@ -1,5 +1,6 @@
 using System.Text;
 using GUMS.Data.Entities;
+using GUMS.Data.Enums;
 using GUMS.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -12,6 +13,7 @@ public partial class ViewMember
 {
     [Inject] public required IPersonService PersonService { get; set; }
     [Inject] public required IPaymentService PaymentService { get; set; }
+    [Inject] public required IProgrammeService ProgrammeService { get; set; }
     [Inject] public required UserManager<IdentityUser> UserManager { get; set; }
     [Inject] public required AuthenticationStateProvider AuthenticationStateProvider { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
@@ -22,6 +24,8 @@ public partial class ViewMember
 
     private Person? _person;
     private MemberPaymentSummary? _paymentSummary;
+    private AwardStatus? _awardStatus;
+    private List<GirlThemeProgress>? _themeProgress;
     private string? _errorMessage;
     private string? _successMessage;
     private bool _isLoading = true;
@@ -36,10 +40,17 @@ public partial class ViewMember
         {
             _person = await PersonService.GetByIdAsync(Id);
 
-            // Load payment summary if person exists
+            // Load payment summary and programme progress if person exists
             if (_person != null)
             {
                 _paymentSummary = await PaymentService.GetMemberPaymentSummaryAsync(_person.MembershipNumber);
+
+                // Load programme progress for girls only
+                if (_person.PersonType == PersonType.Girl && !_person.IsDataRemoved)
+                {
+                    _awardStatus = await ProgrammeService.GetAwardStatusAsync(_person.MembershipNumber);
+                    _themeProgress = await ProgrammeService.GetGirlThemeProgressAsync(_person.MembershipNumber);
+                }
             }
         }
         catch

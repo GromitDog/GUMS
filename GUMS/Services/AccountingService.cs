@@ -77,22 +77,47 @@ public class AccountingService : IAccountingService
     /// <inheritdoc/>
     public async Task<decimal> GetCashOnHandAsync()
     {
-        var account = await GetAccountByCodeAsync(CashOnHandCode);
-        return account?.Balance ?? 0;
+        return await CalculateAccountBalanceFromLinesAsync(CashOnHandCode);
     }
 
     /// <inheritdoc/>
     public async Task<decimal> GetBankBalanceAsync()
     {
-        var account = await GetAccountByCodeAsync(BankAccountCode);
-        return account?.Balance ?? 0;
+        return await CalculateAccountBalanceFromLinesAsync(BankAccountCode);
     }
 
     /// <inheritdoc/>
     public async Task<decimal> GetChequesPendingAsync()
     {
-        var account = await GetAccountByCodeAsync(ChequesPendingCode);
-        return account?.Balance ?? 0;
+        return await CalculateAccountBalanceFromLinesAsync(ChequesPendingCode);
+    }
+
+    /// <summary>
+    /// Calculates an account balance from transaction lines (source of truth),
+    /// excluding voided transactions. This matches the year-end report logic.
+    /// </summary>
+    private async Task<decimal> CalculateAccountBalanceFromLinesAsync(string accountCode)
+    {
+        var account = await GetAccountByCodeAsync(accountCode);
+        if (account == null) return 0;
+
+        var totalDebit = await _context.TransactionLines
+            .Where(l => l.AccountId == account.Id && !l.Transaction.IsVoided)
+            .SumAsync(l => l.Debit);
+
+        var totalCredit = await _context.TransactionLines
+            .Where(l => l.AccountId == account.Id && !l.Transaction.IsVoided)
+            .SumAsync(l => l.Credit);
+
+        // Asset/Expense: Debit increases. Income/Liability/Equity: Credit increases.
+        if (account.Type == AccountType.Asset || account.Type == AccountType.Expense)
+        {
+            return totalDebit - totalCredit;
+        }
+        else
+        {
+            return totalCredit - totalDebit;
+        }
     }
 
     // ===== Transaction Operations =====
@@ -1563,7 +1588,7 @@ public class AccountingService : IAccountingService
         decimal subsIncome = 0;
         decimal activityIncome = 0;
 
-        foreach (var transaction in transactions)
+        foreach (var transaction in transactions.Where(t => !t.IsVoided))
         {
             foreach (var line in transaction.Lines)
             {

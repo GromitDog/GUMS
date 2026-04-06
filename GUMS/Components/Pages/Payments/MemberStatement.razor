@@ -1,0 +1,206 @@
+@page "/Payments/Statement/{MembershipNumber}"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Statement - @_memberName - GUMS</PageTitle>
+
+<style>
+    @@media print {
+        .sidebar, .top-row, .no-print, nav, .navbar {
+            display: none !important;
+        }
+        .main {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .container-fluid {
+            padding: 0 !important;
+        }
+        .statement-page {
+            padding: 20px !important;
+            font-size: 11pt !important;
+        }
+        .statement-page .card {
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .statement-page .card-body {
+            padding: 0 !important;
+        }
+        .statement-page table {
+            font-size: 10pt !important;
+        }
+    }
+
+    @@media screen {
+        .statement-page {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+    }
+
+    .statement-page table th {
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: #555;
+    }
+</style>
+
+<div class="container-fluid py-4 statement-page">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <a href="/Payments/MemberHistory/@MembershipNumber" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to History
+        </a>
+        <button class="btn btn-primary" @onclick="Print">
+            <i class="bi bi-printer"></i> Print
+        </button>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5 no-print">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Header -->
+        <div class="text-center mb-4">
+            <h3 class="mb-1" style="color: var(--gg-dark-navy);">@_unitName</h3>
+            <p class="text-muted mb-1" style="font-size: 1.1rem;">Payment Statement</p>
+            <p class="mb-0" style="font-size: 1rem;"><strong>@_memberName</strong></p>
+            <p class="text-muted small mb-0">@DateTime.Today.ToString("dd MMMM yyyy")</p>
+        </div>
+
+        <hr style="border-color: #ddd;" />
+
+        @if (!_lines.Any())
+        {
+            <p class="text-center text-muted py-4">No payment records to display.</p>
+        }
+        else
+        {
+            <table class="table table-sm mb-4" style="font-size: 0.9rem;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #ccc;">
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th class="text-end">Charged</th>
+                        <th class="text-end">Paid</th>
+                        <th class="text-end">Refund / Credit</th>
+                        <th class="text-end">Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var line in _lines)
+                    {
+                        <tr>
+                            <td>@line.Date.ToString("dd MMM yyyy")</td>
+                            <td>
+                                @line.Description
+                                @if (line.Status == "Refunded")
+                                {
+                                    <span class="text-muted small"> (refunded)</span>
+                                }
+                            </td>
+                            <td class="text-end">@line.Charged.ToString("C")</td>
+                            <td class="text-end">
+                                @if (line.Paid > 0)
+                                {
+                                    @line.Paid.ToString("C")
+                                }
+                            </td>
+                            <td class="text-end">
+                                @if (line.RefundCredit > 0)
+                                {
+                                    @line.RefundCredit.ToString("C")
+                                }
+                            </td>
+                            <td class="text-end">
+                                @if (line.Balance > 0)
+                                {
+                                    @line.Balance.ToString("C")
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr style="border-top: 2px solid #999;">
+                        <td colspan="2" class="text-end fw-bold">Totals</td>
+                        <td class="text-end fw-bold">@_totalCharged.ToString("C")</td>
+                        <td class="text-end fw-bold">@_totalPaid.ToString("C")</td>
+                        <td class="text-end fw-bold">
+                            @if (_totalRefundCredit > 0)
+                            {
+                                @_totalRefundCredit.ToString("C")
+                            }
+                        </td>
+                        <td class="text-end fw-bold">
+                            @if (_totalOutstanding > 0)
+                            {
+                                @_totalOutstanding.ToString("C")
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <!-- Summary -->
+            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1rem;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted">Total charged:</span>
+                        <strong class="ms-2">@_totalCharged.ToString("C")</strong>
+                    </div>
+                    <div>
+                        <span class="text-muted">Total paid:</span>
+                        <strong class="ms-2">@_totalPaid.ToString("C")</strong>
+                    </div>
+                    @if (_creditBalance > 0)
+                    {
+                        <div>
+                            <span class="text-muted">Credit held:</span>
+                            <strong class="ms-2">@_creditBalance.ToString("C")</strong>
+                        </div>
+                    }
+                    <div>
+                        @if (_totalOutstanding > 0)
+                        {
+                            <span class="text-muted">Balance due:</span>
+                            <strong class="ms-2" style="font-size: 1.1rem;">@_totalOutstanding.ToString("C")</strong>
+                        }
+                        else
+                        {
+                            <span style="color: var(--gg-success);">
+                                <i class="bi bi-check-circle"></i> Paid in full
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            @if (_totalOutstanding > 0)
+            {
+                <p class="text-muted text-center small mt-3 mb-0">
+                    If you have any questions about this statement, please speak to a leader.
+                </p>
+            }
+        }
+    }
+</div>

@@ -1,0 +1,162 @@
+@page "/Meetings/Register"
+@using GUMS.Data.Enums
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Term Register - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/Meetings">Meetings</a></li>
+            <li class="breadcrumb-item active">Term Register</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-grid-3x3-gap"></i> Term Register</h2>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading register...</p>
+        </div>
+    }
+    else
+    {
+        <!-- Term Selector -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Term</label>
+                <select class="form-select" value="@_selectedTermId" @onchange="OnTermChanged">
+                    @foreach (var term in _terms)
+                    {
+                        <option value="@term.Id">
+                            @term.Name (@term.StartDate.ToString("dd MMM") - @term.EndDate.ToString("dd MMM yyyy"))
+                        </option>
+                    }
+                </select>
+            </div>
+            @if (_selectedTerm != null)
+            {
+                <div class="col-md-8 d-flex align-items-end">
+                    <div class="text-muted">
+                        <strong>@_meetings.Count</strong> meetings &middot;
+                        <strong>@_girls.Count</strong> girls &middot;
+                        <strong>@_meetings.Count(m => !IsFutureMeeting(m))</strong> past &middot;
+                        <strong>@_meetings.Count(m => IsFutureMeeting(m))</strong> upcoming
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (!_meetings.Any())
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No meetings found for this term.
+            </div>
+        }
+        else if (!_girls.Any())
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No active girls in the register.
+            </div>
+        }
+        else
+        {
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 75vh; overflow: auto;">
+                        <table class="table table-sm table-bordered table-hover mb-0" style="font-size: 0.85rem;">
+                            <thead class="table-light" style="position: sticky; top: 0; z-index: 2;">
+                                <tr>
+                                    <th style="position: sticky; left: 0; z-index: 3; background: #f8f9fa; min-width: 160px;">
+                                        Name
+                                    </th>
+                                    @foreach (var meeting in _meetings)
+                                    {
+                                        var isFuture = IsFutureMeeting(meeting);
+                                        <th class="text-center @(isFuture ? "text-muted" : "")"
+                                            style="min-width: 60px; white-space: nowrap; font-weight: 500;"
+                                            title="@meeting.Title — @meeting.Date.ToString("dd MMMM yyyy")">
+                                            @meeting.Date.ToString("dd MMM")
+                                        </th>
+                                    }
+                                    <th class="text-center" style="position: sticky; right: 0; z-index: 3; background: #f8f9fa; min-width: 80px;">
+                                        Summary
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var girl in _girls)
+                                {
+                                    var summary = GetGirlSummary(girl.MembershipNumber);
+                                    var pct = summary.totalPast > 0 ? (double)summary.attended / summary.totalPast * 100 : 0;
+
+                                    <tr>
+                                        <td style="position: sticky; left: 0; z-index: 1; background: white; white-space: nowrap;">
+                                            <a href="/Register/View/@girl.Id" class="text-decoration-none">
+                                                @girl.FullName
+                                            </a>
+                                        </td>
+                                        @foreach (var meeting in _meetings)
+                                        {
+                                            var isFuture = IsFutureMeeting(meeting);
+                                            var hasData = HasAttendanceData(meeting);
+                                            var attended = _matrix.ContainsKey(girl.MembershipNumber) && _matrix[girl.MembershipNumber].ContainsKey(meeting.Id)
+                                                ? _matrix[girl.MembershipNumber][meeting.Id]
+                                                : (bool?)null;
+
+                                            <td class="text-center" style="@(isFuture ? "background-color: #f8f9fa;" : "")">
+                                                @if (isFuture)
+                                                {
+                                                    @* Future meeting — blank *@
+                                                }
+                                                else if (!hasData)
+                                                {
+                                                    <span class="text-muted" title="Attendance not recorded">—</span>
+                                                }
+                                                else if (attended == true)
+                                                {
+                                                    <i class="bi bi-check-circle-fill" style="color: var(--gg-success);" title="Attended"></i>
+                                                }
+                                                else if (attended == false)
+                                                {
+                                                    <i class="bi bi-x-circle-fill" style="color: var(--gg-error);" title="Absent"></i>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted" title="No record">—</span>
+                                                }
+                                            </td>
+                                        }
+                                        <td class="text-center fw-bold" style="position: sticky; right: 0; z-index: 1; background: white;">
+                                            @if (summary.totalPast > 0)
+                                            {
+                                                var summaryColor = pct >= 75 ? "var(--gg-success)" : pct >= 50 ? "#ff9800" : "var(--gg-error)";
+                                                <span style="color: @summaryColor;">
+                                                    @summary.attended/@summary.totalPast
+                                                </span>
+                                                <br />
+                                                <small style="color: @summaryColor;">@pct.ToString("0")%</small>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">—</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>

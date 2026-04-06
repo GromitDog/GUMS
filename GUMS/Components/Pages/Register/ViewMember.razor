@@ -270,6 +270,85 @@
                         </div>
                     </div>
 
+                    <!-- Programme Progress (Girls only) -->
+                    @if (_person.PersonType == PersonType.Girl && _awardStatus != null && _themeProgress != null)
+                    {
+                        <div class="card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Programme Progress</h5>
+                                <a href="/Programme/Progress/@_person.MembershipNumber" class="btn btn-sm btn-outline-primary">
+                                    View Full Progress
+                                </a>
+                            </div>
+                            <div class="card-body">
+                                <!-- Award Level Badges -->
+                                <div class="d-flex gap-2 mb-3">
+                                    <span class="badge @(_awardStatus.BronzeEarned ? "" : "bg-opacity-25")"
+                                          style="background-color: @(_awardStatus.BronzeEarned ? "#CD7F32" : "#e0d5c9"); color: @(_awardStatus.BronzeEarned ? "white" : "#999"); font-size: 0.85rem;">
+                                        <i class="bi @(_awardStatus.BronzeEarned ? "bi-award-fill" : "bi-award")"></i> Bronze
+                                    </span>
+                                    <span class="badge @(_awardStatus.SilverEarned ? "" : "bg-opacity-25")"
+                                          style="background-color: @(_awardStatus.SilverEarned ? "#C0C0C0" : "#e8e8e8"); color: @(_awardStatus.SilverEarned ? "#333" : "#999"); font-size: 0.85rem;">
+                                        <i class="bi @(_awardStatus.SilverEarned ? "bi-award-fill" : "bi-award")"></i> Silver
+                                    </span>
+                                    <span class="badge @(_awardStatus.GoldEarned ? "" : "bg-opacity-25")"
+                                          style="background-color: @(_awardStatus.GoldEarned ? "#FFD700" : "#f0ead6"); color: @(_awardStatus.GoldEarned ? "#333" : "#999"); font-size: 0.85rem;">
+                                        <i class="bi @(_awardStatus.GoldEarned ? "bi-award-fill" : "bi-award")"></i> Gold
+                                    </span>
+                                </div>
+
+                                <!-- Theme Pips -->
+                                <div class="d-flex gap-3 flex-wrap mb-2">
+                                    @foreach (var theme in _themeProgress)
+                                    {
+                                        var color = theme.Theme switch
+                                        {
+                                            Theme.KnowMyself => "#1A9FE0",
+                                            Theme.ExpressMyself => "#E2187B",
+                                            Theme.BeWell => "#904C94",
+                                            Theme.HaveAdventures => "#79B741",
+                                            Theme.TakeAction => "#F08E2C",
+                                            Theme.SkillsForMyFuture => "#F3B6D1",
+                                            _ => "#666"
+                                        };
+                                        var hasProgress = theme.SkillsBuilders.Any(b => b.ClausesCompleted > 0)
+                                            || theme.InterestBadges.Any(b => b.ClausesCompleted > 0)
+                                            || theme.UmaMinutesCompleted > 0;
+
+                                        <div class="text-center" style="min-width: 60px;">
+                                            @if (theme.ThemeAwardEarned)
+                                            {
+                                                <div style="width: 28px; height: 28px; border-radius: 50%; background-color: @color; margin: 0 auto;"
+                                                     title="@theme.ThemeDisplayName — Award Earned">
+                                                    <i class="bi bi-check" style="color: white; font-size: 1rem; line-height: 28px;"></i>
+                                                </div>
+                                            }
+                                            else if (hasProgress)
+                                            {
+                                                <div style="width: 28px; height: 28px; border-radius: 50%; border: 3px solid @color; margin: 0 auto;"
+                                                     title="@theme.ThemeDisplayName — In Progress">
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div style="width: 28px; height: 28px; border-radius: 50%; border: 2px solid #ddd; margin: 0 auto;"
+                                                     title="@theme.ThemeDisplayName — Not Started">
+                                                </div>
+                                            }
+                                            <small style="font-size: 0.65rem; color: @(theme.ThemeAwardEarned ? color : "#999");">
+                                                @theme.ThemeDisplayName
+                                            </small>
+                                        </div>
+                                    }
+                                </div>
+
+                                <p class="text-muted mb-0 small">
+                                    @_awardStatus.ThemeAwardsEarned of 6 theme awards earned
+                                </p>
+                            </div>
+                        </div>
+                    }
+
                     <!-- Payment History -->
                     <div class="card mb-4">
                         <div class="card-header d-flex justify-content-between align-items-center">
