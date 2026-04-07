@@ -6,7 +6,7 @@
 
 <PageTitle>Record Attendance - GUMS</PageTitle>
 
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 mobile-sticky-page">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/Meetings">Meetings</a></li>
@@ -47,14 +47,14 @@
     }
     else
     {
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-2">
             <div>
                 <h2>Record Attendance</h2>
                 <p class="text-muted mb-0">
                     <strong>@meeting.Title</strong> - @meeting.Date.ToString("dddd, dd MMMM yyyy")
                 </p>
             </div>
-            <div>
+            <div class="d-none d-md-block">
                 <button class="btn btn-success btn-lg" @onclick="SaveAttendance" disabled="@isSaving">
                     @if (isSaving)
                     {
@@ -138,7 +138,8 @@
                                 Only members with a received consent form will appear in the attendance checklist.
                             </p>
 
-                            <div class="table-responsive">
+                            <!-- Desktop: table view -->
+                            <div class="table-responsive d-none d-md-block">
                                 <table class="table table-sm">
                                     <thead>
                                         <tr>
@@ -192,6 +193,55 @@
                                         }
                                     </tbody>
                                 </table>
+                            </div>
+
+                            <!-- Mobile: card view -->
+                            <div class="d-md-none">
+                                @foreach (var record in attendanceRecords.Where(a => memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == PersonType.Girl).OrderBy(a => memberLookup[a.MembershipNumber].FullName))
+                                {
+                                    var member = memberLookup[record.MembershipNumber];
+                                    <div class="mobile-consent-card">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <strong>@member.FullName</strong>
+                                            @if (record.ConsentFormReceived)
+                                            {
+                                                <span class="badge bg-success">Consented</span>
+                                            }
+                                            else if (record.ConsentDeclined)
+                                            {
+                                                <span class="badge bg-secondary">Declined</span>
+                                            }
+                                            else if (record.ConsentEmailReceived)
+                                            {
+                                                <span class="badge bg-warning text-dark">Form Outstanding</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-light text-dark border">Not Started</span>
+                                            }
+                                        </div>
+                                        <div class="d-flex gap-3">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input"
+                                                       checked="@record.ConsentEmailReceived"
+                                                       @onchange="@(e => ToggleConsentEmail(record, (bool)(e.Value ?? false)))" />
+                                                <label class="form-check-label small">Email</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input"
+                                                       checked="@record.ConsentFormReceived"
+                                                       @onchange="@(e => ToggleConsentForm(record, (bool)(e.Value ?? false)))" />
+                                                <label class="form-check-label small">Form In</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input"
+                                                       checked="@record.ConsentDeclined"
+                                                       @onchange="@(e => ToggleConsentDeclined(record, (bool)(e.Value ?? false)))" />
+                                                <label class="form-check-label small">Declined</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
                             </div>
 
                             @{
@@ -493,8 +543,8 @@
                     </div>
                 </div>
 
-                <!-- Tips Card -->
-                <div class="card">
+                <!-- Tips Card (hidden on mobile) -->
+                <div class="card d-none d-lg-block">
                     <div class="card-body">
                         <h6 class="card-title">
                             <i class="bi bi-lightbulb text-warning"></i> Quick Tips
@@ -525,6 +575,17 @@
                     </a>
                 </div>
             </div>
+        </div>
+
+        <!-- Mobile sticky save button -->
+        <div class="d-md-none mobile-sticky-action">
+            <button class="btn btn-success w-100" @onclick="SaveAttendance" disabled="@isSaving">
+                @if (isSaving)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                }
+                <i class="bi bi-check-lg"></i> Save Attendance
+            </button>
         </div>
     }
 </div>

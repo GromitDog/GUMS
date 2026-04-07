@@ -67,8 +67,8 @@
                                 <tr>
                                     <th>Girl</th>
                                     <th>Award</th>
-                                    <th>Type</th>
-                                    <th>Stock</th>
+                                    <th class="d-none d-md-table-cell">Type</th>
+                                    <th class="d-none d-md-table-cell">Stock</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -83,7 +83,7 @@
                                             </a>
                                         </td>
                                         <td><strong>@award.AwardName</strong></td>
-                                        <td>
+                                        <td class="d-none d-md-table-cell">
                                             @switch (award.AwardType)
                                             {
                                                 case "Badge":
@@ -106,7 +106,7 @@
                                                     break;
                                             }
                                         </td>
-                                        <td>
+                                        <td class="d-none d-md-table-cell">
                                             @if (stockRow == null || !stockRow.IsTracked)
                                             {
                                                 <span class="text-muted small">—</span>
@@ -127,8 +127,9 @@
                                         <td class="text-end">
                                             <button class="btn btn-sm btn-outline-success"
                                                     disabled="@_isSaving"
-                                                    @onclick="() => MarkAwarded(award)">
-                                                <i class="bi bi-check-lg"></i> Mark Awarded
+                                                    @onclick="() => MarkAwarded(award)"
+                                                    title="Mark Awarded">
+                                                <i class="bi bi-check-lg"></i> <span class="d-none d-md-inline">Mark Awarded</span>
                                             </button>
                                         </td>
                                     </tr>
@@ -157,12 +158,12 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Award</th>
-                                    <th class="text-center">Due Now</th>
-                                    <th class="text-center">Predicted This Term</th>
-                                    <th class="text-center">Total Needed</th>
-                                    <th class="text-center">In Stock</th>
+                                    <th class="text-center d-none d-md-table-cell">Due Now</th>
+                                    <th class="text-center d-none d-md-table-cell">Predicted</th>
+                                    <th class="text-center">Needed</th>
+                                    <th class="text-center">Stock</th>
                                     <th class="text-center">Shortfall</th>
-                                    <th></th>
+                                    <th class="d-none d-md-table-cell"></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -170,8 +171,8 @@
                                 {
                                     <tr class="@(row.IsTracked && row.Shortfall > 0 ? "table-danger" : "")">
                                         <td><strong>@row.AwardName</strong></td>
-                                        <td class="text-center">@row.CurrentlyDue</td>
-                                        <td class="text-center text-muted">
+                                        <td class="text-center d-none d-md-table-cell">@row.CurrentlyDue</td>
+                                        <td class="text-center text-muted d-none d-md-table-cell">
                                             @(row.ProjectedAdditional > 0 ? $"+{row.ProjectedAdditional}" : "—")
                                         </td>
                                         <td class="text-center fw-bold">@row.TotalNeeded</td>
@@ -192,7 +193,7 @@
                                                 <span class="text-success"><i class="bi bi-check-lg"></i></span>
                                             }
                                         </td>
-                                        <td>
+                                        <td class="d-none d-md-table-cell">
                                             @if (row.StockItemId.HasValue)
                                             {
                                                 <a href="/Inventory/Stock/@row.StockItemId" class="btn btn-sm btn-outline-secondary">

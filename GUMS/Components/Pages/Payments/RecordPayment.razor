@@ -50,18 +50,18 @@
                     </div>
                     <div class="card-body">
                         <dl class="row mb-0">
-                            <dt class="col-sm-5">Member</dt>
-                            <dd class="col-sm-7">
+                            <dt class="col-12 col-sm-5">Member</dt>
+                            <dd class="col-12 col-sm-7">
                                 <a href="/Payments/MemberHistory/@_payment.MembershipNumber">
                                     @_memberName
                                 </a>
                             </dd>
 
-                            <dt class="col-sm-5">Reference</dt>
-                            <dd class="col-sm-7">@_payment.Reference</dd>
+                            <dt class="col-12 col-sm-5">Reference</dt>
+                            <dd class="col-12 col-sm-7">@_payment.Reference</dd>
 
-                            <dt class="col-sm-5">Type</dt>
-                            <dd class="col-sm-7">
+                            <dt class="col-12 col-sm-5">Type</dt>
+                            <dd class="col-12 col-sm-7">
                                 @if (_payment.PaymentType == PaymentType.Subs)
                                 {
                                     <span class="badge badge-gg-subs">Subscription</span>
@@ -72,8 +72,8 @@
                                 }
                             </dd>
 
-                            <dt class="col-sm-5">Due Date</dt>
-                            <dd class="col-sm-7">
+                            <dt class="col-12 col-sm-5">Due Date</dt>
+                            <dd class="col-12 col-sm-7">
                                 @_payment.DueDate.ToString("dd MMM yyyy")
                                 @if (_payment.DueDate < DateTime.Today)
                                 {
@@ -81,14 +81,14 @@
                                 }
                             </dd>
 
-                            <dt class="col-sm-5">Total Amount</dt>
-                            <dd class="col-sm-7"><strong>@_payment.Amount.ToString("C")</strong></dd>
+                            <dt class="col-12 col-sm-5">Total Amount</dt>
+                            <dd class="col-12 col-sm-7"><strong>@_payment.Amount.ToString("C")</strong></dd>
 
-                            <dt class="col-sm-5">Already Paid</dt>
-                            <dd class="col-sm-7 text-success">@_payment.AmountPaid.ToString("C")</dd>
+                            <dt class="col-12 col-sm-5">Already Paid</dt>
+                            <dd class="col-12 col-sm-7 text-success">@_payment.AmountPaid.ToString("C")</dd>
 
-                            <dt class="col-sm-5">Outstanding</dt>
-                            <dd class="col-sm-7">
+                            <dt class="col-12 col-sm-5">Outstanding</dt>
+                            <dd class="col-12 col-sm-7">
                                 <strong class="text-danger fs-5">@_payment.OutstandingBalance.ToString("C")</strong>
                             </dd>
                         </dl>

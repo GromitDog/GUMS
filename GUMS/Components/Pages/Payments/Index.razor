@@ -7,20 +7,20 @@
 <PageTitle>Payments - GUMS</PageTitle>
 
 <div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-2">
         <h2>Payments</h2>
-        <div>
-            <a href="/Payments/Balances" class="btn btn-outline-info me-2">
+        <div class="d-flex flex-wrap gap-2">
+            <a href="/Payments/Balances" class="btn btn-outline-info d-none d-md-inline-block">
                 <i class="bi bi-people"></i> Member Balances
             </a>
-            <a href="/Payments/Overdue" class="btn btn-outline-warning me-2">
+            <a href="/Payments/Overdue" class="btn btn-outline-warning d-none d-md-inline-block">
                 <i class="bi bi-exclamation-triangle"></i> Overdue Payments
             </a>
-            <a href="/Payments/Create" class="btn btn-outline-primary me-2">
-                <i class="bi bi-plus-circle"></i> Create Payment
+            <a href="/Payments/Create" class="btn btn-outline-primary">
+                <i class="bi bi-plus-circle"></i> <span class="d-none d-sm-inline">Create</span> Payment
             </a>
             <a href="/Payments/GenerateSubs" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Generate Termly Subs
+                <i class="bi bi-plus-circle"></i> <span class="d-none d-sm-inline">Generate</span> Subs
             </a>
         </div>
     </div>
@@ -158,18 +158,18 @@
                                 <th style="cursor: pointer;" @onclick='() => SortBy("Member")'>
                                     Member <i class="bi @SortIcon("Member") small"></i>
                                 </th>
-                                <th style="cursor: pointer;" @onclick='() => SortBy("Type")'>
+                                <th class="d-none d-md-table-cell" style="cursor: pointer;" @onclick='() => SortBy("Type")'>
                                     Type <i class="bi @SortIcon("Type") small"></i>
                                 </th>
-                                <th>Reference</th>
-                                <th class="text-end" style="cursor: pointer;" @onclick='() => SortBy("Amount")'>
+                                <th class="d-none d-lg-table-cell">Reference</th>
+                                <th class="d-none d-md-table-cell text-end" style="cursor: pointer;" @onclick='() => SortBy("Amount")'>
                                     Amount <i class="bi @SortIcon("Amount") small"></i>
                                 </th>
-                                <th class="text-end">Paid</th>
+                                <th class="d-none d-lg-table-cell text-end">Paid</th>
                                 <th class="text-end" style="cursor: pointer;" @onclick='() => SortBy("Outstanding")'>
                                     Outstanding <i class="bi @SortIcon("Outstanding") small"></i>
                                 </th>
-                                <th style="cursor: pointer;" @onclick='() => SortBy("DueDate")'>
+                                <th class="d-none d-md-table-cell" style="cursor: pointer;" @onclick='() => SortBy("DueDate")'>
                                     Due Date <i class="bi @SortIcon("DueDate") small"></i>
                                 </th>
                                 <th style="cursor: pointer;" @onclick='() => SortBy("Status")'>
@@ -190,7 +190,7 @@
                                             @memberName
                                         </a>
                                     </td>
-                                    <td>
+                                    <td class="d-none d-md-table-cell">
                                         @if (payment.PaymentType == PaymentType.Subs)
                                         {
                                             <span class="badge badge-gg-subs">Subs</span>
@@ -204,9 +204,9 @@
                                             <span class="badge badge-gg-other">Other</span>
                                         }
                                     </td>
-                                    <td>@payment.Reference</td>
-                                    <td class="text-end">@payment.Amount.ToString("C")</td>
-                                    <td class="text-end">@payment.AmountPaid.ToString("C")</td>
+                                    <td class="d-none d-lg-table-cell">@payment.Reference</td>
+                                    <td class="d-none d-md-table-cell text-end">@payment.Amount.ToString("C")</td>
+                                    <td class="d-none d-lg-table-cell text-end">@payment.AmountPaid.ToString("C")</td>
                                     <td class="text-end">
                                         @if (payment.OutstandingBalance > 0)
                                         {
@@ -217,7 +217,7 @@
                                             <span class="text-success">@payment.OutstandingBalance.ToString("C")</span>
                                         }
                                     </td>
-                                    <td>
+                                    <td class="d-none d-md-table-cell">
                                         @payment.DueDate.ToString("dd MMM yyyy")
                                         @if (isOverdue)
                                         {

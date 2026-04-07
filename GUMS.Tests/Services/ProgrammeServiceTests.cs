@@ -4,6 +4,7 @@ using GUMS.Data.Entities;
 using GUMS.Data.Enums;
 using GUMS.Services;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 
 namespace GUMS.Tests.Services;
 
@@ -22,7 +23,7 @@ public class ProgrammeServiceTests : IDisposable
         _context = new ApplicationDbContext(options);
         _context.Database.EnsureCreated();
 
-        _sut = new ProgrammeService(_context);
+        _sut = new ProgrammeService(_context, new Mock<IInventoryService>().Object);
     }
 
     public void Dispose()

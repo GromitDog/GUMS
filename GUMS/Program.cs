@@ -9,9 +9,10 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure database path
-var dbPath = Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-    "GUMS", "gums.db");
+var dbPath = Environment.GetEnvironmentVariable("GUMS_DB_PATH")
+    ?? Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "GUMS", "gums.db");
 
 // Ensure directory exists and secure it (Windows file permissions)
 var dbDirectory = Path.GetDirectoryName(dbPath)!;
@@ -119,7 +120,12 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
+// Only redirect to HTTPS when not in production HTTP-only mode (e.g. Pi behind Tailscale)
+var configuredUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? "";
+if (!app.Environment.IsProduction() || configuredUrls.Contains("https"))
+{
+    app.UseHttpsRedirection();
+}
 
 // Add authentication and authorization middleware
 app.UseAuthentication();

@@ -16,7 +16,28 @@ public static class DatabaseSecurityService
     {
         if (!OperatingSystem.IsWindows())
         {
-            // File permissions only apply on Windows
+            if (OperatingSystem.IsLinux())
+            {
+                try
+                {
+                    var chmod = new System.Diagnostics.Process
+                    {
+                        StartInfo = new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = "chmod",
+                            Arguments = $"700 \"{directoryPath}\"",
+                            UseShellExecute = false,
+                            RedirectStandardError = true
+                        }
+                    };
+                    chmod.Start();
+                    chmod.WaitForExit();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Warning: Could not set Linux permissions on database directory: {ex.Message}");
+                }
+            }
             return;
         }
 
