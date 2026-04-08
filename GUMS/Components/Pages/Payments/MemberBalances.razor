@@ -26,62 +26,62 @@
     else
     {
         <!-- Summary Cards -->
-        <div class="row mb-4">
-            <div class="col-md-3">
+        <div class="row mb-4 g-2">
+            <div class="col-6 col-md-3">
                 <div class="card">
-                    <div class="card-body text-center">
-                        <h3 class="mb-0 text-danger">@TotalOutstanding.ToString("C")</h3>
-                        <p class="text-muted mb-0">Total Owed</p>
+                    <div class="card-body text-center py-2 py-md-3">
+                        <h3 class="mb-0 text-danger fs-5 fs-md-3">@TotalOutstanding.ToString("C")</h3>
+                        <p class="text-muted mb-0 small">Total Owed</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-6 col-md-3">
                 <div class="card">
-                    <div class="card-body text-center">
-                        <h3 class="mb-0" style="color: #ff9800;">@TotalCredit.ToString("C")</h3>
-                        <p class="text-muted mb-0">Total Credit Held</p>
+                    <div class="card-body text-center py-2 py-md-3">
+                        <h3 class="mb-0 fs-5 fs-md-3" style="color: #ff9800;">@TotalCredit.ToString("C")</h3>
+                        <p class="text-muted mb-0 small">Credit Held</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-6 col-md-3">
                 <div class="card">
-                    <div class="card-body text-center">
-                        <h3 class="mb-0 text-danger">@CountOwing</h3>
-                        <p class="text-muted mb-0">Members Owing</p>
+                    <div class="card-body text-center py-2 py-md-3">
+                        <h3 class="mb-0 text-danger fs-5 fs-md-3">@CountOwing</h3>
+                        <p class="text-muted mb-0 small">Owing</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-6 col-md-3">
                 <div class="card">
-                    <div class="card-body text-center">
-                        <h3 class="mb-0 text-success">@CountClear</h3>
-                        <p class="text-muted mb-0">All Clear</p>
+                    <div class="card-body text-center py-2 py-md-3">
+                        <h3 class="mb-0 text-success fs-5 fs-md-3">@CountClear</h3>
+                        <p class="text-muted mb-0 small">Clear</p>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Filters -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="btn-group" role="group">
-                <button type="button" class="btn @(_filterMode == "all" ? "btn-primary" : "btn-outline-primary")"
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-2">
+            <div class="btn-group flex-wrap" role="group">
+                <button type="button" class="btn btn-sm btn-md @(_filterMode == "all" ? "btn-primary" : "btn-outline-primary")"
                         @onclick='() => SetFilter("all")'>
                     All (@_rows.Count)
                 </button>
-                <button type="button" class="btn @(_filterMode == "owing" ? "btn-primary" : "btn-outline-primary")"
+                <button type="button" class="btn btn-sm btn-md @(_filterMode == "owing" ? "btn-primary" : "btn-outline-primary")"
                         @onclick='() => SetFilter("owing")'>
                     Owing (@CountOwing)
                 </button>
-                <button type="button" class="btn @(_filterMode == "credit" ? "btn-primary" : "btn-outline-primary")"
+                <button type="button" class="btn btn-sm btn-md @(_filterMode == "credit" ? "btn-primary" : "btn-outline-primary")"
                         @onclick='() => SetFilter("credit")'>
-                    Has Credit (@CountWithCredit)
+                    Credit (@CountWithCredit)
                 </button>
-                <button type="button" class="btn @(_filterMode == "clear" ? "btn-primary" : "btn-outline-primary")"
+                <button type="button" class="btn btn-sm btn-md @(_filterMode == "clear" ? "btn-primary" : "btn-outline-primary")"
                         @onclick='() => SetFilter("clear")'>
                     Clear (@CountClear)
                 </button>
             </div>
-            <div style="width: 250px;">
+            <div class="w-100" style="max-width: 250px;">
                 <input type="text" class="form-control form-control-sm" placeholder="Search..."
                        @bind="_searchTerm" @bind:event="oninput" @bind:after="ApplyFilters" />
             </div>
@@ -107,14 +107,14 @@
                                     <th class="text-end" style="cursor: pointer;" @onclick='() => SortBy("Outstanding")'>
                                         Owed <i class="bi @SortIcon("Outstanding") small"></i>
                                     </th>
-                                    <th class="text-end" style="cursor: pointer;" @onclick='() => SortBy("Credit")'>
+                                    <th class="d-none d-md-table-cell text-end" style="cursor: pointer;" @onclick='() => SortBy("Credit")'>
                                         Credit <i class="bi @SortIcon("Credit") small"></i>
                                     </th>
-                                    <th class="text-end" style="cursor: pointer;" @onclick='() => SortBy("Net")'>
+                                    <th class="d-none d-md-table-cell text-end" style="cursor: pointer;" @onclick='() => SortBy("Net")'>
                                         Net <i class="bi @SortIcon("Net") small"></i>
                                     </th>
                                     <th>Status</th>
-                                    <th>Actions</th>
+                                    <th class="d-none d-md-table-cell">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -141,7 +141,7 @@
                                                 <span class="text-muted">—</span>
                                             }
                                         </td>
-                                        <td class="text-end">
+                                        <td class="d-none d-md-table-cell text-end">
                                             @if (row.CreditBalance > 0)
                                             {
                                                 <strong style="color: #ff9800;">@row.CreditBalance.ToString("C")</strong>
@@ -151,7 +151,7 @@
                                                 <span class="text-muted">—</span>
                                             }
                                         </td>
-                                        <td class="text-end">
+                                        <td class="d-none d-md-table-cell text-end">
                                             @if (row.NetPosition > 0)
                                             {
                                                 <span style="color: #ff9800;">+@row.NetPosition.ToString("C")</span>
@@ -183,7 +183,7 @@
                                                 <span class="badge" style="background-color: #ff9800; color: white;">Credit</span>
                                             }
                                         </td>
-                                        <td>
+                                        <td class="d-none d-md-table-cell">
                                             <a href="/Payments/MemberHistory/@row.MembershipNumber"
                                                class="btn btn-sm btn-outline-primary" title="View payment history">
                                                 <i class="bi bi-clock-history"></i> History

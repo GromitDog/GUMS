@@ -1,4 +1,5 @@
 @page "/Accounts/EventAccounts/{MeetingId:int}"
+@using GUMS.Data.Enums
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @rendermode InteractiveServer
@@ -29,95 +30,204 @@
     }
     else
     {
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-2">
             <h2>@_summary.MeetingTitle - Financial Summary</h2>
-            <div>
-                <a href="/Accounts/EventBudget/@MeetingId" class="btn btn-outline-info me-2">
-                    <i class="bi bi-calculator"></i> Budget
+            <div class="d-flex flex-wrap gap-2">
+                <a href="/Accounts/EventBudget/@MeetingId" class="btn btn-outline-info">
+                    <i class="bi bi-calculator"></i> <span class="d-none d-md-inline">Budget</span>
                 </a>
-                <a href="/Accounts/BudgetComparison/@MeetingId" class="btn btn-outline-primary me-2">
-                    <i class="bi bi-bar-chart"></i> Budget vs Actual
+                <a href="/Accounts/BudgetComparison/@MeetingId" class="btn btn-outline-primary">
+                    <i class="bi bi-bar-chart"></i> <span class="d-none d-md-inline">Budget vs Actual</span>
                 </a>
                 <a href="/Meetings/View/@MeetingId" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to Meeting
+                    <i class="bi bi-arrow-left"></i> Back
                 </a>
             </div>
         </div>
 
+        <!-- Summary Cards -->
+        <div class="row mb-4 g-2">
+            <div class="col-6 col-md-3">
+                <div class="card h-100">
+                    <div class="card-body text-center py-2 py-md-3">
+                        <h6 class="text-muted mb-1 small">Total Received</h6>
+                        <h3 class="mb-0 text-success fs-5 fs-md-3">@((_summary.TotalIncome + _summary.TotalCreditApplied).ToString("C"))</h3>
+                        @if (_summary.TotalCreditApplied > 0)
+                        {
+                            <small class="text-muted">incl. @_summary.TotalCreditApplied.ToString("C") credit</small>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card h-100">
+                    <div class="card-body text-center py-2 py-md-3">
+                        <h6 class="text-muted mb-1 small">Cash Received</h6>
+                        <h3 class="mb-0 fs-5 fs-md-3" style="color: var(--gg-primary-blue);">@_summary.TotalIncome.ToString("C")</h3>
+                        <small class="text-muted">@_summary.PaidCount of @_summary.PaymentCount paid</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card h-100">
+                    <div class="card-body text-center py-2 py-md-3">
+                        <h6 class="text-muted mb-1 small">Total Expenses</h6>
+                        <h3 class="mb-0 text-danger fs-5 fs-md-3">@_summary.TotalExpenses.ToString("C")</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card h-100 @(_summary.TotalOutstanding > 0 ? "border-warning" : "border-success")">
+                    <div class="card-body text-center py-2 py-md-3">
+                        <h6 class="text-muted mb-1 small">Outstanding</h6>
+                        @if (_summary.TotalOutstanding > 0)
+                        {
+                            <h3 class="mb-0 fs-5 fs-md-3" style="color: #ff9800;">@_summary.TotalOutstanding.ToString("C")</h3>
+                            <small class="text-muted">@_summary.PendingCount pending</small>
+                        }
+                        else
+                        {
+                            <h3 class="mb-0 text-success fs-5 fs-md-3">@(0m.ToString("C"))</h3>
+                            <small class="text-success"><i class="bi bi-check-circle"></i> All settled</small>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Net Position -->
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card h-100">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted">Total Income</h6>
-                        <h2 class="text-success">@_summary.TotalIncome.ToString("C")</h2>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted">Total Expenses</h6>
-                        <h2 class="text-danger">@_summary.TotalExpenses.ToString("C")</h2>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100 @(_summary.NetPosition >= 0 ? "border-success" : "border-danger")">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted">Net Position</h6>
-                        <h2 class="@(_summary.NetPosition >= 0 ? "text-success" : "text-danger")">
-                            @_summary.NetPosition.ToString("C")
-                        </h2>
-                    </div>
-                </div>
+        <div class="card mb-4 @(_summary.NetPosition >= 0 ? "border-success" : "border-danger")">
+            <div class="card-body text-center py-2">
+                <span class="text-muted me-2">Net Position:</span>
+                <strong class="fs-5 @(_summary.NetPosition >= 0 ? "text-success" : "text-danger")">
+                    @_summary.NetPosition.ToString("C")
+                </strong>
             </div>
         </div>
 
         <div class="row">
             <!-- Income Breakdown -->
-            <div class="col-md-6">
+            <div class="col-lg-7">
                 <div class="card mb-4">
                     <div class="card-header" style="background-color: var(--gg-success); color: white;">
-                        <h5 class="mb-0"><i class="bi bi-graph-up-arrow"></i> Income</h5>
+                        <h5 class="mb-0"><i class="bi bi-graph-up-arrow"></i> Payments</h5>
                     </div>
                     <div class="card-body">
                         @if (!_summary.IncomeBreakdown.Any())
                         {
-                            <p class="text-muted text-center py-3">No income recorded for this event.</p>
+                            <p class="text-muted text-center py-3">No payments recorded for this event.</p>
                         }
                         else
                         {
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Description</th>
-                                        <th class="text-end">Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var item in _summary.IncomeBreakdown)
-                                    {
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead>
                                         <tr>
-                                            <td>@item.Description</td>
-                                            <td class="text-end">@item.Amount.ToString("C")</td>
+                                            <th>Member</th>
+                                            <th class="d-none d-md-table-cell text-end">Due</th>
+                                            <th class="text-end">Paid</th>
+                                            <th class="text-end">Credit</th>
+                                            <th class="d-none d-md-table-cell text-end">Outstanding</th>
+                                            <th>Status</th>
+                                            <th class="d-none d-lg-table-cell">Method</th>
                                         </tr>
-                                    }
-                                </tbody>
-                                <tfoot>
-                                    <tr class="table-success">
-                                        <td><strong>Total</strong></td>
-                                        <td class="text-end"><strong>@_summary.TotalIncome.ToString("C")</strong></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in _summary.IncomeBreakdown)
+                                        {
+                                            <tr>
+                                                <td>@item.Description</td>
+                                                <td class="d-none d-md-table-cell text-end">@item.Amount.ToString("C")</td>
+                                                <td class="text-end">
+                                                    @if (item.AmountPaid > 0)
+                                                    {
+                                                        @item.AmountPaid.ToString("C")
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">—</span>
+                                                    }
+                                                </td>
+                                                <td class="text-end">
+                                                    @if (item.CreditApplied > 0)
+                                                    {
+                                                        <strong style="color: #ff9800;">@item.CreditApplied.ToString("C")</strong>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">—</span>
+                                                    }
+                                                </td>
+                                                <td class="d-none d-md-table-cell text-end">
+                                                    @if (item.Outstanding > 0)
+                                                    {
+                                                        <span class="text-danger">@item.Outstanding.ToString("C")</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">—</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (item.Status == PaymentStatus.Paid)
+                                                    {
+                                                        <span class="badge badge-gg-paid">Paid</span>
+                                                    }
+                                                    else if (item.Status == PaymentStatus.Pending)
+                                                    {
+                                                        <span class="badge badge-gg-pending">Pending</span>
+                                                    }
+                                                    else if (item.Status == PaymentStatus.Refunded)
+                                                    {
+                                                        <span class="badge bg-secondary">Refunded</span>
+                                                    }
+                                                </td>
+                                                <td class="d-none d-lg-table-cell">
+                                                    @if (item.PaymentMethod.HasValue)
+                                                    {
+                                                        <small class="text-muted">@FormatPaymentMethod(item.PaymentMethod.Value)</small>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="table-success fw-bold">
+                                            <td>Total</td>
+                                            <td class="d-none d-md-table-cell text-end">@_summary.TotalAmountDue.ToString("C")</td>
+                                            <td class="text-end">@_summary.TotalIncome.ToString("C")</td>
+                                            <td class="text-end">
+                                                @if (_summary.TotalCreditApplied > 0)
+                                                {
+                                                    <span style="color: #ff9800;">@_summary.TotalCreditApplied.ToString("C")</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>—</span>
+                                                }
+                                            </td>
+                                            <td class="d-none d-md-table-cell text-end">
+                                                @if (_summary.TotalOutstanding > 0)
+                                                {
+                                                    <span class="text-danger">@_summary.TotalOutstanding.ToString("C")</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>—</span>
+                                                }
+                                            </td>
+                                            <td colspan="2"></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
                         }
                     </div>
                 </div>
             </div>
 
             <!-- Expense Breakdown -->
-            <div class="col-md-6">
+            <div class="col-lg-5">
                 <div class="card mb-4">
                     <div class="card-header" style="background-color: var(--gg-error); color: white;">
                         <h5 class="mb-0"><i class="bi bi-graph-down-arrow"></i> Expenses</h5>
@@ -129,7 +239,7 @@
                         }
                         else
                         {
-                            <table class="table table-sm">
+                            <table class="table table-sm mb-0">
                                 <thead>
                                     <tr>
                                         <th>Category</th>
@@ -193,10 +303,10 @@
                                 <thead>
                                     <tr>
                                         <th style="width:2rem;"></th>
-                                        <th>Reference</th>
+                                        <th class="d-none d-md-table-cell">Reference</th>
                                         <th>Member</th>
                                         <th class="text-end">Amount paid</th>
-                                        <th>Date paid</th>
+                                        <th class="d-none d-md-table-cell">Date paid</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -208,10 +318,10 @@
                                                        checked="@_selectedPaymentIds.Contains(p.Id)"
                                                        @onchange="() => TogglePayment(p.Id)" />
                                             </td>
-                                            <td>@p.Reference</td>
+                                            <td class="d-none d-md-table-cell">@p.Reference</td>
                                             <td>@p.MembershipNumber</td>
-                                            <td class="text-end">£@p.AmountPaid.ToString("N2")</td>
-                                            <td>@(p.PaymentDate?.ToString("d MMM yyyy") ?? "-")</td>
+                                            <td class="text-end">@p.AmountPaid.ToString("C")</td>
+                                            <td class="d-none d-md-table-cell">@(p.PaymentDate?.ToString("d MMM yyyy") ?? "-")</td>
                                         </tr>
                                     }
                                 </tbody>

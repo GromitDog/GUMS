@@ -7,10 +7,10 @@
 <PageTitle>Member Register - GUMS</PageTitle>
 
 <div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-2">
         <h2>Member Register</h2>
-        <div>
-            <a href="/Register/AddGirl" class="btn btn-primary me-2">
+        <div class="d-flex flex-wrap gap-2">
+            <a href="/Register/AddGirl" class="btn btn-primary">
                 <i class="bi bi-person-plus"></i> Add Girl
             </a>
             <a href="/Register/AddLeader" class="btn btn-secondary">
@@ -78,11 +78,11 @@
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>Membership Number</th>
+                                <th class="d-none d-md-table-cell">Membership Number</th>
                                 <th>Name</th>
-                                <th>Type</th>
+                                <th class="d-none d-lg-table-cell">Type</th>
                                 <th>Status</th>
-                                <th>Date Joined</th>
+                                <th class="d-none d-md-table-cell">Date Joined</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -97,7 +97,7 @@
                                 @foreach (var member in girls)
                                 {
                                     <tr>
-                                        <td>@member.MembershipNumber</td>
+                                        <td class="d-none d-md-table-cell">@member.MembershipNumber</td>
                                         <td>
                                             @if (member.IsDataRemoved)
                                             {
@@ -108,7 +108,7 @@
                                                 @member.FullName
                                             }
                                         </td>
-                                        <td>
+                                        <td class="d-none d-lg-table-cell">
                                             <span class="badge bg-info">
                                                 @member.PersonType
                                             </span>
@@ -127,7 +127,7 @@
                                                 <span class="badge bg-warning">Inactive</span>
                                             }
                                         </td>
-                                        <td>@member.DateJoined.ToString("dd/MM/yyyy")</td>
+                                        <td class="d-none d-md-table-cell">@member.DateJoined.ToString("dd/MM/yyyy")</td>
                                         <td>
                                             <div class="btn-group btn-group-sm" role="group">
                                                 <a href="/Register/View/@member.Id" class="btn btn-outline-primary">View</a>
@@ -151,7 +151,7 @@
                                 @foreach (var member in leaders)
                                 {
                                     <tr>
-                                        <td>@member.MembershipNumber</td>
+                                        <td class="d-none d-md-table-cell">@member.MembershipNumber</td>
                                         <td>
                                             @if (member.IsDataRemoved)
                                             {
@@ -162,7 +162,7 @@
                                                 @member.FullName
                                             }
                                         </td>
-                                        <td>
+                                        <td class="d-none d-lg-table-cell">
                                             <span class="badge bg-secondary">
                                                 @member.PersonType
                                             </span>
@@ -181,7 +181,7 @@
                                                 <span class="badge bg-warning">Inactive</span>
                                             }
                                         </td>
-                                        <td>@member.DateJoined.ToString("dd/MM/yyyy")</td>
+                                        <td class="d-none d-md-table-cell">@member.DateJoined.ToString("dd/MM/yyyy")</td>
                                         <td>
                                             <div class="btn-group btn-group-sm" role="group">
                                                 <a href="/Register/View/@member.Id" class="btn btn-outline-primary">View</a>

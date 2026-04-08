@@ -52,42 +52,42 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <div class="row text-center">
-                            <div class="col">
-                                <h4 class="mb-0">@_summary.TotalPayments</h4>
-                                <small class="text-muted">Total Payments</small>
+                        <div class="row text-center g-2">
+                            <div class="col-4 col-md">
+                                <h4 class="mb-0 fs-6 fs-md-4">@_summary.TotalPayments</h4>
+                                <small class="text-muted">Payments</small>
                             </div>
-                            <div class="col">
-                                <h4 class="mb-0 text-success">@_summary.TotalPaid.ToString("C")</h4>
-                                <small class="text-muted">Total Paid</small>
+                            <div class="col-4 col-md">
+                                <h4 class="mb-0 text-success fs-6 fs-md-4">@_summary.TotalPaid.ToString("C")</h4>
+                                <small class="text-muted">Paid</small>
                             </div>
-                            <div class="col">
-                                <h4 class="mb-0 @(_summary.TotalOutstanding > 0 ? "text-danger" : "text-success")">
+                            <div class="col-4 col-md">
+                                <h4 class="mb-0 fs-6 fs-md-4 @(_summary.TotalOutstanding > 0 ? "text-danger" : "text-success")">
                                     @_summary.TotalOutstanding.ToString("C")
                                 </h4>
                                 <small class="text-muted">Outstanding</small>
                             </div>
-                            <div class="col">
+                            <div class="col-6 col-md d-none d-sm-block">
                                 @if (_summary.OverduePayments > 0)
                                 {
-                                    <h4 class="mb-0 text-danger">@_summary.OverduePayments</h4>
+                                    <h4 class="mb-0 text-danger fs-6 fs-md-4">@_summary.OverduePayments</h4>
                                     <small class="text-danger">Overdue</small>
                                 }
                                 else
                                 {
-                                    <h4 class="mb-0 text-success"><i class="bi bi-check-circle"></i></h4>
+                                    <h4 class="mb-0 text-success fs-6 fs-md-4"><i class="bi bi-check-circle"></i></h4>
                                     <small class="text-muted">No Overdue</small>
                                 }
                             </div>
-                            <div class="col">
+                            <div class="col-6 col-md d-none d-sm-block">
                                 @if (_summary.CreditBalance > 0)
                                 {
-                                    <h4 class="mb-0" style="color: #ff9800;">@_summary.CreditBalance.ToString("C")</h4>
-                                    <small style="color: #ff9800;">Credit Available</small>
+                                    <h4 class="mb-0 fs-6 fs-md-4" style="color: #ff9800;">@_summary.CreditBalance.ToString("C")</h4>
+                                    <small style="color: #ff9800;">Credit</small>
                                 }
                                 else
                                 {
-                                    <h4 class="mb-0 text-muted">@(0m.ToString("C"))</h4>
+                                    <h4 class="mb-0 text-muted fs-6 fs-md-4">@(0m.ToString("C"))</h4>
                                     <small class="text-muted">Credit</small>
                                 }
                             </div>
@@ -126,7 +126,7 @@
 
         <!-- Filter -->
         <div class="mb-3">
-            <div class="btn-group" role="group">
+            <div class="btn-group flex-wrap" role="group">
                 <button type="button" class="btn @(_paymentTypeFilter == null ? "btn-primary" : "btn-outline-primary")"
                         @onclick="() => FilterByType(null)">
                     All (@_payments.Count)
@@ -158,10 +158,10 @@
                             <thead>
                                 <tr>
                                     <th>Date</th>
-                                    <th>Type</th>
-                                    <th>Reference</th>
-                                    <th class="text-end">Amount</th>
-                                    <th class="text-end">Paid</th>
+                                    <th class="d-none d-md-table-cell">Type</th>
+                                    <th class="d-none d-lg-table-cell">Reference</th>
+                                    <th class="d-none d-md-table-cell text-end">Amount</th>
+                                    <th class="d-none d-lg-table-cell text-end">Paid</th>
                                     <th class="text-end">Outstanding</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -181,7 +181,7 @@
                                                 <small class="text-muted">Paid: @payment.PaymentDate.Value.ToString("dd MMM yyyy")</small>
                                             }
                                         </td>
-                                        <td>
+                                        <td class="d-none d-md-table-cell">
                                             @if (payment.PaymentType == PaymentType.Subs)
                                             {
                                                 <span class="badge badge-gg-subs">Subs</span>
@@ -191,7 +191,7 @@
                                                 <span class="badge badge-gg-activity">Activity</span>
                                             }
                                         </td>
-                                        <td>
+                                        <td class="d-none d-lg-table-cell">
                                             @payment.Reference
                                             @if (payment.CreditApplied > 0)
                                             {
@@ -204,8 +204,8 @@
                                                 <small class="text-muted">@payment.Notes</small>
                                             }
                                         </td>
-                                        <td class="text-end">@payment.Amount.ToString("C")</td>
-                                        <td class="text-end text-success">@payment.AmountPaid.ToString("C")</td>
+                                        <td class="d-none d-md-table-cell text-end">@payment.Amount.ToString("C")</td>
+                                        <td class="d-none d-lg-table-cell text-end text-success">@payment.AmountPaid.ToString("C")</td>
                                         <td class="text-end">
                                             @if (payment.OutstandingBalance > 0)
                                             {
@@ -241,14 +241,14 @@
                                         <td>
                                             @if (payment.Status == PaymentStatus.Pending)
                                             {
-                                                <a href="/Payments/RecordPayment/@payment.Id" class="btn btn-sm btn-success me-1">
-                                                    <i class="bi bi-cash"></i> Pay
+                                                <a href="/Payments/RecordPayment/@payment.Id" class="btn btn-sm btn-success me-1" title="Record payment">
+                                                    <i class="bi bi-cash"></i> <span class="d-none d-md-inline">Pay</span>
                                                 </a>
                                                 @if (_summary.CreditBalance > 0)
                                                 {
                                                     <button class="btn btn-sm btn-outline-warning" @onclick="() => ShowApplyCreditModal(payment)"
                                                             title="Apply credit to this payment">
-                                                        <i class="bi bi-wallet2"></i> Use Credit
+                                                        <i class="bi bi-wallet2"></i> <span class="d-none d-md-inline">Use Credit</span>
                                                     </button>
                                                 }
                                             }
@@ -256,11 +256,11 @@
                                             {
                                                 <button class="btn btn-sm btn-outline-info me-1" @onclick="() => ShowRefundConfirm(payment)"
                                                         title="Refund as cash">
-                                                    <i class="bi bi-arrow-counterclockwise"></i> Refund
+                                                    <i class="bi bi-arrow-counterclockwise"></i> <span class="d-none d-md-inline">Refund</span>
                                                 </button>
                                                 <button class="btn btn-sm btn-outline-warning" @onclick="() => ShowConvertToCreditModal(payment)"
                                                         title="Convert to credit balance">
-                                                    <i class="bi bi-wallet2"></i> To Credit
+                                                    <i class="bi bi-wallet2"></i> <span class="d-none d-md-inline">To Credit</span>
                                                 </button>
                                             }
                                         </td>

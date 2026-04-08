@@ -1527,10 +1527,10 @@ public class AccountingService : IAccountingService
             MeetingTitle = meeting?.Title ?? "Unknown"
         };
 
-        // Get income: payments linked to this meeting where any amount has been received
+        // Get all non-cancelled payments linked to this meeting
         var payments = await _context.Payments
             .AsNoTracking()
-            .Where(p => p.MeetingId == meetingId && p.AmountPaid > 0)
+            .Where(p => p.MeetingId == meetingId && p.Status != PaymentStatus.Cancelled)
             .ToListAsync();
 
         // Look up member names for the income breakdown
@@ -1546,10 +1546,21 @@ public class AccountingService : IAccountingService
             summary.IncomeBreakdown.Add(new EventIncomeBreakdown
             {
                 Description = name,
-                Amount = payment.AmountPaid
+                Amount = payment.Amount,
+                AmountPaid = payment.AmountPaid,
+                CreditApplied = payment.CreditApplied,
+                Outstanding = payment.Amount - payment.AmountPaid - payment.CreditApplied,
+                Status = payment.Status,
+                PaymentMethod = payment.PaymentMethod
             });
         }
         summary.TotalIncome = payments.Sum(p => p.AmountPaid);
+        summary.TotalCreditApplied = payments.Sum(p => p.CreditApplied);
+        summary.TotalAmountDue = payments.Sum(p => p.Amount);
+        summary.TotalOutstanding = payments.Sum(p => p.Amount - p.AmountPaid - p.CreditApplied);
+        summary.PaymentCount = payments.Count;
+        summary.PaidCount = payments.Count(p => p.Status == PaymentStatus.Paid);
+        summary.PendingCount = payments.Count(p => p.Status == PaymentStatus.Pending);
 
         // Get expenses linked to this meeting
         var expenses = await _context.Expenses

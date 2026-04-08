@@ -47,7 +47,9 @@
       "Bash(cd C:\\\\Users\\\\amyjm\\\\RiderProjects\\\\GUMS\\\\GUMS\\\\Data\\\\Entities:*)",
       "Bash(cd \"C:\\\\Users\\\\amyjm\\\\RiderProjects\\\\GUMS\" && sqlite3 GUMS/gums.db \"SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;\" 2>&1)",
       "Bash(powershell:*)",
-      "Bash(dotnet script:*)"
+      "Bash(dotnet script:*)",
+      "Skill(ralph-loop:ralph-loop)",
+      "Skill(ralph-loop:ralph-loop:*)"
     ]
   }
 }

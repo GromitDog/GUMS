@@ -1,4 +1,5 @@
 using GUMS.Data.Entities;
+using GUMS.Data.Enums;
 using GUMS.Services;
 using Microsoft.AspNetCore.Components;
 
@@ -82,4 +83,12 @@ public partial class EventAccounts
             _isLinking = false;
         }
     }
+
+    private static string FormatPaymentMethod(PaymentMethod method) => method switch
+    {
+        Data.Enums.PaymentMethod.Cash => "Cash",
+        Data.Enums.PaymentMethod.Cheque => "Cheque",
+        Data.Enums.PaymentMethod.BankTransfer => "Bank Transfer",
+        _ => method.ToString()
+    };
 }

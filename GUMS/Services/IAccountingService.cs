@@ -369,8 +369,14 @@ public class EventFinancialSummary
     public int MeetingId { get; set; }
     public string MeetingTitle { get; set; } = string.Empty;
     public decimal TotalIncome { get; set; }
+    public decimal TotalCreditApplied { get; set; }
     public decimal TotalExpenses { get; set; }
-    public decimal NetPosition => TotalIncome - TotalExpenses;
+    public decimal TotalOutstanding { get; set; }
+    public decimal TotalAmountDue { get; set; }
+    public decimal NetPosition => TotalIncome + TotalCreditApplied - TotalExpenses;
+    public int PaymentCount { get; set; }
+    public int PaidCount { get; set; }
+    public int PendingCount { get; set; }
     public List<EventIncomeBreakdown> IncomeBreakdown { get; set; } = new();
     public List<EventExpenseBreakdown> ExpenseBreakdown { get; set; } = new();
 }
@@ -379,6 +385,11 @@ public class EventIncomeBreakdown
 {
     public string Description { get; set; } = string.Empty;
     public decimal Amount { get; set; }
+    public decimal AmountPaid { get; set; }
+    public decimal CreditApplied { get; set; }
+    public decimal Outstanding { get; set; }
+    public PaymentStatus Status { get; set; }
+    public PaymentMethod? PaymentMethod { get; set; }
 }
 
 public class EventExpenseBreakdown
