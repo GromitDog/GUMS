@@ -271,7 +271,8 @@ public class ProgrammeService : IProgrammeService
             {
                 MembershipNumber = girl.MembershipNumber,
                 Name = girl.FullName,
-                Section = girl.Section
+                Section = girl.Section,
+                DateJoined = girl.DateJoined
             };
 
             foreach (var theme in themes)

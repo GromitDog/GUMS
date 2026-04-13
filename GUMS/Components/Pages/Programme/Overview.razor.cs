@@ -12,6 +12,7 @@ public partial class Overview
     private Section? _filterSection;
     private Theme? _filterTheme;
     private string _filterType = "All"; // "All", "UMAs", "Badges"
+    private string _sortBy = "Progress"; // "Progress", "Name", "TimeInGuides"
     private bool _isLoading = true;
 
     protected override async Task OnInitializedAsync()
@@ -53,6 +54,40 @@ public partial class Overview
         if (_filterTheme.HasValue)
             return new[] { _filterTheme.Value };
         return Enum.GetValues<Theme>();
+    }
+
+    private void OnSortChanged(ChangeEventArgs e)
+    {
+        _sortBy = e.Value?.ToString() ?? "Progress";
+    }
+
+    private int GetAverageProgress(GirlOverviewRow girl)
+    {
+        var themes = Enum.GetValues<Theme>();
+        var total = 0;
+        foreach (var theme in themes)
+        {
+            var summary = girl.Themes.GetValueOrDefault(theme);
+            if (summary == null) continue;
+            var sbPct = Math.Min(summary.SkillsBuilderPercent, 100);
+            var ibPct = Math.Min(summary.InterestBadgePercent, 100);
+            var umaPct = summary.UmaMinutesRequired > 0
+                ? (int)Math.Min(summary.UmaMinutes * 100 / summary.UmaMinutesRequired, 100)
+                : 0;
+            total += (sbPct + ibPct + umaPct) / 3;
+        }
+        return themes.Length > 0 ? total / themes.Length : 0;
+    }
+
+    private IEnumerable<GirlOverviewRow> GetSortedGirls()
+    {
+        if (_overview == null) return Enumerable.Empty<GirlOverviewRow>();
+        return _sortBy switch
+        {
+            "Name" => _overview.Girls.OrderBy(g => g.Name),
+            "TimeInGuides" => _overview.Girls.OrderBy(g => g.DateJoined), // earliest joined first = longest serving
+            _ => _overview.Girls.OrderByDescending(g => GetAverageProgress(g))
+        };
     }
 
     private bool ShowBadges => _filterType is "All" or "Badges";

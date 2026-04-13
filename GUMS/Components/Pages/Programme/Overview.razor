@@ -49,6 +49,14 @@
                         <option value="Badges">Badges Only</option>
                     </select>
                 </div>
+                <div class="col-md-3">
+                    <label class="form-label form-label-sm">Sort by</label>
+                    <select class="form-select form-select-sm" @onchange="OnSortChanged">
+                        <option value="Progress">Total Progress</option>
+                        <option value="Name">Name (A-Z)</option>
+                        <option value="TimeInGuides">Time in Guides</option>
+                    </select>
+                </div>
             </div>
         </div>
     </div>
@@ -98,7 +106,7 @@
 
         <!-- Girls Progress Cards -->
         <div class="row">
-            @foreach (var girl in _overview.Girls)
+            @foreach (var girl in GetSortedGirls())
             {
                 <div class="col-12 col-md-6 col-xl-4 col-xxl-3 mb-3">
                     @{

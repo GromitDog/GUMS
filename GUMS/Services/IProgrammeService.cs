@@ -131,6 +131,7 @@ public class GirlOverviewRow
     public string MembershipNumber { get; set; } = string.Empty;
     public string? Name { get; set; }
     public Section? Section { get; set; }
+    public DateTime DateJoined { get; set; }
     public Dictionary<Theme, ThemeProgressSummary> Themes { get; set; } = new();
     public int ThemeAwardsEarned { get; set; }
 }
