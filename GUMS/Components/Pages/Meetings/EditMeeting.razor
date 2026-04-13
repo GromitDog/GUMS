@@ -234,9 +234,14 @@
                                                         <select class="form-select form-select-sm"
                                                                 @onchange="@(e => SetUmaDefinitionId(index, e))">
                                                             <option value="" selected="@(!activity.UmaDefinitionId.HasValue)">None</option>
-                                                            @foreach (var uma in _availableUmas)
+                                                            @foreach (var group in _availableUmas.GroupBy(u => u.Theme))
                                                             {
-                                                                <option value="@uma.Id" selected="@(activity.UmaDefinitionId == uma.Id)">@uma.Name (@uma.Minutes min)</option>
+                                                                <optgroup label="@GUMS.Services.ProgrammeService.GetThemeDisplayName(group.Key)">
+                                                                    @foreach (var uma in group)
+                                                                    {
+                                                                        <option value="@uma.Id" selected="@(activity.UmaDefinitionId == uma.Id)">@uma.Name (@uma.Minutes min)</option>
+                                                                    }
+                                                                </optgroup>
                                                             }
                                                         </select>
                                                     </div>
