@@ -1,0 +1,179 @@
+@page "/Accounts/CostCentreReport"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Cost Centre Report - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/Accounts">Accounts</a></li>
+            <li class="breadcrumb-item active">Cost Centre Report</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-2">
+        <div>
+            <h2><i class="bi bi-diagram-3"></i> Cost Centre Report</h2>
+            <p class="text-muted mb-0">Income and expenses grouped by purpose</p>
+        </div>
+        <a href="/Accounts" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Accounts
+        </a>
+    </div>
+
+    <!-- Date Range -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">From</label>
+                    <input type="date" class="form-control" @bind="_dateFrom" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">To</label>
+                    <input type="date" class="form-control" @bind="_dateTo" />
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-primary w-100" @onclick="LoadReport">
+                        <i class="bi bi-arrow-clockwise"></i> Update
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (_report != null)
+    {
+        @if (!_report.Lines.Any())
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No transactions with cost centres found in this period.
+            </div>
+        }
+        else
+        {
+            <!-- Summary Cards -->
+            <div class="row mb-4 g-2">
+                <div class="col-6 col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body text-center py-2 py-md-3">
+                            <h6 class="text-muted mb-1 small">Total Income</h6>
+                            <h3 class="mb-0 text-success fs-5 fs-md-3">@_report.TotalIncome.ToString("C")</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body text-center py-2 py-md-3">
+                            <h6 class="text-muted mb-1 small">Total Expenses</h6>
+                            <h3 class="mb-0 text-danger fs-5 fs-md-3">@_report.TotalExpenses.ToString("C")</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="card h-100 @(_report.TotalNet >= 0 ? "border-success" : "border-danger")">
+                        <div class="card-body text-center py-2 py-md-3">
+                            <h6 class="text-muted mb-1 small">Net Position</h6>
+                            <h3 class="mb-0 fs-5 fs-md-3 @(_report.TotalNet >= 0 ? "text-success" : "text-danger")">@_report.TotalNet.ToString("C")</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Table -->
+            <div class="card">
+                <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                    <h5 class="mb-0"><i class="bi bi-table"></i> Breakdown by Cost Centre</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Cost Centre</th>
+                                    <th class="text-end">Income</th>
+                                    <th class="text-end">Expenses</th>
+                                    <th class="text-end">Net</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var line in _report.Lines)
+                                {
+                                    <tr class="@(line.CostCentreId == null ? "table-light" : "")" style="cursor: pointer;" @onclick="() => ToggleExpand(line.CostCentreId)">
+                                        <td style="width: 2rem;">
+                                            @if (line.ExpenseDetails.Any())
+                                            {
+                                                <i class="bi @(IsExpanded(line.CostCentreId) ? "bi-chevron-down" : "bi-chevron-right")"></i>
+                                            }
+                                        </td>
+                                        <td>
+                                            <strong>@line.CostCentreName</strong>
+                                        </td>
+                                        <td class="text-end">
+                                            @if (line.Income > 0)
+                                            {
+                                                <span class="text-success">@line.Income.ToString("C")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">—</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            @if (line.Expenses > 0)
+                                            {
+                                                <span class="text-danger">@line.Expenses.ToString("C")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">—</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <strong class="@(line.Net >= 0 ? "text-success" : "text-danger")">@line.Net.ToString("C")</strong>
+                                        </td>
+                                    </tr>
+                                    @if (IsExpanded(line.CostCentreId) && line.ExpenseDetails.Any())
+                                    {
+                                        @foreach (var detail in line.ExpenseDetails)
+                                        {
+                                            <tr class="table-light">
+                                                <td></td>
+                                                <td class="ps-4 text-muted">
+                                                    <i class="bi bi-dot"></i> @detail.AccountName
+                                                </td>
+                                                <td></td>
+                                                <td class="text-end text-muted">@detail.Amount.ToString("C")</td>
+                                                <td></td>
+                                            </tr>
+                                        }
+                                    }
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr class="fw-bold" style="border-top: 2px solid var(--gg-dark-navy);">
+                                    <td></td>
+                                    <td>Total</td>
+                                    <td class="text-end text-success">@_report.TotalIncome.ToString("C")</td>
+                                    <td class="text-end text-danger">@_report.TotalExpenses.ToString("C")</td>
+                                    <td class="text-end @(_report.TotalNet >= 0 ? "text-success" : "text-danger")">@_report.TotalNet.ToString("C")</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>

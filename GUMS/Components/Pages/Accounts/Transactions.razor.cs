@@ -23,6 +23,9 @@ public partial class Transactions
     private int? _confirmVoidId;
     private int? _editDateId;
     private DateTime _editDateValue;
+    private int? _editAccountLineId;
+    private int _editAccountValue;
+    private List<Account> _editAccountOptions = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -163,6 +166,34 @@ public partial class Transactions
         {
             _editDateId = null;
             _successMessage = "Transaction date updated.";
+            _errorMessage = string.Empty;
+            await LoadTransactions();
+        }
+        else
+        {
+            _errorMessage = result.ErrorMessage;
+        }
+    }
+
+    private void StartEditAccount(TransactionLine line)
+    {
+        _editAccountLineId = line.Id;
+        _editAccountValue = line.AccountId;
+        _editAccountOptions = _accounts.Where(a => a.Type == line.Account.Type).ToList();
+    }
+
+    private void CancelEditAccount()
+    {
+        _editAccountLineId = null;
+    }
+
+    private async Task SaveAccount(int lineId)
+    {
+        var result = await AccountingService.UpdateTransactionLineAccountAsync(lineId, _editAccountValue);
+        if (result.Success)
+        {
+            _editAccountLineId = null;
+            _successMessage = "Account updated successfully.";
             _errorMessage = string.Empty;
             await LoadTransactions();
         }

@@ -110,13 +110,13 @@
 
         <!-- Attendance Alerts Card -->
         <div class="col-md-4">
-            <div class="card @(_alertCount > 0 ? "border-warning" : "")">
+            <div class="card @(_attendanceConcernCount > 0 ? "border-warning" : "")">
                 <div class="card-body">
                     <h5 class="card-title">
-                        Attendance Alerts
-                        @if (_alertCount > 0)
+                        Attendance
+                        @if (_attendanceConcernCount > 0)
                         {
-                            <span class="badge bg-warning ms-2">@_alertCount</span>
+                            <span class="badge bg-warning ms-2">@_attendanceConcernCount</span>
                         }
                     </h5>
                     @if (_isLoading)
@@ -127,18 +127,10 @@
                             </div>
                         </div>
                     }
-                    else if (_currentTermName == null)
-                    {
-                        <p class="card-text text-muted">No active term configured.</p>
-                        <a href="/Configuration/Terms" class="btn btn-outline-secondary">Configure Terms</a>
-                    }
                     else
                     {
                         <div class="mb-3">
-                            <p class="card-text mb-1">
-                                <small class="text-muted">Current term: @_currentTermName</small>
-                            </p>
-                            @if (_alertCount == 0)
+                            @if (_attendanceConcernCount == 0)
                             {
                                 <p class="card-text text-success">
                                     <i class="bi bi-check-circle"></i> No attendance concerns
@@ -146,22 +138,13 @@
                             }
                             else
                             {
-                                @if (_fullTermAbsenceCount > 0)
-                                {
-                                    <p class="card-text mb-1 text-danger">
-                                        <i class="bi bi-exclamation-triangle"></i> <strong>@_fullTermAbsenceCount</strong> full-term @(_fullTermAbsenceCount == 1 ? "absence" : "absences")
-                                    </p>
-                                }
-                                @if (_lowAttendanceCount > 0)
-                                {
-                                    <p class="card-text mb-1 text-warning">
-                                        <i class="bi bi-exclamation-circle"></i> <strong>@_lowAttendanceCount</strong> low attendance
-                                    </p>
-                                }
+                                <p class="card-text mb-1 text-warning">
+                                    <i class="bi bi-exclamation-triangle"></i> <strong>@_attendanceConcernCount</strong> @(_attendanceConcernCount == 1 ? "member has" : "members have") missed 5+ consecutive meetings
+                                </p>
                             }
                         </div>
-                        <a href="/Meetings/Alerts" class="btn @(_alertCount > 0 ? "btn-warning" : "btn-primary")">
-                            @if (_alertCount > 0)
+                        <a href="/Meetings/Alerts" class="btn @(_attendanceConcernCount > 0 ? "btn-warning" : "btn-primary")">
+                            @if (_attendanceConcernCount > 0)
                             {
                                 <span>Review Alerts</span>
                             }

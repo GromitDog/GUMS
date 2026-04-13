@@ -47,6 +47,9 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     public DbSet<BadgeStockItem> BadgeStockItems { get; set; }
     public DbSet<BadgeStockTransaction> BadgeStockTransactions { get; set; }
 
+    // Cost Centre DbSets
+    public DbSet<CostCentre> CostCentres { get; set; }
+
     // Credit DbSets
     public DbSet<MemberCredit> MemberCredits { get; set; }
     public DbSet<CreditTransaction> CreditTransactions { get; set; }
@@ -101,6 +104,11 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
                 .WithOne(a => a.Meeting)
                 .HasForeignKey(a => a.MeetingId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(m => m.CostCentre)
+                .WithMany()
+                .HasForeignKey(m => m.CostCentreId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // MeetingActivity configuration (replaces Activity)
@@ -332,6 +340,7 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
             entity.HasIndex(tl => tl.TransactionId);
             entity.HasIndex(tl => tl.AccountId);
             entity.HasIndex(tl => tl.BankReconciliationId);
+            entity.HasIndex(tl => tl.CostCentreId);
 
             entity.Property(tl => tl.Debit).HasPrecision(18, 2);
             entity.Property(tl => tl.Credit).HasPrecision(18, 2);
@@ -340,6 +349,11 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
                 .WithMany(a => a.TransactionLines)
                 .HasForeignKey(tl => tl.AccountId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(tl => tl.CostCentre)
+                .WithMany(cc => cc.TransactionLines)
+                .HasForeignKey(tl => tl.CostCentreId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Expense configuration
@@ -349,6 +363,7 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
             entity.HasIndex(e => e.Date);
             entity.HasIndex(e => e.ExpenseAccountId);
             entity.HasIndex(e => e.MeetingId);
+            entity.HasIndex(e => e.CostCentreId);
             entity.HasIndex(e => e.ExpenseClaimId);
 
             entity.Property(e => e.Amount).HasPrecision(18, 2);
@@ -367,6 +382,11 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
             entity.HasOne(e => e.Meeting)
                 .WithMany()
                 .HasForeignKey(e => e.MeetingId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.CostCentre)
+                .WithMany()
+                .HasForeignKey(e => e.CostCentreId)
                 .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasOne(e => e.Transaction)
@@ -544,6 +564,16 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
                 .WithOne(tl => tl.BankReconciliation)
                 .HasForeignKey(tl => tl.BankReconciliationId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // CostCentre configuration
+        modelBuilder.Entity<CostCentre>(entity =>
+        {
+            entity.HasKey(cc => cc.Id);
+            entity.HasIndex(cc => cc.Name).IsUnique();
+            entity.HasIndex(cc => cc.IsActive);
+
+            entity.Property(cc => cc.Name).IsRequired().HasMaxLength(100);
         });
 
         // MemberCredit configuration

@@ -44,9 +44,19 @@ public class TransactionLine
     public Account Account { get; set; } = null!;
 
     /// <summary>
+    /// Optional cost centre for grouping by purpose (e.g. "Spring Camp")
+    /// </summary>
+    public int? CostCentreId { get; set; }
+
+    /// <summary>
     /// Foreign key to bank reconciliation (null = unreconciled)
     /// </summary>
     public int? BankReconciliationId { get; set; }
+
+    /// <summary>
+    /// Navigation property for the cost centre
+    /// </summary>
+    public CostCentre? CostCentre { get; set; }
 
     /// <summary>
     /// Navigation property for the bank reconciliation

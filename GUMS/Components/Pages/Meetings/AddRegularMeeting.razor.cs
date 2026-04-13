@@ -22,7 +22,7 @@ public partial class AddRegularMeeting
     private DateTime _endTime = DateTime.Today;
     private List<DateTime> _suggestedDates = [];
     private bool _suggestedDatesUsed;
-    private Term? _currentTerm;
+    private Term? _activeTerm;
 
     private bool _isSaving;
     private string _errorMessage = string.Empty;
@@ -31,7 +31,6 @@ public partial class AddRegularMeeting
     {
         // Load configuration defaults
         var config = await ConfigService.GetConfigurationAsync();
-        _meeting.Date = DateTime.Today;
         _meeting.MeetingType = MeetingType.Regular;
         _meeting.Title = "Weekly Meeting";
         _meeting.LocationName = config.DefaultLocationName;
@@ -40,12 +39,29 @@ public partial class AddRegularMeeting
         _startTime = DateTime.Today.Add(config.DefaultMeetingStartTime.ToTimeSpan());
         _endTime = DateTime.Today.Add(config.DefaultMeetingEndTime.ToTimeSpan());
 
-        // Load current term and suggested dates
-        _currentTerm = await TermService.GetCurrentTermAsync();
-        if (_currentTerm != null)
+        // Default date to next unplanned meeting day within current or future term
+        _activeTerm = await TermService.GetCurrentTermAsync();
+        if (_activeTerm != null)
         {
-            _suggestedDates = await MeetingService.GetSuggestedMeetingDatesForTermAsync(_currentTerm.Id);
+            _suggestedDates = await MeetingService.GetSuggestedMeetingDatesForTermAsync(_activeTerm.Id);
         }
+
+        // If no current term or no available dates, try future terms
+        if (!_suggestedDates.Any())
+        {
+            var futureTerms = await TermService.GetFutureTermsAsync();
+            foreach (var term in futureTerms)
+            {
+                _suggestedDates = await MeetingService.GetSuggestedMeetingDatesForTermAsync(term.Id);
+                if (_suggestedDates.Any())
+                {
+                    _activeTerm = term;
+                    break;
+                }
+            }
+        }
+
+        _meeting.Date = _suggestedDates.Any() ? _suggestedDates.First() : DateTime.Today;
 
         _availableClauses = await BadgeService.SearchClausesAsync(string.Empty);
         _availableUmas = await BadgeService.SearchUmasAsync(string.Empty);

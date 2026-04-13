@@ -13,6 +13,7 @@ public partial class RecordIncome
     private List<Account> _incomeAccounts = new();
     private List<Account> _expenseAccounts = new();
     private List<Account> _assetAccounts = new();
+    private Dictionary<int, decimal> _accountBalances = new();
 
     // Form fields
     private DateTime _formDate = DateTime.Today;
@@ -41,6 +42,10 @@ public partial class RecordIncome
             _expenseAccounts = await AccountingService.GetAccountsByTypeAsync(AccountType.Expense);
             var allAccounts = await AccountingService.GetAccountsAsync();
             _assetAccounts = allAccounts.Where(a => a.Type == AccountType.Asset).ToList();
+            foreach (var account in _assetAccounts)
+            {
+                _accountBalances[account.Id] = await AccountingService.GetAccountBalanceAsync(account.Id);
+            }
         }
         catch (Exception ex)
         {

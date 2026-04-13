@@ -128,7 +128,7 @@
                                     <option value="0">-- Select Account --</option>
                                     @foreach (var account in _assetAccounts)
                                     {
-                                        <option value="@account.Id">@account.Name (@account.Balance.ToString("C"))</option>
+                                        <option value="@account.Id">@account.Name (@(_accountBalances.GetValueOrDefault(account.Id).ToString("C")))</option>
                                     }
                                 </select>
                             </div>
@@ -146,13 +146,25 @@
 
                         <div class="mb-3">
                             <label class="form-label">Link to Event</label>
-                            <select class="form-select" @bind="_formMeetingId">
+                            <select class="form-select" value="@_formMeetingId" @onchange="OnMeetingChanged">
                                 <option value="0">-- None --</option>
                                 @foreach (var meeting in _meetings)
                                 {
                                     <option value="@meeting.Id">@meeting.Title (@meeting.Date.ToString("dd MMM yyyy"))</option>
                                 }
                             </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Cost Centre</label>
+                            <select class="form-select" @bind="_formCostCentreId">
+                                <option value="0">-- None --</option>
+                                @foreach (var cc in _costCentres)
+                                {
+                                    <option value="@cc.Id">@cc.Name</option>
+                                }
+                            </select>
+                            <small class="text-muted">Groups this expense by purpose for reporting</small>
                         </div>
 
                         <div class="mb-3">

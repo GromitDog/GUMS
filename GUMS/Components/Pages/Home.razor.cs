@@ -22,10 +22,7 @@ public partial class Home
     private int _upcomingMeetingCount;
 
     // Attendance alerts
-    private string? _currentTermName;
-    private int _fullTermAbsenceCount;
-    private int _lowAttendanceCount;
-    private int _alertCount;
+    private int _attendanceConcernCount;
 
     // Payment stats
     private int _pendingPaymentCount;
@@ -65,20 +62,9 @@ public partial class Home
             var upcomingMeetings = await MeetingService.GetUpcomingAsync();
             _upcomingMeetingCount = upcomingMeetings.Count;
 
-            // Load attendance alerts
-            var currentTerm = await TermService.GetCurrentTermAsync();
-            if (currentTerm != null)
-            {
-                _currentTermName = currentTerm.Name;
-
-                var fullTermAbsences = await AttendanceService.GetFullTermAbsencesAsync(currentTerm.Id);
-                _fullTermAbsenceCount = fullTermAbsences.Count;
-
-                var lowAttendance = await AttendanceService.GetLowAttendanceAlertsAsync(currentTerm.Id, 25);
-                _lowAttendanceCount = lowAttendance.Count;
-
-                _alertCount = _fullTermAbsenceCount + _lowAttendanceCount;
-            }
+            // Load attendance alerts — 5+ consecutive regular meetings missed
+            var attendanceConcerns = await AttendanceService.GetConsecutiveAbsenceAlertsAsync(5);
+            _attendanceConcernCount = attendanceConcerns.Count;
 
             // Load payment stats
             var paymentStats = await PaymentService.GetDashboardStatsAsync();

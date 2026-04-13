@@ -9,21 +9,12 @@ namespace GUMS.Components.Pages.Meetings;
 [Authorize]
 public partial class AttendanceAlerts
 {
-    
-    [Inject] public required IAttendanceService AttendanceService { get; set; }
 
-    [Inject] public required ITermService TermService { get; set; }
-    [Inject] public required IPersonService PersonService { get; set; }
-    [Inject] public required IMeetingService MeetingService { get; set; }
+    [Inject] public required IAttendanceService AttendanceService { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
 
-    private Term? currentTerm;
-    private List<MemberAttendanceAlert> fullTermAbsences = new();
-    private List<MemberAttendanceAlert> lowAttendanceAlerts = new();
+    private List<MemberAttendanceAlert> _alerts = new();
     private Dictionary<string, string> alertNotes = new();
-    private int meetingsHeld = 0;
-    private int totalMeetingsInTerm = 0;
-    private int termProgress = 0;
 
     private bool isLoading = true;
     private string successMessage = string.Empty;
@@ -44,23 +35,7 @@ public partial class AttendanceAlerts
 
         try
         {
-            currentTerm = await TermService.GetCurrentTermAsync();
-
-            if (currentTerm != null)
-            {
-                // Calculate term progress
-                var totalDays = (currentTerm.EndDate - currentTerm.StartDate).Days;
-                var daysPassed = (DateTime.Today - currentTerm.StartDate).Days;
-                termProgress = totalDays > 0 ? Math.Min(100, Math.Max(0, (int)((double)daysPassed / totalDays * 100))) : 0;
-
-                // Get alerts
-                fullTermAbsences = await AttendanceService.GetFullTermAbsencesAsync(currentTerm.Id);
-                lowAttendanceAlerts = await AttendanceService.GetLowAttendanceAlertsAsync(currentTerm.Id, 25);
-
-                // Get meeting counts directly
-                totalMeetingsInTerm = await MeetingService.GetMeetingCountInRangeAsync(currentTerm.StartDate, currentTerm.EndDate);
-                meetingsHeld = await MeetingService.GetMeetingCountInRangeAsync(currentTerm.StartDate, DateTime.Today.AddDays(-1));
-            }
+            _alerts = await AttendanceService.GetConsecutiveAbsenceAlertsAsync(5);
         }
         catch (Exception ex)
         {

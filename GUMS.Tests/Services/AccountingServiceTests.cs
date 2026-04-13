@@ -53,6 +53,28 @@ public class AccountingServiceTests : IDisposable
         await _sut.EnsureDefaultAccountsAsync();
     }
 
+    /// <summary>
+    /// Sets up an initial balance for an asset account by creating a balanced transaction
+    /// (debit asset, credit Opening Balances). This is needed because balance accessors
+    /// calculate from transaction lines, not the Account.Balance field.
+    /// </summary>
+    private async Task SetAssetBalanceViaTransactionAsync(string accountCode, decimal amount)
+    {
+        var account = await _context.Accounts.FirstAsync(a => a.Code == accountCode);
+        var openingBalances = await _context.Accounts.FirstAsync(a => a.Code == "3001");
+
+        await _sut.CreateTransactionAsync(new Transaction
+        {
+            Date = DateTime.Today.AddDays(-1),
+            Description = $"Opening balance for {account.Name}",
+            Lines = new List<TransactionLine>
+            {
+                new TransactionLine { AccountId = account.Id, Debit = amount, Credit = 0 },
+                new TransactionLine { AccountId = openingBalances.Id, Debit = 0, Credit = amount }
+            }
+        });
+    }
+
     private async Task<Account> CreateTestAccountAsync(string code, string name, AccountType type, decimal balance = 0)
     {
         var account = new Account
@@ -99,11 +121,13 @@ public class AccountingServiceTests : IDisposable
 
         // Assert
         var accounts = await _context.Accounts.ToListAsync();
-        accounts.Should().HaveCount(11);
+        accounts.Should().HaveCount(13);
 
         accounts.Should().Contain(a => a.Code == "1001" && a.Name == "Cash on Hand");
         accounts.Should().Contain(a => a.Code == "1002" && a.Name == "Cheques Pending");
         accounts.Should().Contain(a => a.Code == "1003" && a.Name == "Bank Account");
+        accounts.Should().Contain(a => a.Code == "2001" && a.Name == "Member Credits");
+        accounts.Should().Contain(a => a.Code == "3001" && a.Name == "Opening Balances");
         accounts.Should().Contain(a => a.Code == "4001" && a.Name == "Subscription Income");
         accounts.Should().Contain(a => a.Code == "4002" && a.Name == "Activity Income");
         accounts.Should().Contain(a => a.Code == "5001" && a.Name == "Supplies");
@@ -125,7 +149,7 @@ public class AccountingServiceTests : IDisposable
 
         // Assert
         var accounts = await _context.Accounts.ToListAsync();
-        accounts.Should().HaveCount(11);
+        accounts.Should().HaveCount(13);
     }
 
     [Fact]
@@ -235,9 +259,7 @@ public class AccountingServiceTests : IDisposable
     {
         // Arrange
         await EnsureDefaultAccountsAsync();
-        var cashAccount = await _context.Accounts.FirstAsync(a => a.Code == "1001");
-        cashAccount.Balance = 150.00m;
-        await _context.SaveChangesAsync();
+        await SetAssetBalanceViaTransactionAsync("1001", 150.00m);
 
         // Act
         var result = await _sut.GetCashOnHandAsync();
@@ -251,9 +273,7 @@ public class AccountingServiceTests : IDisposable
     {
         // Arrange
         await EnsureDefaultAccountsAsync();
-        var bankAccount = await _context.Accounts.FirstAsync(a => a.Code == "1003");
-        bankAccount.Balance = 500.00m;
-        await _context.SaveChangesAsync();
+        await SetAssetBalanceViaTransactionAsync("1003", 500.00m);
 
         // Act
         var result = await _sut.GetBankBalanceAsync();
@@ -267,15 +287,40 @@ public class AccountingServiceTests : IDisposable
     {
         // Arrange
         await EnsureDefaultAccountsAsync();
-        var chequeAccount = await _context.Accounts.FirstAsync(a => a.Code == "1002");
-        chequeAccount.Balance = 75.00m;
-        await _context.SaveChangesAsync();
+        await SetAssetBalanceViaTransactionAsync("1002", 75.00m);
 
         // Act
         var result = await _sut.GetChequesPendingAsync();
 
         // Assert
         result.Should().Be(75.00m);
+    }
+
+    [Fact]
+    public async Task GetAccountBalanceAsync_ShouldCalculateFromTransactionLines()
+    {
+        // Arrange
+        await EnsureDefaultAccountsAsync();
+        var cashAccount = await _context.Accounts.FirstAsync(a => a.Code == "1001");
+
+        // Create a transaction to give the cash account a balance
+        await SetAssetBalanceViaTransactionAsync("1001", 200.00m);
+
+        // Act
+        var result = await _sut.GetAccountBalanceAsync(cashAccount.Id);
+
+        // Assert
+        result.Should().Be(200.00m);
+    }
+
+    [Fact]
+    public async Task GetAccountBalanceAsync_ShouldReturnZero_WhenAccountNotFound()
+    {
+        // Act
+        var result = await _sut.GetAccountBalanceAsync(999);
+
+        // Assert
+        result.Should().Be(0);
     }
 
     #endregion
@@ -604,9 +649,7 @@ public class AccountingServiceTests : IDisposable
     {
         // Arrange
         await EnsureDefaultAccountsAsync();
-        var cashAccount = await _context.Accounts.FirstAsync(a => a.Code == "1001");
-        cashAccount.Balance = 100.00m;
-        await _context.SaveChangesAsync();
+        await SetAssetBalanceViaTransactionAsync("1001", 100.00m);
 
         // Act
         var result = await _sut.BankDepositAsync(50.00m, 0, DateTime.Today);
@@ -626,9 +669,7 @@ public class AccountingServiceTests : IDisposable
     {
         // Arrange
         await EnsureDefaultAccountsAsync();
-        var chequeAccount = await _context.Accounts.FirstAsync(a => a.Code == "1002");
-        chequeAccount.Balance = 75.00m;
-        await _context.SaveChangesAsync();
+        await SetAssetBalanceViaTransactionAsync("1002", 75.00m);
 
         // Act
         var result = await _sut.BankDepositAsync(0, 75.00m, DateTime.Today);
@@ -648,11 +689,8 @@ public class AccountingServiceTests : IDisposable
     {
         // Arrange
         await EnsureDefaultAccountsAsync();
-        var cashAccount = await _context.Accounts.FirstAsync(a => a.Code == "1001");
-        var chequeAccount = await _context.Accounts.FirstAsync(a => a.Code == "1002");
-        cashAccount.Balance = 100.00m;
-        chequeAccount.Balance = 50.00m;
-        await _context.SaveChangesAsync();
+        await SetAssetBalanceViaTransactionAsync("1001", 100.00m);
+        await SetAssetBalanceViaTransactionAsync("1002", 50.00m);
 
         // Act
         var result = await _sut.BankDepositAsync(80.00m, 50.00m, DateTime.Today, "Monthly deposit");
@@ -674,9 +712,7 @@ public class AccountingServiceTests : IDisposable
     {
         // Arrange
         await EnsureDefaultAccountsAsync();
-        var cashAccount = await _context.Accounts.FirstAsync(a => a.Code == "1001");
-        cashAccount.Balance = 50.00m;
-        await _context.SaveChangesAsync();
+        await SetAssetBalanceViaTransactionAsync("1001", 50.00m);
 
         // Act
         var result = await _sut.BankDepositAsync(100.00m, 0, DateTime.Today);
@@ -735,17 +771,12 @@ public class AccountingServiceTests : IDisposable
         await EnsureDefaultAccountsAsync();
         await CreateTestTermAsync(DateTime.Today.AddDays(-30), DateTime.Today.AddDays(60));
 
-        // Set some balances
-        var cashAccount = await _context.Accounts.FirstAsync(a => a.Code == "1001");
-        var chequeAccount = await _context.Accounts.FirstAsync(a => a.Code == "1002");
-        var bankAccount = await _context.Accounts.FirstAsync(a => a.Code == "1003");
+        // Set initial balances via transactions (balance accessors calculate from lines)
+        await SetAssetBalanceViaTransactionAsync("1001", 50.00m);
+        await SetAssetBalanceViaTransactionAsync("1002", 25.00m);
+        await SetAssetBalanceViaTransactionAsync("1003", 200.00m);
 
-        cashAccount.Balance = 50.00m;
-        chequeAccount.Balance = 25.00m;
-        bankAccount.Balance = 200.00m;
-        await _context.SaveChangesAsync();
-
-        // Record some payments
+        // Record some payments (these add to cash via transaction lines)
         await _sut.RecordPaymentEntryAsync(1, 25.00m, PaymentMethod.Cash, PaymentType.Subs, "Subs", DateTime.Today);
         await _sut.RecordPaymentEntryAsync(2, 15.00m, PaymentMethod.Cash, PaymentType.Activity, "Activity", DateTime.Today);
 
@@ -753,7 +784,7 @@ public class AccountingServiceTests : IDisposable
         var result = await _sut.GetDashboardStatsAsync();
 
         // Assert
-        result.CashOnHand.Should().Be(90.00m); // 50 + 25 + 15 from payments
+        result.CashOnHand.Should().Be(90.00m); // 50 opening + 25 + 15 from payments
         result.ChequesPending.Should().Be(25.00m);
         result.BankBalance.Should().Be(200.00m);
         result.TotalAssets.Should().Be(315.00m);
@@ -1133,6 +1164,7 @@ public class AccountingServiceTests : IDisposable
         var suppliesAccount = await _context.Accounts.FirstAsync(a => a.Code == AccountingService.SuppliesExpenseCode);
         var badgesAccount = await _context.Accounts.FirstAsync(a => a.Code == AccountingService.BadgesAwardsExpenseCode);
         var bankAccount = await _context.Accounts.FirstAsync(a => a.Code == "1003");
+        await SetAssetBalanceViaTransactionAsync("1003", 500m);
 
         var claimResult = await _sut.CreateExpenseClaimAsync(new ExpenseClaim
         {
@@ -1175,6 +1207,7 @@ public class AccountingServiceTests : IDisposable
         await EnsureDefaultAccountsAsync();
         var suppliesAccount = await _context.Accounts.FirstAsync(a => a.Code == AccountingService.SuppliesExpenseCode);
         var bankAccount = await _context.Accounts.FirstAsync(a => a.Code == "1003");
+        await SetAssetBalanceViaTransactionAsync("1003", 500m);
 
         var claimResult = await _sut.CreateExpenseClaimAsync(new ExpenseClaim
         {
@@ -1204,8 +1237,7 @@ public class AccountingServiceTests : IDisposable
         await EnsureDefaultAccountsAsync();
         var suppliesAccount = await _context.Accounts.FirstAsync(a => a.Code == AccountingService.SuppliesExpenseCode);
         var bankAccount = await _context.Accounts.FirstAsync(a => a.Code == "1003");
-        bankAccount.Balance = 200m;
-        await _context.SaveChangesAsync();
+        await SetAssetBalanceViaTransactionAsync("1003", 200m);
 
         var claimResult = await _sut.CreateExpenseClaimAsync(new ExpenseClaim
         {
@@ -1224,8 +1256,8 @@ public class AccountingServiceTests : IDisposable
             claimResult.Claim.Id, bankAccount.Id, PaymentMethod.BankTransfer, DateTime.Today);
 
         // Assert
-        var updatedBank = await _context.Accounts.FirstAsync(a => a.Code == "1003");
-        updatedBank.Balance.Should().Be(150m); // Credit decreased
+        var bankBalance = await _sut.GetAccountBalanceAsync(bankAccount.Id);
+        bankBalance.Should().Be(150m); // 200 - 50 credit
     }
 
     [Fact]
@@ -1251,12 +1283,45 @@ public class AccountingServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task SettleExpenseClaimAsync_ShouldFail_WhenInsufficientFunds()
+    {
+        // Arrange
+        await EnsureDefaultAccountsAsync();
+        var suppliesAccount = await _context.Accounts.FirstAsync(a => a.Code == AccountingService.SuppliesExpenseCode);
+        var bankAccount = await _context.Accounts.FirstAsync(a => a.Code == "1003");
+
+        // Give bank only 10, but claim is for 50
+        await SetAssetBalanceViaTransactionAsync("1003", 10.00m);
+
+        var claimResult = await _sut.CreateExpenseClaimAsync(new ExpenseClaim
+        {
+            ClaimedBy = "Jane Leader",
+            SubmittedDate = DateTime.Today
+        });
+
+        await _sut.AddExpenseToClaimAsync(claimResult.Claim!.Id, new Expense
+        {
+            Date = DateTime.Today, Amount = 50m,
+            ExpenseAccountId = suppliesAccount.Id, Description = "Supplies"
+        });
+
+        // Act
+        var result = await _sut.SettleExpenseClaimAsync(
+            claimResult.Claim.Id, bankAccount.Id, PaymentMethod.BankTransfer, DateTime.Today);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Insufficient funds");
+    }
+
+    [Fact]
     public async Task DeleteExpenseClaimAsync_ShouldFail_WhenSettled()
     {
         // Arrange
         await EnsureDefaultAccountsAsync();
         var suppliesAccount = await _context.Accounts.FirstAsync(a => a.Code == AccountingService.SuppliesExpenseCode);
         var bankAccount = await _context.Accounts.FirstAsync(a => a.Code == "1003");
+        await SetAssetBalanceViaTransactionAsync("1003", 100m);
 
         var claimResult = await _sut.CreateExpenseClaimAsync(new ExpenseClaim
         {
@@ -1505,6 +1570,149 @@ public class AccountingServiceTests : IDisposable
         // Assert
         result.PendingClaimsCount.Should().Be(1);
         result.PendingClaimsAmount.Should().Be(25m);
+    }
+
+    #endregion
+
+    #region UpdateTransactionLineAccountAsync Tests
+
+    [Fact]
+    public async Task UpdateTransactionLineAccountAsync_ShouldChangeAccount()
+    {
+        // Arrange
+        await EnsureDefaultAccountsAsync();
+        var suppliesAccount = await _context.Accounts.FirstAsync(a => a.Code == AccountingService.SuppliesExpenseCode);
+        var badgesAccount = await _context.Accounts.FirstAsync(a => a.Code == AccountingService.BadgesAwardsExpenseCode);
+        var cashAccount = await _context.Accounts.FirstAsync(a => a.Code == "1001");
+        await SetAssetBalanceViaTransactionAsync("1001", 100m);
+
+        // Create an expense transaction: debit Supplies, credit Cash
+        var txResult = await _sut.CreateTransactionAsync(new Transaction
+        {
+            Date = DateTime.Today,
+            Description = "Misbooking test",
+            Lines = new List<TransactionLine>
+            {
+                new TransactionLine { AccountId = suppliesAccount.Id, Debit = 30m, Credit = 0 },
+                new TransactionLine { AccountId = cashAccount.Id, Debit = 0, Credit = 30m }
+            }
+        });
+
+        var expenseLine = txResult.Transaction!.Lines.First(l => l.AccountId == suppliesAccount.Id);
+
+        // Act — rebook from Supplies to Badges & Awards
+        var result = await _sut.UpdateTransactionLineAccountAsync(expenseLine.Id, badgesAccount.Id);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        var updatedLine = await _context.TransactionLines.FirstAsync(l => l.Id == expenseLine.Id);
+        updatedLine.AccountId.Should().Be(badgesAccount.Id);
+    }
+
+    [Fact]
+    public async Task UpdateTransactionLineAccountAsync_ShouldUpdateCachedBalances()
+    {
+        // Arrange
+        await EnsureDefaultAccountsAsync();
+        var suppliesAccount = await _context.Accounts.FirstAsync(a => a.Code == AccountingService.SuppliesExpenseCode);
+        var badgesAccount = await _context.Accounts.FirstAsync(a => a.Code == AccountingService.BadgesAwardsExpenseCode);
+        var cashAccount = await _context.Accounts.FirstAsync(a => a.Code == "1001");
+        await SetAssetBalanceViaTransactionAsync("1001", 100m);
+
+        await _sut.CreateTransactionAsync(new Transaction
+        {
+            Date = DateTime.Today,
+            Description = "Balance test",
+            Lines = new List<TransactionLine>
+            {
+                new TransactionLine { AccountId = suppliesAccount.Id, Debit = 25m, Credit = 0 },
+                new TransactionLine { AccountId = cashAccount.Id, Debit = 0, Credit = 25m }
+            }
+        });
+
+        var line = await _context.TransactionLines.FirstAsync(l => l.AccountId == suppliesAccount.Id);
+
+        // Act
+        await _sut.UpdateTransactionLineAccountAsync(line.Id, badgesAccount.Id);
+
+        // Assert — old account balance reversed, new account balance applied
+        var updatedSupplies = await _context.Accounts.FirstAsync(a => a.Code == AccountingService.SuppliesExpenseCode);
+        var updatedBadges = await _context.Accounts.FirstAsync(a => a.Code == AccountingService.BadgesAwardsExpenseCode);
+        updatedSupplies.Balance.Should().Be(0m);
+        updatedBadges.Balance.Should().Be(25m);
+    }
+
+    [Fact]
+    public async Task UpdateTransactionLineAccountAsync_ShouldFail_WhenVoided()
+    {
+        // Arrange
+        await EnsureDefaultAccountsAsync();
+        var suppliesAccount = await _context.Accounts.FirstAsync(a => a.Code == AccountingService.SuppliesExpenseCode);
+        var badgesAccount = await _context.Accounts.FirstAsync(a => a.Code == AccountingService.BadgesAwardsExpenseCode);
+        var cashAccount = await _context.Accounts.FirstAsync(a => a.Code == "1001");
+        await SetAssetBalanceViaTransactionAsync("1001", 100m);
+
+        var txResult = await _sut.CreateTransactionAsync(new Transaction
+        {
+            Date = DateTime.Today,
+            Description = "Void test",
+            Lines = new List<TransactionLine>
+            {
+                new TransactionLine { AccountId = suppliesAccount.Id, Debit = 10m, Credit = 0 },
+                new TransactionLine { AccountId = cashAccount.Id, Debit = 0, Credit = 10m }
+            }
+        });
+
+        await _sut.VoidTransactionAsync(txResult.Transaction!.Id);
+        var line = await _context.TransactionLines.FirstAsync(l => l.AccountId == suppliesAccount.Id);
+
+        // Act
+        var result = await _sut.UpdateTransactionLineAccountAsync(line.Id, badgesAccount.Id);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("voided");
+    }
+
+    [Fact]
+    public async Task UpdateTransactionLineAccountAsync_ShouldFail_WhenDifferentAccountType()
+    {
+        // Arrange
+        await EnsureDefaultAccountsAsync();
+        var suppliesAccount = await _context.Accounts.FirstAsync(a => a.Code == AccountingService.SuppliesExpenseCode);
+        var cashAccount = await _context.Accounts.FirstAsync(a => a.Code == "1001");
+        await SetAssetBalanceViaTransactionAsync("1001", 100m);
+
+        var txResult = await _sut.CreateTransactionAsync(new Transaction
+        {
+            Date = DateTime.Today,
+            Description = "Type mismatch test",
+            Lines = new List<TransactionLine>
+            {
+                new TransactionLine { AccountId = suppliesAccount.Id, Debit = 10m, Credit = 0 },
+                new TransactionLine { AccountId = cashAccount.Id, Debit = 0, Credit = 10m }
+            }
+        });
+
+        var expenseLine = txResult.Transaction!.Lines.First(l => l.AccountId == suppliesAccount.Id);
+
+        // Act — try to change Expense account to an Asset account
+        var result = await _sut.UpdateTransactionLineAccountAsync(expenseLine.Id, cashAccount.Id);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("same type");
+    }
+
+    [Fact]
+    public async Task UpdateTransactionLineAccountAsync_ShouldFail_WhenLineNotFound()
+    {
+        // Act
+        var result = await _sut.UpdateTransactionLineAccountAsync(999, 1);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("not found");
     }
 
     #endregion

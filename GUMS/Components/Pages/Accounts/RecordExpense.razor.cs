@@ -10,6 +10,7 @@ public partial class RecordExpense
     [Inject] private IAccountingService AccountingService { get; set; } = default!;
     [Inject] private IMeetingService MeetingService { get; set; } = default!;
     [Inject] private IPersonService PersonService { get; set; } = default!;
+    [Inject] private ICostCentreService CostCentreService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
     [SupplyParameterFromQuery(Name = "claimId")]
@@ -17,9 +18,11 @@ public partial class RecordExpense
 
     private List<Account> _expenseAccounts = new();
     private List<Account> _assetAccounts = new();
+    private Dictionary<int, decimal> _accountBalances = new();
     private List<Meeting> _meetings = new();
     private List<ExpenseClaim> _draftClaims = new();
     private List<Person> _leaders = new();
+    private List<CostCentre> _costCentres = new();
 
     private string _expenseType = "direct";
     private int _selectedClaimId;
@@ -34,6 +37,7 @@ public partial class RecordExpense
     private string? _formReference;
     private string? _formNotes;
     private int _formMeetingId;
+    private int _formCostCentreId;
 
     private bool _isLoading = true;
     private bool _isSubmitting;
@@ -58,9 +62,14 @@ public partial class RecordExpense
             _expenseAccounts = await AccountingService.GetExpenseAccountsAsync();
             var allAccounts = await AccountingService.GetAccountsAsync();
             _assetAccounts = allAccounts.Where(a => a.Type == AccountType.Asset).ToList();
+            foreach (var account in _assetAccounts)
+            {
+                _accountBalances[account.Id] = await AccountingService.GetAccountBalanceAsync(account.Id);
+            }
             _meetings = await MeetingService.GetAllAsync();
             _draftClaims = await AccountingService.GetExpenseClaimsAsync(ExpenseClaimStatus.Draft);
             _leaders = await PersonService.GetByTypeAsync(PersonType.Leader);
+            _costCentres = await CostCentreService.GetAllAsync();
         }
         catch (Exception ex)
         {
@@ -69,6 +78,21 @@ public partial class RecordExpense
         finally
         {
             _isLoading = false;
+        }
+    }
+
+    private void OnMeetingChanged(ChangeEventArgs e)
+    {
+        _formMeetingId = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+
+        // Auto-fill cost centre from meeting's default
+        if (_formMeetingId > 0)
+        {
+            var meeting = _meetings.FirstOrDefault(m => m.Id == _formMeetingId);
+            if (meeting?.CostCentreId > 0)
+            {
+                _formCostCentreId = meeting.CostCentreId.Value;
+            }
         }
     }
 
@@ -101,7 +125,8 @@ public partial class RecordExpense
                 Description = _formDescription.Trim(),
                 Reference = string.IsNullOrWhiteSpace(_formReference) ? null : _formReference.Trim(),
                 Notes = string.IsNullOrWhiteSpace(_formNotes) ? null : _formNotes.Trim(),
-                MeetingId = _formMeetingId > 0 ? _formMeetingId : null
+                MeetingId = _formMeetingId > 0 ? _formMeetingId : null,
+                CostCentreId = _formCostCentreId > 0 ? _formCostCentreId : null
             };
 
             if (_expenseType == "direct")

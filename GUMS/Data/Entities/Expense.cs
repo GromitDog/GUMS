@@ -51,6 +51,11 @@ public class Expense
     /// </summary>
     public int? MeetingId { get; set; }
 
+    /// <summary>
+    /// Optional cost centre for grouping by purpose
+    /// </summary>
+    public int? CostCentreId { get; set; }
+
     // Direct expense fields
 
     /// <summary>
@@ -74,6 +79,7 @@ public class Expense
     public Account ExpenseAccount { get; set; } = null!;
     public Account? PaidFromAccount { get; set; }
     public Meeting? Meeting { get; set; }
+    public CostCentre? CostCentre { get; set; }
     public Transaction? Transaction { get; set; }
     public ExpenseClaim? ExpenseClaim { get; set; }
 }

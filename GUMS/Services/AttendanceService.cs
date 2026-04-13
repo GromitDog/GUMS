@@ -562,6 +562,77 @@ public class AttendanceService : IAttendanceService
         return alerts.OrderBy(a => a.AttendancePercent).ToList();
     }
 
+    public async Task<List<MemberAttendanceAlert>> GetConsecutiveAbsenceAlertsAsync(int consecutiveThreshold = 5)
+    {
+        // Get all past regular meetings, most recent first
+        var today = DateTime.Today;
+        var pastRegularMeetings = await _context.Meetings
+            .AsNoTracking()
+            .Where(m => m.MeetingType == MeetingType.Regular && m.Date < today)
+            .OrderByDescending(m => m.Date)
+            .Select(m => new { m.Id, m.Date })
+            .ToListAsync();
+
+        if (pastRegularMeetings.Count < consecutiveThreshold)
+        {
+            return new List<MemberAttendanceAlert>();
+        }
+
+        // Get all active girls
+        var activeGirls = await _context.Persons
+            .AsNoTracking()
+            .Where(p => p.IsActive && !p.IsDataRemoved && p.PersonType == PersonType.Girl)
+            .ToListAsync();
+
+        // Get all attendance records for these meetings in one query
+        var meetingIds = pastRegularMeetings.Select(m => m.Id).ToList();
+        var attendanceRecords = await _context.Attendances
+            .AsNoTracking()
+            .Where(a => meetingIds.Contains(a.MeetingId) && a.Attended)
+            .Select(a => new { a.MembershipNumber, a.MeetingId })
+            .ToListAsync();
+
+        var attendedByMember = attendanceRecords
+            .GroupBy(a => a.MembershipNumber)
+            .ToDictionary(g => g.Key, g => g.Select(a => a.MeetingId).ToHashSet());
+
+        var alerts = new List<MemberAttendanceAlert>();
+
+        foreach (var girl in activeGirls)
+        {
+            var attended = attendedByMember.GetValueOrDefault(girl.MembershipNumber);
+
+            // Count consecutive misses from most recent meeting backwards,
+            // only considering meetings on or after the girl joined
+            var consecutiveMissed = 0;
+            foreach (var meeting in pastRegularMeetings)
+            {
+                if (meeting.Date < girl.DateJoined)
+                    break;
+
+                if (attended != null && attended.Contains(meeting.Id))
+                    break;
+
+                consecutiveMissed++;
+            }
+
+            if (consecutiveMissed >= consecutiveThreshold)
+            {
+                alerts.Add(new MemberAttendanceAlert
+                {
+                    MembershipNumber = girl.MembershipNumber,
+                    MemberName = girl.FullName,
+                    TotalMeetings = consecutiveMissed,
+                    MeetingsAttended = 0,
+                    AttendancePercent = 0,
+                    AlertType = "ConsecutiveAbsence"
+                });
+            }
+        }
+
+        return alerts.OrderByDescending(a => a.TotalMeetings).ToList();
+    }
+
     // ===== Nights Away Tracking =====
 
     public async Task<int> GetTotalNightsAwayAsync(string membershipNumber)

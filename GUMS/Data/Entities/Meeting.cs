@@ -57,8 +57,14 @@ public class Meeting
     /// </summary>
     public DateTime? EndDate { get; set; }
 
+    /// <summary>
+    /// Default cost centre for this event. Expenses/payments auto-inherit this but can be overridden.
+    /// </summary>
+    public int? CostCentreId { get; set; }
+
     // Navigation properties
     public Account? IncomeAccount { get; set; }
+    public CostCentre? CostCentre { get; set; }
     public List<MeetingActivity> MeetingActivities { get; set; } = new();
     public List<Attendance> Attendances { get; set; } = new();
 }

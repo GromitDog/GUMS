@@ -420,6 +420,43 @@ public class ProgrammeService : IProgrammeService
                 });
             }
 
+            // Check fun badges — linked via BadgeDefinitionId on MeetingActivity
+            var completedFunBadgeIds = await _context.ActivityCompletions
+                .AsNoTracking()
+                .Where(c => c.MembershipNumber == girl.MembershipNumber && c.Completed
+                    && c.MeetingActivity.BadgeDefinitionId.HasValue
+                    && c.MeetingActivity.BadgeDefinition!.BadgeType == BadgeType.FunBadge)
+                .Select(c => c.MeetingActivity.BadgeDefinitionId!.Value)
+                .Distinct()
+                .ToListAsync();
+
+            var awardedBadgeIds = await _context.AwardedBadges
+                .AsNoTracking()
+                .Where(a => a.MembershipNumber == girl.MembershipNumber)
+                .Select(a => a.BadgeDefinitionId)
+                .ToHashSetAsync();
+
+            foreach (var funBadgeId in completedFunBadgeIds)
+            {
+                if (!awardedBadgeIds.Contains(funBadgeId))
+                {
+                    var badgeName = await _context.BadgeDefinitions
+                        .AsNoTracking()
+                        .Where(b => b.Id == funBadgeId)
+                        .Select(b => b.Name)
+                        .FirstOrDefaultAsync();
+
+                    awards.Add(new AwardDue
+                    {
+                        MembershipNumber = girl.MembershipNumber,
+                        Name = girl.FullName,
+                        AwardName = badgeName ?? "Fun Badge",
+                        AwardType = "FunBadge",
+                        BadgeDefinitionId = funBadgeId
+                    });
+                }
+            }
+
             // Check nights away milestones
             var totalNights = await _context.Attendances
                 .Where(a => a.MembershipNumber == girl.MembershipNumber && a.Attended && a.NightsAway.HasValue && a.NightsAway > 0)

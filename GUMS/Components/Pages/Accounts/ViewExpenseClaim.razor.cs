@@ -14,6 +14,7 @@ public partial class ViewExpenseClaim
 
     private ExpenseClaim? _claim;
     private List<Account> _assetAccounts = new();
+    private Dictionary<int, decimal> _accountBalances = new();
 
     // Settlement form
     private int _settlePaidFromId;
@@ -44,6 +45,10 @@ public partial class ViewExpenseClaim
             _claim = await AccountingService.GetExpenseClaimByIdAsync(ClaimId);
             var allAccounts = await AccountingService.GetAccountsAsync();
             _assetAccounts = allAccounts.Where(a => a.Type == AccountType.Asset).ToList();
+            foreach (var account in _assetAccounts)
+            {
+                _accountBalances[account.Id] = await AccountingService.GetAccountBalanceAsync(account.Id);
+            }
         }
         catch (Exception ex)
         {

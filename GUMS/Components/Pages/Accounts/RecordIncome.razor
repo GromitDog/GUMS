@@ -86,7 +86,7 @@
                                 <option value="0">-- Select Account --</option>
                                 @foreach (var account in _assetAccounts)
                                 {
-                                    <option value="@account.Id">@account.Name (@account.Balance.ToString("C"))</option>
+                                    <option value="@account.Id">@account.Name (@(_accountBalances.GetValueOrDefault(account.Id).ToString("C")))</option>
                                 }
                             </select>
                         </div>

@@ -34,20 +34,26 @@ public partial class AddExtraMeeting
         _meeting.LocationName = string.Empty;
         _meeting.CostPerAttendee = 0;
 
-        // Try to find the next available meeting date within current term
+        // Try to find the next available meeting date within current or future term
         var currentTerm = await TermService.GetCurrentTermAsync();
+        List<DateTime> suggestedDates = [];
         if (currentTerm != null)
         {
-            var suggestedDates = await MeetingService.GetSuggestedMeetingDatesForTermAsync(currentTerm.Id);
-            if (suggestedDates.Any())
+            suggestedDates = await MeetingService.GetSuggestedMeetingDatesForTermAsync(currentTerm.Id);
+        }
+
+        if (!suggestedDates.Any())
+        {
+            var futureTerms = await TermService.GetFutureTermsAsync();
+            foreach (var term in futureTerms)
             {
-                _meeting.Date = suggestedDates.First();
-                return;
+                suggestedDates = await MeetingService.GetSuggestedMeetingDatesForTermAsync(term.Id);
+                if (suggestedDates.Any())
+                    break;
             }
         }
 
-        // Fallback to today if no term or no available dates
-        _meeting.Date = DateTime.Today;
+        _meeting.Date = suggestedDates.Any() ? suggestedDates.First() : DateTime.Today;
 
         _availableClauses = await BadgeService.SearchClausesAsync(string.Empty);
         _availableUmas = await BadgeService.SearchUmasAsync(string.Empty);

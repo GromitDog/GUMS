@@ -75,6 +75,26 @@ public class AccountingService : IAccountingService
     }
 
     /// <inheritdoc/>
+    public async Task<decimal> GetAccountBalanceAsync(int accountId)
+    {
+        var account = await _context.Accounts.AsNoTracking().FirstOrDefaultAsync(a => a.Id == accountId);
+        if (account == null) return 0;
+
+        var totalDebit = await _context.TransactionLines
+            .Where(l => l.AccountId == accountId && !l.Transaction.IsVoided)
+            .SumAsync(l => l.Debit);
+
+        var totalCredit = await _context.TransactionLines
+            .Where(l => l.AccountId == accountId && !l.Transaction.IsVoided)
+            .SumAsync(l => l.Credit);
+
+        if (account.Type == AccountType.Asset || account.Type == AccountType.Expense)
+            return totalDebit - totalCredit;
+        else
+            return totalCredit - totalDebit;
+    }
+
+    /// <inheritdoc/>
     public async Task<decimal> GetCashOnHandAsync()
     {
         return await CalculateAccountBalanceFromLinesAsync(CashOnHandCode);
@@ -336,6 +356,65 @@ public class AccountingService : IAccountingService
         return (true, string.Empty);
     }
 
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage)> UpdateTransactionLineAccountAsync(int transactionLineId, int newAccountId)
+    {
+        var line = await _context.TransactionLines
+            .Include(l => l.Transaction)
+            .Include(l => l.Account)
+            .FirstOrDefaultAsync(l => l.Id == transactionLineId);
+
+        if (line == null)
+            return (false, "Transaction line not found.");
+
+        if (line.Transaction.IsVoided)
+            return (false, "Cannot edit a voided transaction.");
+
+        if (line.BankReconciliationId.HasValue)
+            return (false, "Cannot edit a reconciled transaction line.");
+
+        // Period lock check
+        var config = await _configurationService.GetConfigurationAsync();
+        if (config.AccountsLockedUntil.HasValue && line.Transaction.Date <= config.AccountsLockedUntil.Value)
+            return (false, $"This period is locked. Transactions dated on or before {config.AccountsLockedUntil.Value:d MMMM yyyy} cannot be edited.");
+
+        var newAccount = await _context.Accounts.FindAsync(newAccountId);
+        if (newAccount == null)
+            return (false, "New account not found.");
+
+        if (newAccount.Id == line.AccountId)
+            return (false, "New account is the same as the current account.");
+
+        if (newAccount.Type != line.Account.Type)
+            return (false, $"New account must be the same type ({line.Account.Type}). Cannot change from {line.Account.Type} to {newAccount.Type}.");
+
+        // Reverse old account cached balance
+        var oldAccount = await _context.Accounts.FindAsync(line.AccountId);
+        if (oldAccount!.Type == AccountType.Asset || oldAccount.Type == AccountType.Expense)
+        {
+            oldAccount.Balance -= line.Debit - line.Credit;
+        }
+        else
+        {
+            oldAccount.Balance -= line.Credit - line.Debit;
+        }
+
+        // Apply new account cached balance
+        if (newAccount.Type == AccountType.Asset || newAccount.Type == AccountType.Expense)
+        {
+            newAccount.Balance += line.Debit - line.Credit;
+        }
+        else
+        {
+            newAccount.Balance += line.Credit - line.Debit;
+        }
+
+        line.AccountId = newAccountId;
+        await _context.SaveChangesAsync();
+
+        return (true, string.Empty);
+    }
+
     // ===== Payment Recording Integration =====
 
     /// <inheritdoc/>
@@ -346,7 +425,8 @@ public class AccountingService : IAccountingService
         PaymentType paymentType,
         string description,
         DateTime date,
-        int? incomeAccountId = null)
+        int? incomeAccountId = null,
+        int? costCentreId = null)
     {
         if (amount <= 0)
         {
@@ -404,13 +484,15 @@ public class AccountingService : IAccountingService
                 {
                     AccountId = assetAccount.Id,
                     Debit = amount,
-                    Credit = 0
+                    Credit = 0,
+                    CostCentreId = costCentreId
                 },
                 new TransactionLine
                 {
                     AccountId = incomeAccount.Id,
                     Debit = 0,
-                    Credit = amount
+                    Credit = amount,
+                    CostCentreId = costCentreId
                 }
             }
         };
@@ -427,7 +509,8 @@ public class AccountingService : IAccountingService
         PaymentType paymentType,
         string description,
         DateTime date,
-        int? incomeAccountId = null)
+        int? incomeAccountId = null,
+        int? costCentreId = null)
     {
         if (amount <= 0)
         {
@@ -486,13 +569,15 @@ public class AccountingService : IAccountingService
                 {
                     AccountId = incomeAccount.Id,
                     Debit = amount,
-                    Credit = 0
+                    Credit = 0,
+                    CostCentreId = costCentreId
                 },
                 new TransactionLine
                 {
                     AccountId = assetAccount.Id,
                     Debit = 0,
-                    Credit = amount
+                    Credit = amount,
+                    CostCentreId = costCentreId
                 }
             }
         };
@@ -515,7 +600,8 @@ public class AccountingService : IAccountingService
         PaymentType paymentType,
         string description,
         DateTime date,
-        int? incomeAccountId = null)
+        int? incomeAccountId = null,
+        int? costCentreId = null)
     {
         if (amount <= 0)
         {
@@ -565,13 +651,15 @@ public class AccountingService : IAccountingService
                 {
                     AccountId = incomeAccount.Id,
                     Debit = amount,
-                    Credit = 0
+                    Credit = 0,
+                    CostCentreId = costCentreId
                 },
                 new TransactionLine
                 {
                     AccountId = creditsAccount.Id,
                     Debit = 0,
-                    Credit = amount
+                    Credit = amount,
+                    CostCentreId = costCentreId
                 }
             }
         };
@@ -592,7 +680,8 @@ public class AccountingService : IAccountingService
         PaymentType paymentType,
         string description,
         DateTime date,
-        int? incomeAccountId = null)
+        int? incomeAccountId = null,
+        int? costCentreId = null)
     {
         if (amount <= 0)
         {
@@ -642,13 +731,15 @@ public class AccountingService : IAccountingService
                 {
                     AccountId = creditsAccount.Id,
                     Debit = amount,
-                    Credit = 0
+                    Credit = 0,
+                    CostCentreId = costCentreId
                 },
                 new TransactionLine
                 {
                     AccountId = incomeAccount.Id,
                     Debit = 0,
-                    Credit = amount
+                    Credit = amount,
+                    CostCentreId = costCentreId
                 }
             }
         };
@@ -750,15 +841,17 @@ public class AccountingService : IAccountingService
             return (false, "Required accounts not found. Please ensure default accounts have been created.");
         }
 
-        // Validate sufficient balances
-        if (cashAmount > 0 && cashAccount.Balance < cashAmount)
+        // Validate sufficient balances (calculate from transaction lines — source of truth)
+        var cashBalance = await GetAccountBalanceAsync(cashAccount.Id);
+        if (cashAmount > 0 && cashBalance < cashAmount)
         {
-            return (false, $"Insufficient cash on hand. Available: {cashAccount.Balance:C}");
+            return (false, $"Insufficient cash on hand. Available: {cashBalance:C}");
         }
 
-        if (chequeAmount > 0 && chequeAccount.Balance < chequeAmount)
+        var chequeBalance = await GetAccountBalanceAsync(chequeAccount.Id);
+        if (chequeAmount > 0 && chequeBalance < chequeAmount)
         {
-            return (false, $"Insufficient cheques pending. Available: {chequeAccount.Balance:C}");
+            return (false, $"Insufficient cheques pending. Available: {chequeBalance:C}");
         }
 
         var totalDeposit = cashAmount + chequeAmount;
@@ -1166,13 +1259,15 @@ public class AccountingService : IAccountingService
                 {
                     AccountId = expenseAccount.Id,
                     Debit = expense.Amount,
-                    Credit = 0
+                    Credit = 0,
+                    CostCentreId = expense.CostCentreId
                 },
                 new TransactionLine
                 {
                     AccountId = assetAccount.Id,
                     Debit = 0,
-                    Credit = expense.Amount
+                    Credit = expense.Amount,
+                    CostCentreId = expense.CostCentreId
                 }
             }
         };
@@ -1404,21 +1499,29 @@ public class AccountingService : IAccountingService
 
         var totalAmount = claim.Expenses.Sum(e => e.Amount);
 
+        // Validate sufficient funds in the asset account
+        var availableBalance = await GetAccountBalanceAsync(paidFromAccountId);
+        if (availableBalance < totalAmount)
+        {
+            return (false, $"Insufficient funds in {assetAccount.Name}. Available: {availableBalance:C}, required: {totalAmount:C}");
+        }
+
         // Create multi-line transaction: Debit each expense category, Credit asset account
+        // Group by category AND cost centre so each line gets the right tag
         var lines = new List<TransactionLine>();
 
-        // Group expenses by category for cleaner transaction
         var groupedExpenses = claim.Expenses
-            .GroupBy(e => e.ExpenseAccountId)
+            .GroupBy(e => new { e.ExpenseAccountId, e.CostCentreId })
             .ToList();
 
         foreach (var group in groupedExpenses)
         {
             lines.Add(new TransactionLine
             {
-                AccountId = group.Key,
+                AccountId = group.Key.ExpenseAccountId,
                 Debit = group.Sum(e => e.Amount),
-                Credit = 0
+                Credit = 0,
+                CostCentreId = group.Key.CostCentreId
             });
         }
 
@@ -1639,15 +1742,19 @@ public class AccountingService : IAccountingService
     }
 
     /// <inheritdoc/>
-    public async Task<ExpenseReport> GetExpenseReportAsync(DateTime dateFrom, DateTime dateTo)
+    public async Task<ExpenseReport> GetExpenseReportAsync(DateTime dateFrom, DateTime dateTo, int? costCentreId = null)
     {
-        var expenses = await _context.Expenses
+        var query = _context.Expenses
             .AsNoTracking()
             .Include(e => e.ExpenseAccount)
             .Where(e => e.Date >= dateFrom && e.Date <= dateTo)
             // Only count expenses that have been accounted for (direct or settled claims)
-            .Where(e => e.TransactionId.HasValue || (e.ExpenseClaim != null && e.ExpenseClaim.Status == ExpenseClaimStatus.Settled))
-            .ToListAsync();
+            .Where(e => e.TransactionId.HasValue || (e.ExpenseClaim != null && e.ExpenseClaim.Status == ExpenseClaimStatus.Settled));
+
+        if (costCentreId.HasValue)
+            query = query.Where(e => e.CostCentreId == costCentreId.Value);
+
+        var expenses = await query.ToListAsync();
 
         var lines = expenses
             .GroupBy(e => new { e.ExpenseAccount.Code, e.ExpenseAccount.Name })
@@ -1667,6 +1774,74 @@ public class AccountingService : IAccountingService
             DateTo = dateTo,
             TotalExpenses = lines.Sum(l => l.Amount),
             Lines = lines
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<CostCentreReport> GetCostCentreReportAsync(DateTime dateFrom, DateTime dateTo, int? costCentreId = null)
+    {
+        // Get all non-voided transaction lines in the date range with their accounts and cost centres
+        var query = _context.TransactionLines
+            .AsNoTracking()
+            .Include(tl => tl.Account)
+            .Include(tl => tl.CostCentre)
+            .Include(tl => tl.Transaction)
+            .Where(tl => !tl.Transaction.IsVoided)
+            .Where(tl => tl.Transaction.Date >= dateFrom && tl.Transaction.Date <= dateTo);
+
+        if (costCentreId.HasValue)
+            query = query.Where(tl => tl.CostCentreId == costCentreId.Value);
+
+        var lines = await query.ToListAsync();
+
+        // Group by cost centre
+        var grouped = lines
+            .GroupBy(tl => new { tl.CostCentreId, Name = tl.CostCentre?.Name ?? "Unallocated" })
+            .Select(g =>
+            {
+                var reportLine = new CostCentreReportLine
+                {
+                    CostCentreId = g.Key.CostCentreId,
+                    CostCentreName = g.Key.Name
+                };
+
+                foreach (var tl in g)
+                {
+                    if (tl.Account.Type == AccountType.Income)
+                    {
+                        reportLine.Income += tl.Credit - tl.Debit;
+                    }
+                    else if (tl.Account.Type == AccountType.Expense)
+                    {
+                        reportLine.Expenses += tl.Debit - tl.Credit;
+                    }
+                }
+
+                // Build expense detail breakdown by account
+                reportLine.ExpenseDetails = g
+                    .Where(tl => tl.Account.Type == AccountType.Expense)
+                    .GroupBy(tl => tl.Account.Name)
+                    .Select(eg => new CostCentreExpenseDetail
+                    {
+                        AccountName = eg.Key,
+                        Amount = eg.Sum(tl => tl.Debit - tl.Credit)
+                    })
+                    .Where(d => d.Amount != 0)
+                    .OrderBy(d => d.AccountName)
+                    .ToList();
+
+                return reportLine;
+            })
+            .Where(l => l.Income != 0 || l.Expenses != 0)
+            .OrderBy(l => l.CostCentreId.HasValue ? 0 : 1) // Named cost centres first, Unallocated last
+            .ThenBy(l => l.CostCentreName)
+            .ToList();
+
+        return new CostCentreReport
+        {
+            DateFrom = dateFrom,
+            DateTo = dateTo,
+            Lines = grouped
         };
     }
 

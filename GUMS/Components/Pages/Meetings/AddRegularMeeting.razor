@@ -40,11 +40,11 @@
                                 <label class="form-label">Meeting Date</label>
                                 <InputDate class="form-control" @bind-Value="_meeting.Date" />
                                 <ValidationMessage For="@(() => _meeting.Date)" />
-                                @if (_suggestedDates.Any() && !_suggestedDatesUsed)
+                                @if (_suggestedDates.Count > 1 && !_suggestedDatesUsed)
                                 {
                                     <small class="text-muted">
                                         Suggested dates:
-                                        @foreach (var date in _suggestedDates.Take(3))
+                                        @foreach (var date in _suggestedDates.Skip(1).Take(3))
                                         {
                                             <button type="button" class="btn btn-link btn-sm p-0 ms-1" @onclick="() => UseSuggestedDate(date)">
                                                 @date.ToString("dd MMM")
@@ -235,16 +235,16 @@
                 </div>
             </div>
 
-            @if (_currentTerm != null)
+            @if (_activeTerm != null)
             {
                 <div class="card mt-3">
                     <div class="card-body">
                         <h6 class="card-title">
                             <i class="bi bi-calendar-check"></i> Current Term
                         </h6>
-                        <p class="mb-1"><strong>@_currentTerm.Name</strong></p>
+                        <p class="mb-1"><strong>@_activeTerm.Name</strong></p>
                         <p class="text-muted mb-0">
-                            @_currentTerm.StartDate.ToString("dd MMM") - @_currentTerm.EndDate.ToString("dd MMM yyyy")
+                            @_activeTerm.StartDate.ToString("dd MMM") - @_activeTerm.EndDate.ToString("dd MMM yyyy")
                         </p>
                     </div>
                 </div>

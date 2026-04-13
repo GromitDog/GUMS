@@ -159,7 +159,37 @@
                                             isFirst = false;
                                         }
                                         <td>
-                                            <code>@line.Account.Code</code> @line.Account.Name
+                                            @if (_editAccountLineId == line.Id)
+                                            {
+                                                <div class="d-flex flex-column gap-1">
+                                                    <select class="form-select form-select-sm" @bind="_editAccountValue" style="min-width: 180px;">
+                                                        @foreach (var account in _editAccountOptions)
+                                                        {
+                                                            <option value="@account.Id">@account.Code - @account.Name</option>
+                                                        }
+                                                    </select>
+                                                    <div>
+                                                        <button class="btn btn-success btn-sm py-0 px-1" @onclick="() => SaveAccount(line.Id)">
+                                                            <i class="bi bi-check"></i>
+                                                        </button>
+                                                        <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="CancelEditAccount">
+                                                            <i class="bi bi-x"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            }
+                                            else if (!transaction.IsVoided && !line.BankReconciliationId.HasValue)
+                                            {
+                                                <span @onclick="() => StartEditAccount(line)"
+                                                      style="cursor: pointer; border-bottom: 1px dashed var(--gg-muted);"
+                                                      title="Click to change account">
+                                                    <code>@line.Account.Code</code> @line.Account.Name
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <code>@line.Account.Code</code> @line.Account.Name
+                                            }
                                         </td>
                                         <td class="text-end">
                                             @if (line.Debit > 0)

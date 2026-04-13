@@ -98,6 +98,8 @@ public partial class AwardsDue
     {
         "Badge" when row.BadgeDefinitionId.HasValue =>
             _stockItems.FirstOrDefault(s => s.BadgeDefinitionId == row.BadgeDefinitionId),
+        "FunBadge" when row.BadgeDefinitionId.HasValue =>
+            _stockItems.FirstOrDefault(s => s.BadgeDefinitionId == row.BadgeDefinitionId),
         "ThemeAward" when row.AwardTheme.HasValue =>
             _stockItems.FirstOrDefault(s => s.StockType == BadgeStockType.ThemeAward && s.AwardTheme == row.AwardTheme),
         "Bronze" =>
@@ -127,6 +129,7 @@ public partial class AwardsDue
             switch (award.AwardType)
             {
                 case "Badge" when award.BadgeDefinitionId.HasValue:
+                case "FunBadge" when award.BadgeDefinitionId.HasValue:
                     await ProgrammeService.MarkBadgeAwardedAsync(award.MembershipNumber, award.BadgeDefinitionId.Value);
                     break;
                 case "ThemeAward" when award.Theme.HasValue:

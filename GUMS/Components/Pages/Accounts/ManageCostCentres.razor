@@ -1,0 +1,172 @@
+@page "/Accounts/CostCentres"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Cost Centres - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/Accounts">Accounts</a></li>
+            <li class="breadcrumb-item active">Cost Centres</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-2">
+        <div>
+            <h2><i class="bi bi-diagram-3"></i> Cost Centres</h2>
+            <p class="text-muted mb-0">Group income and expenses by purpose (e.g. camps, trips)</p>
+        </div>
+        <a href="/Accounts" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Accounts
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="() => _successMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Add New -->
+        <div class="card mb-4">
+            <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
+                <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add Cost Centre</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-8">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-control" @bind="_newName" placeholder="e.g. Spring Camp 2026, Cinema Trip" />
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-primary w-100" @onclick="AddCostCentre"
+                                disabled="@(_isAdding || string.IsNullOrWhiteSpace(_newName))">
+                            @if (_isAdding)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            }
+                            <i class="bi bi-plus-circle"></i> Add
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- List -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-list-ul"></i> Cost Centres</h5>
+                <button class="btn btn-sm @(_showInactive ? "btn-secondary" : "btn-outline-secondary")" @onclick="ToggleShowInactive">
+                    @(_showInactive ? "Hide Inactive" : "Show Inactive")
+                </button>
+            </div>
+            <div class="card-body">
+                @if (!_costCentres.Any())
+                {
+                    <p class="text-muted text-center py-3">No cost centres yet. Add one above to start tracking expenses by purpose.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th class="text-center">Transactions</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var cc in _costCentres)
+                                {
+                                    <tr class="@(!cc.IsActive ? "table-secondary" : "")">
+                                        <td>
+                                            @if (_editingId == cc.Id)
+                                            {
+                                                <div class="d-flex gap-2">
+                                                    <input type="text" class="form-control form-control-sm" @bind="_editingName" />
+                                                    <button class="btn btn-sm btn-success" @onclick="SaveEdit"><i class="bi bi-check"></i></button>
+                                                    <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit"><i class="bi bi-x"></i></button>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                @cc.Name
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-light text-dark">@(_usageCounts.GetValueOrDefault(cc.Id, 0))</span>
+                                        </td>
+                                        <td class="text-center">
+                                            @if (cc.IsActive)
+                                            {
+                                                <span class="badge badge-gg-paid">Active</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Inactive</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            @if (_editingId != cc.Id)
+                                            {
+                                                <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => StartEdit(cc)" title="Rename">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                @if (cc.IsActive)
+                                                {
+                                                    @if (_confirmDeactivateId == cc.Id)
+                                                    {
+                                                        <span class="me-1">
+                                                            <button class="btn btn-sm btn-danger" @onclick="() => DeactivateCostCentre(cc.Id)">Confirm</button>
+                                                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => _confirmDeactivateId = null">Cancel</button>
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => _confirmDeactivateId = cc.Id" title="Deactivate">
+                                                            <i class="bi bi-archive"></i>
+                                                        </button>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <button class="btn btn-sm btn-outline-success" @onclick="() => ReactivateCostCentre(cc.Id)" title="Reactivate">
+                                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                                    </button>
+                                                }
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

@@ -117,6 +117,12 @@ public interface IAttendanceService
     /// </summary>
     Task<List<MemberAttendanceAlert>> GetLowAttendanceAlertsAsync(int termId, int thresholdPercent = 25);
 
+    /// <summary>
+    /// Gets members who have missed a number of consecutive regular meetings (across terms).
+    /// Only counts Regular meetings, not Extra (camps, trips, etc.).
+    /// </summary>
+    Task<List<MemberAttendanceAlert>> GetConsecutiveAbsenceAlertsAsync(int consecutiveThreshold = 5);
+
     // ===== Nights Away Tracking =====
 
     /// <summary>

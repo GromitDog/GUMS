@@ -26,6 +26,11 @@ public interface IAccountingService
     Task<Account?> GetAccountByCodeAsync(string code);
 
     /// <summary>
+    /// Calculates the true balance for any account from transaction lines.
+    /// </summary>
+    Task<decimal> GetAccountBalanceAsync(int accountId);
+
+    /// <summary>
     /// Gets the current cash on hand balance.
     /// </summary>
     Task<decimal> GetCashOnHandAsync();
@@ -74,6 +79,12 @@ public interface IAccountingService
     /// </summary>
     Task<(bool Success, string ErrorMessage)> UpdateTransactionDateAsync(int transactionId, DateTime newDate);
 
+    /// <summary>
+    /// Changes the account on a transaction line (for fixing misbookings).
+    /// New account must be the same type as the old account.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage)> UpdateTransactionLineAccountAsync(int transactionLineId, int newAccountId);
+
     // ===== Payment Recording Integration =====
 
     /// <summary>
@@ -87,7 +98,8 @@ public interface IAccountingService
         PaymentType paymentType,
         string description,
         DateTime date,
-        int? incomeAccountId = null);
+        int? incomeAccountId = null,
+        int? costCentreId = null);
 
     /// <summary>
     /// Records the accounting entries for a payment refund.
@@ -100,7 +112,8 @@ public interface IAccountingService
         PaymentType paymentType,
         string description,
         DateTime date,
-        int? incomeAccountId = null);
+        int? incomeAccountId = null,
+        int? costCentreId = null);
 
     // ===== Credit Operations =====
 
@@ -114,7 +127,8 @@ public interface IAccountingService
         PaymentType paymentType,
         string description,
         DateTime date,
-        int? incomeAccountId = null);
+        int? incomeAccountId = null,
+        int? costCentreId = null);
 
     /// <summary>
     /// Records the accounting entries when credit is applied to a pending payment.
@@ -126,7 +140,8 @@ public interface IAccountingService
         PaymentType paymentType,
         string description,
         DateTime date,
-        int? incomeAccountId = null);
+        int? incomeAccountId = null,
+        int? costCentreId = null);
 
     /// <summary>
     /// Records the accounting entries when credit is refunded as cash.
@@ -285,7 +300,12 @@ public interface IAccountingService
     /// <summary>
     /// Gets an expense report for a date range.
     /// </summary>
-    Task<ExpenseReport> GetExpenseReportAsync(DateTime dateFrom, DateTime dateTo);
+    Task<ExpenseReport> GetExpenseReportAsync(DateTime dateFrom, DateTime dateTo, int? costCentreId = null);
+
+    /// <summary>
+    /// Gets a cost centre P&L report for a date range, optionally filtered to a single cost centre.
+    /// </summary>
+    Task<CostCentreReport> GetCostCentreReportAsync(DateTime dateFrom, DateTime dateTo, int? costCentreId = null);
 
     /// <summary>
     /// Gets accounting dashboard statistics.
@@ -483,4 +503,33 @@ public class YearClosingLine
     public string AccountName { get; set; } = string.Empty;
     public decimal? Debit { get; set; }
     public decimal? Credit { get; set; }
+}
+
+/// <summary>
+/// Cost centre P&L report showing income and expenses grouped by cost centre.
+/// </summary>
+public class CostCentreReport
+{
+    public DateTime DateFrom { get; set; }
+    public DateTime DateTo { get; set; }
+    public List<CostCentreReportLine> Lines { get; set; } = new();
+    public decimal TotalIncome => Lines.Sum(l => l.Income);
+    public decimal TotalExpenses => Lines.Sum(l => l.Expenses);
+    public decimal TotalNet => TotalIncome - TotalExpenses;
+}
+
+public class CostCentreReportLine
+{
+    public int? CostCentreId { get; set; }
+    public string CostCentreName { get; set; } = string.Empty;
+    public decimal Income { get; set; }
+    public decimal Expenses { get; set; }
+    public decimal Net => Income - Expenses;
+    public List<CostCentreExpenseDetail> ExpenseDetails { get; set; } = new();
+}
+
+public class CostCentreExpenseDetail
+{
+    public string AccountName { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
 }
