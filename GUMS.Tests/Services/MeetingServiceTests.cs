@@ -217,22 +217,24 @@ public class MeetingServiceTests : IDisposable
     {
         // Arrange
         var today = DateTime.Today;
-        var pastMeeting = CreateMeeting("Past", today.AddDays(-10));
+        var oldPastMeeting = CreateMeeting("Old Past", today.AddDays(-30)); // Beyond 21-day window
+        var recentPastMeeting = CreateMeeting("Recent Past", today.AddDays(-10)); // Within 21-day window
         var todayMeeting = CreateMeeting("Today", today);
         var future1 = CreateMeeting("Future 1", today.AddDays(5));
         var future2 = CreateMeeting("Future 2", today.AddDays(10));
 
-        _context.Meetings.AddRange(pastMeeting, todayMeeting, future1, future2);
+        _context.Meetings.AddRange(oldPastMeeting, recentPastMeeting, todayMeeting, future1, future2);
         await _context.SaveChangesAsync();
 
         // Act
         var result = await _sut.GetUpcomingAsync();
 
-        // Assert
-        result.Should().HaveCount(3); // Today and future meetings
-        result[0].Title.Should().Be("Today");
-        result[1].Title.Should().Be("Future 1");
-        result[2].Title.Should().Be("Future 2");
+        // Assert — meetings within last 21 days + today + future
+        result.Should().HaveCount(4);
+        result[0].Title.Should().Be("Recent Past");
+        result[1].Title.Should().Be("Today");
+        result[2].Title.Should().Be("Future 1");
+        result[3].Title.Should().Be("Future 2");
     }
 
     [Fact]
@@ -263,17 +265,18 @@ public class MeetingServiceTests : IDisposable
     {
         // Arrange
         var today = DateTime.Today;
-        var past1 = CreateMeeting("Past 1", today.AddDays(-20));
-        var past2 = CreateMeeting("Past 2", today.AddDays(-10));
+        var past1 = CreateMeeting("Past 1", today.AddDays(-60));
+        var past2 = CreateMeeting("Past 2", today.AddDays(-30));
+        var recentPast = CreateMeeting("Recent Past", today.AddDays(-10)); // Within 21-day window, still "upcoming"
         var future = CreateMeeting("Future", today.AddDays(10));
 
-        _context.Meetings.AddRange(past1, past2, future);
+        _context.Meetings.AddRange(past1, past2, recentPast, future);
         await _context.SaveChangesAsync();
 
         // Act
         var result = await _sut.GetPastAsync();
 
-        // Assert
+        // Assert — only meetings older than 21 days
         result.Should().HaveCount(2);
         result[0].Title.Should().Be("Past 2"); // Most recent past first
         result[1].Title.Should().Be("Past 1");

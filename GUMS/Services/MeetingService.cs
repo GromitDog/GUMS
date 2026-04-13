@@ -52,11 +52,12 @@ public class MeetingService : IMeetingService
 
     public async Task<List<Meeting>> GetUpcomingAsync(int? limit = null)
     {
-        var today = DateTime.Today;
+        // Keep meetings visible for 3 weeks after meeting date before moving to past
+        var cutoff = DateTime.Today.AddDays(-21);
         var query = _context.Meetings
             .Include(m => m.MeetingActivities.OrderBy(a => a.SortOrder))
             .AsNoTracking()
-            .Where(m => m.Date >= today)
+            .Where(m => m.Date >= cutoff)
             .OrderBy(m => m.Date);
 
         if (limit.HasValue)
@@ -69,11 +70,12 @@ public class MeetingService : IMeetingService
 
     public async Task<List<Meeting>> GetPastAsync(int? limit = null)
     {
-        var today = DateTime.Today;
+        // Meetings move to past 3 weeks after their date (matches GetUpcomingAsync cutoff)
+        var cutoff = DateTime.Today.AddDays(-21);
         var query = _context.Meetings
             .Include(m => m.MeetingActivities.OrderBy(a => a.SortOrder))
             .AsNoTracking()
-            .Where(m => m.Date < today)
+            .Where(m => m.Date < cutoff)
             .OrderByDescending(m => m.Date);
 
         if (limit.HasValue)
