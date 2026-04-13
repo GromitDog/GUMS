@@ -153,7 +153,7 @@ public partial class RecordExpense
                     // Create new claim
                     var claimResult = await AccountingService.CreateExpenseClaimAsync(new ExpenseClaim
                     {
-                        ClaimedBy = leader.FullName,
+                        ClaimedBy = leader.FullName ?? leader.MembershipNumber,
                         SubmittedDate = DateTime.Today
                     });
 
