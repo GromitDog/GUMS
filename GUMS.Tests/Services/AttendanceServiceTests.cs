@@ -1396,4 +1396,89 @@ public class AttendanceServiceTests : IDisposable
     }
 
     #endregion
+
+    #region PlanningToAttend Tests
+
+    [Fact]
+    public async Task SaveBulkAttendanceAsync_ShouldPersistPlanningToAttend()
+    {
+        // Arrange
+        var meeting = await CreateTestMeetingAsync();
+        var attendances = new List<Attendance>
+        {
+            new() { MembershipNumber = "L001", PlanningToAttend = true },
+            new() { MembershipNumber = "L002", PlanningToAttend = false },
+            new() { MembershipNumber = "L003", PlanningToAttend = true }
+        };
+
+        // Act
+        var result = await _sut.SaveBulkAttendanceAsync(meeting.Id, attendances);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        var saved = await _context.Attendances
+            .Where(a => a.MeetingId == meeting.Id)
+            .OrderBy(a => a.MembershipNumber)
+            .ToListAsync();
+
+        saved.Should().HaveCount(3);
+        saved[0].MembershipNumber.Should().Be("L001");
+        saved[0].PlanningToAttend.Should().BeTrue();
+        saved[1].MembershipNumber.Should().Be("L002");
+        saved[1].PlanningToAttend.Should().BeFalse();
+        saved[2].MembershipNumber.Should().Be("L003");
+        saved[2].PlanningToAttend.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SaveBulkAttendanceAsync_ShouldUpdatePlanningToAttend_WhenRecordExists()
+    {
+        // Arrange
+        var meeting = await CreateTestMeetingAsync();
+        _context.Attendances.Add(new Attendance
+        {
+            MeetingId = meeting.Id,
+            MembershipNumber = "L001",
+            PlanningToAttend = false
+        });
+        await _context.SaveChangesAsync();
+
+        var updated = new List<Attendance>
+        {
+            new() { MembershipNumber = "L001", PlanningToAttend = true }
+        };
+
+        // Act
+        var result = await _sut.SaveBulkAttendanceAsync(meeting.Id, updated);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        var record = await _context.Attendances
+            .SingleAsync(a => a.MeetingId == meeting.Id && a.MembershipNumber == "L001");
+        record.PlanningToAttend.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SaveAttendanceRecordAsync_ShouldPersistPlanningToAttend()
+    {
+        // Arrange
+        var meeting = await CreateTestMeetingAsync();
+        var attendance = new Attendance
+        {
+            MeetingId = meeting.Id,
+            MembershipNumber = "L001",
+            PlanningToAttend = true
+        };
+
+        // Act
+        var result = await _sut.SaveAttendanceRecordAsync(attendance);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        var saved = await _context.Attendances
+            .SingleAsync(a => a.MeetingId == meeting.Id && a.MembershipNumber == "L001");
+        saved.PlanningToAttend.Should().BeTrue();
+    }
+
+    #endregion
 }

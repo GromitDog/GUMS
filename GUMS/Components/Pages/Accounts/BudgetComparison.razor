@@ -57,17 +57,9 @@
                                     <h6 class="text-muted">Expected Income</h6>
                                     <h3 style="color: var(--gg-primary-blue);">@_comparison.ExpectedIncome.ToString("C")</h3>
                                     <small class="text-muted">
-                                        @_comparison.TotalConsented said yes
-                                        @if (_comparison.ConsentedGirlCount > 0 || _comparison.ConsentedAdultCount > 0)
-                                        {
-                                            <span>
-                                                (@_comparison.ConsentedGirlCount @(_comparison.ConsentedGirlCount == 1 ? "girl" : "girls")
-                                                @if (_comparison.ConsentedAdultCount > 0)
-                                                {
-                                                    <span>+ @_comparison.ConsentedAdultCount @(_comparison.ConsentedAdultCount == 1 ? "adult" : "adults")</span>
-                                                })
-                                            </span>
-                                        }
+                                        @_comparison.TotalConsented attending
+                                        (@_comparison.ConsentedGirlCount @(_comparison.ConsentedGirlCount == 1 ? "girl" : "girls")
+                                        + @_comparison.ConsentedAdultCount @(_comparison.ConsentedAdultCount == 1 ? "leader" : "leaders"))
                                         &times; @_comparison.CostPerAttendee!.Value.ToString("C")
                                     </small>
                                 </div>
@@ -112,11 +104,11 @@
                         <small class="text-muted">
                             @if (_comparison.TotalConsented > 0)
                             {
-                                <span>Based on @_comparison.TotalConsented consent @(_comparison.TotalConsented == 1 ? "form" : "forms") received</span>
+                                <span>Based on @_comparison.ConsentedGirlCount @(_comparison.ConsentedGirlCount == 1 ? "girl" : "girls") + @_comparison.ConsentedAdultCount @(_comparison.ConsentedAdultCount == 1 ? "leader" : "leaders")</span>
                             }
                             else
                             {
-                                <span class="text-warning"><i class="bi bi-exclamation-circle"></i> No consent forms received yet</span>
+                                <span class="text-warning"><i class="bi bi-exclamation-circle"></i> No attendees confirmed yet</span>
                             }
                         </small>
                     </div>

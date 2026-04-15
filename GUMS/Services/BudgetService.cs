@@ -171,18 +171,19 @@ public class BudgetService : IBudgetService
         if (budget == null)
             return null;
 
-        // Use consent forms received as the basis for budgeted costs (meaningful before the register is done)
+        // Girls: count those with consent forms received (meaningful before the register is done)
+        // Leaders: count those marked as planning to attend
         var attendees = await _context.Attendances
             .AsNoTracking()
-            .Where(a => a.MeetingId == meetingId && a.ConsentFormReceived)
+            .Where(a => a.MeetingId == meetingId)
             .Join(_context.Persons,
                 a => a.MembershipNumber,
                 p => p.MembershipNumber,
-                (a, p) => new { p.PersonType })
+                (a, p) => new { a.ConsentFormReceived, a.PlanningToAttend, p.PersonType })
             .ToListAsync();
 
-        var girlCount = attendees.Count(a => a.PersonType == PersonType.Girl);
-        var adultCount = attendees.Count(a => a.PersonType == PersonType.Leader);
+        var girlCount = attendees.Count(a => a.PersonType == PersonType.Girl && a.ConsentFormReceived);
+        var adultCount = attendees.Count(a => a.PersonType == PersonType.Leader && a.PlanningToAttend);
 
         var actualExpenses = await _context.Expenses
             .AsNoTracking()

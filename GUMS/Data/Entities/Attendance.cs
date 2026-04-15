@@ -31,6 +31,13 @@ public class Attendance
 
     public DateTime? ConsentDeclinedDate { get; set; }
 
+    /// <summary>
+    /// Indicates a leader is planning to attend this meeting.
+    /// Used for budget calculations and ratio planning.
+    /// Only meaningful for Leader person types (girls use consent forms instead).
+    /// </summary>
+    public bool PlanningToAttend { get; set; } = false;
+
     public string? Notes { get; set; }
 
     /// <summary>

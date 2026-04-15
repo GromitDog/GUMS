@@ -105,6 +105,7 @@ public class AttendanceService : IAttendanceService
             existingRecord.ConsentDeclinedDate = attendance.ConsentDeclinedDate;
             existingRecord.Notes = attendance.Notes;
             existingRecord.NightsAway = attendance.NightsAway;
+            existingRecord.PlanningToAttend = attendance.PlanningToAttend;
 
             await _context.SaveChangesAsync();
             return (true, string.Empty, existingRecord);
@@ -176,6 +177,7 @@ public class AttendanceService : IAttendanceService
                 existing.ConsentDeclinedDate = record.ConsentDeclinedDate;
                 existing.Notes = record.Notes;
                 existing.NightsAway = record.NightsAway;
+                existing.PlanningToAttend = record.PlanningToAttend;
             }
             else
             {

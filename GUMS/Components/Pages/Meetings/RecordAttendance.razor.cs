@@ -146,6 +146,11 @@ public partial class RecordAttendance
         record.NightsAway = nights;
     }
 
+    private void TogglePlanningToAttend(Attendance record, bool planning)
+    {
+        record.PlanningToAttend = planning;
+    }
+
     private void ToggleConsentEmail(Attendance record, bool received)
     {
         record.ConsentEmailReceived = received;
