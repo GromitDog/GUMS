@@ -757,7 +757,7 @@ public class AccountingServiceTests : IDisposable
         // Assert
         result.SubsIncome.Should().Be(50.00m);
         result.ActivityIncome.Should().Be(15.00m);
-        result.TotalIncome.Should().Be(65.00m);
+        result.ActualTotalIncome.Should().Be(65.00m);
     }
 
     #endregion

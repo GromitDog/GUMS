@@ -78,7 +78,7 @@
                 <div class="card h-100">
                     <div class="card-body text-center">
                         <h6 class="text-muted mb-2">Cash on Hand</h6>
-                        <h2 class="mb-0 @(_dashboardStats.CashOnHand >= 0 ? "text-success" : "text-danger")">
+                        <h2 class="mb-0" style="color: @(_dashboardStats.CashOnHand >= 0 ? "var(--gg-primary-blue)" : "var(--gg-error)");">
                             @_dashboardStats.CashOnHand.ToString("C")
                         </h2>
                         <small class="text-muted">Physical cash collected</small>
@@ -89,7 +89,7 @@
                 <div class="card h-100">
                     <div class="card-body text-center">
                         <h6 class="text-muted mb-2">Cheques Pending</h6>
-                        <h2 class="mb-0 @(_dashboardStats.ChequesPending >= 0 ? "text-warning" : "text-danger")">
+                        <h2 class="mb-0" style="color: @(_dashboardStats.ChequesPending >= 0 ? "var(--gg-primary-blue)" : "var(--gg-error)");">
                             @_dashboardStats.ChequesPending.ToString("C")
                         </h2>
                         <small class="text-muted">Cheques to be banked</small>
@@ -130,10 +130,19 @@
                 </h4>
             </div>
             <div class="col-md-4">
+                <div class="card h-100" style="background-color: var(--gg-success); color: white;">
+                    <div class="card-body text-center">
+                        <h6 class="mb-2">Total Income</h6>
+                        <h2 class="mb-0">@_dashboardStats.TotalIncomeThisYear.ToString("C")</h2>
+                        <small>All income accounts</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
                 <div class="card h-100">
                     <div class="card-body text-center">
-                        <h6 class="text-muted mb-2">Subscription Income</h6>
-                        <h2 class="mb-0 text-success">@_dashboardStats.SubsIncomeThisYear.ToString("C")</h2>
+                        <h6 class="text-muted mb-2">Subs</h6>
+                        <h2 class="mb-0" style="color: var(--gg-success);">@_dashboardStats.SubsIncomeThisYear.ToString("C")</h2>
                         <small class="text-muted">From termly subs</small>
                     </div>
                 </div>
@@ -141,18 +150,9 @@
             <div class="col-md-4">
                 <div class="card h-100">
                     <div class="card-body text-center">
-                        <h6 class="text-muted mb-2">Activity Income</h6>
-                        <h2 class="mb-0 text-success">@_dashboardStats.ActivityIncomeThisYear.ToString("C")</h2>
-                        <small class="text-muted">From special events</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100 bg-success text-white">
-                    <div class="card-body text-center">
-                        <h6 class="mb-2">Total Income</h6>
-                        <h2 class="mb-0">@_dashboardStats.TotalIncomeThisYear.ToString("C")</h2>
-                        <small>This year</small>
+                        <h6 class="text-muted mb-2">Other</h6>
+                        <h2 class="mb-0" style="color: var(--gg-success);">@((_dashboardStats.TotalIncomeThisYear - _dashboardStats.SubsIncomeThisYear).ToString("C"))</h2>
+                        <small class="text-muted">Events, activities &amp; other</small>
                     </div>
                 </div>
             </div>
@@ -169,16 +169,16 @@
                 <div class="card h-100">
                     <div class="card-body text-center">
                         <h6 class="text-muted mb-2">Total Expenses</h6>
-                        <h2 class="mb-0 text-danger">@_dashboardStats.TotalExpensesThisYear.ToString("C")</h2>
+                        <h2 class="mb-0" style="color: var(--gg-error);">@_dashboardStats.TotalExpensesThisYear.ToString("C")</h2>
                         <small class="text-muted">This year</small>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card h-100 @(_dashboardStats.NetIncomeThisYear >= 0 ? "border-success" : "border-danger")">
+                <div class="card h-100" style="border-color: @(_dashboardStats.NetIncomeThisYear >= 0 ? "var(--gg-success)" : "var(--gg-error)") !important;">
                     <div class="card-body text-center">
                         <h6 class="text-muted mb-2">Net Position</h6>
-                        <h2 class="mb-0 @(_dashboardStats.NetIncomeThisYear >= 0 ? "text-success" : "text-danger")">
+                        <h2 class="mb-0" style="color: @(_dashboardStats.NetIncomeThisYear >= 0 ? "var(--gg-success)" : "var(--gg-error)");">
                             @_dashboardStats.NetIncomeThisYear.ToString("C")
                         </h2>
                         <small class="text-muted">Income - Expenses</small>
@@ -189,7 +189,7 @@
                 <div class="card h-100">
                     <div class="card-body text-center">
                         <h6 class="text-muted mb-2">Pending Claims</h6>
-                        <h2 class="mb-0 @(_dashboardStats.PendingClaimsCount > 0 ? "text-warning" : "")">
+                        <h2 class="mb-0" style="color: @(_dashboardStats.PendingClaimsCount > 0 ? "var(--gg-primary-blue)" : "inherit");">
                             @_dashboardStats.PendingClaimsCount
                         </h2>
                         @if (_dashboardStats.PendingClaimsAmount > 0)
@@ -301,7 +301,7 @@
                                         }
                                     </td>
                                     <td class="text-end">
-                                        <strong class="@(account.Balance >= 0 ? "" : "text-danger")">
+                                        <strong style="@(account.Balance < 0 ? "color: var(--gg-error);" : "")">
                                             @account.Balance.ToString("C")
                                         </strong>
                                     </td>

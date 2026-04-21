@@ -347,7 +347,8 @@ public class IncomeReport
     public DateTime DateTo { get; set; }
     public decimal SubsIncome { get; set; }
     public decimal ActivityIncome { get; set; }
-    public decimal TotalIncome => SubsIncome + ActivityIncome;
+    /// <summary>True total across ALL income accounts (not just subs + activity).</summary>
+    public decimal ActualTotalIncome { get; set; }
     public List<IncomeReportLine> Lines { get; set; } = new();
 }
 
@@ -372,7 +373,7 @@ public class AccountingDashboardStats
     public decimal TotalAssets => CashOnHand + ChequesPending + BankBalance;
     public decimal SubsIncomeThisYear { get; set; }
     public decimal ActivityIncomeThisYear { get; set; }
-    public decimal TotalIncomeThisYear => SubsIncomeThisYear + ActivityIncomeThisYear;
+    public decimal TotalIncomeThisYear { get; set; }
     public decimal TotalExpensesThisYear { get; set; }
     public decimal NetIncomeThisYear => TotalIncomeThisYear - TotalExpensesThisYear;
     public DateTime FinancialYearStart { get; set; }

@@ -1696,26 +1696,49 @@ public class AccountingService : IAccountingService
     {
         var transactions = await GetTransactionsAsync(dateFrom, dateTo);
 
-        var subsAccount = await GetAccountByCodeAsync(SubsIncomeCode);
-        var activityAccount = await GetAccountByCodeAsync(ActivityIncomeCode);
+        // Get all income accounts so we capture the true total
+        var incomeAccounts = await _context.Accounts
+            .AsNoTracking()
+            .Where(a => a.Type == AccountType.Income)
+            .ToListAsync();
+
+        var subsAccount = incomeAccounts.FirstOrDefault(a => a.Code == SubsIncomeCode);
+        var activityAccount = incomeAccounts.FirstOrDefault(a => a.Code == ActivityIncomeCode);
+        var incomeAccountIds = incomeAccounts.Select(a => a.Id).ToHashSet();
 
         decimal subsIncome = 0;
         decimal activityIncome = 0;
+        decimal totalIncome = 0;
 
         foreach (var transaction in transactions.Where(t => !t.IsVoided))
         {
             foreach (var line in transaction.Lines)
             {
+                if (!incomeAccountIds.Contains(line.AccountId))
+                    continue;
+
+                var amount = line.Credit - line.Debit;
+                totalIncome += amount;
+
                 if (line.AccountId == subsAccount?.Id)
-                {
-                    subsIncome += line.Credit - line.Debit;
-                }
+                    subsIncome += amount;
                 else if (line.AccountId == activityAccount?.Id)
-                {
-                    activityIncome += line.Credit - line.Debit;
-                }
+                    activityIncome += amount;
             }
         }
+
+        var lines = incomeAccounts
+            .Select(a =>
+            {
+                decimal amount = 0;
+                foreach (var t in transactions.Where(t => !t.IsVoided))
+                    foreach (var l in t.Lines.Where(l => l.AccountId == a.Id))
+                        amount += l.Credit - l.Debit;
+                return new IncomeReportLine { AccountCode = a.Code, AccountName = a.Name, Amount = amount };
+            })
+            .Where(l => l.Amount != 0)
+            .OrderBy(l => l.AccountCode)
+            .ToList();
 
         return new IncomeReport
         {
@@ -1723,21 +1746,8 @@ public class AccountingService : IAccountingService
             DateTo = dateTo,
             SubsIncome = subsIncome,
             ActivityIncome = activityIncome,
-            Lines = new List<IncomeReportLine>
-            {
-                new IncomeReportLine
-                {
-                    AccountCode = SubsIncomeCode,
-                    AccountName = "Subscription Income",
-                    Amount = subsIncome
-                },
-                new IncomeReportLine
-                {
-                    AccountCode = ActivityIncomeCode,
-                    AccountName = "Activity Income",
-                    Amount = activityIncome
-                }
-            }
+            ActualTotalIncome = totalIncome,
+            Lines = lines
         };
     }
 
@@ -1864,6 +1874,7 @@ public class AccountingService : IAccountingService
         var incomeReport = await GetIncomeReportAsync(fyStart, fyEnd);
         stats.SubsIncomeThisYear = incomeReport.SubsIncome;
         stats.ActivityIncomeThisYear = incomeReport.ActivityIncome;
+        stats.TotalIncomeThisYear = incomeReport.ActualTotalIncome;
 
         var expenseReport = await GetExpenseReportAsync(fyStart, fyEnd);
         stats.TotalExpensesThisYear = expenseReport.TotalExpenses;
