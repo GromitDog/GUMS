@@ -685,6 +685,8 @@ public class ProgrammeService : IProgrammeService
             .Include(m => m.MeetingActivities)
                 .ThenInclude(a => a.BadgeClause)
                     .ThenInclude(c => c!.BadgeDefinition)
+            .Include(m => m.MeetingActivities)
+                .ThenInclude(a => a.BadgeDefinition)
             .AsNoTracking()
             .Where(m => m.Date >= term.StartDate && m.Date <= term.EndDate)
             .ToListAsync();
@@ -720,14 +722,13 @@ public class ProgrammeService : IProgrammeService
 
                 if (activity.BadgeClause?.BadgeDefinition != null)
                 {
+                    // Themed badges linked via a clause (SkillsBuilder / InterestBadge).
                     var clause = activity.BadgeClause;
                     var badge = clause.BadgeDefinition;
 
-                    var firstTimeSeen = badgesSeen.Add(badge.Id);
-
                     if (badge.Theme.HasValue)
                     {
-                        if (firstTimeSeen)
+                        if (badgesSeen.Add(badge.Id))
                         {
                             var tb = balance.ThemeBalances[badge.Theme.Value];
                             tb.BadgesWorkedOn++;
@@ -746,7 +747,12 @@ public class ProgrammeService : IProgrammeService
                             balance.TotalMinutesPlanned += clause.EstimatedMinutes;
                         }
                     }
-                    else if (firstTimeSeen && badge.BadgeType == BadgeType.FunBadge)
+                }
+                else if (activity.BadgeDefinition != null)
+                {
+                    // Fun badges — no clauses, linked directly via BadgeDefinitionId.
+                    var badge = activity.BadgeDefinition;
+                    if (badge.BadgeType == BadgeType.FunBadge && badgesSeen.Add(badge.Id))
                     {
                         balance.FunBadgesWorkedOn++;
                     }

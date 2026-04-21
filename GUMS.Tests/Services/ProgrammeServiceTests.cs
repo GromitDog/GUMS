@@ -374,4 +374,172 @@ public class ProgrammeServiceTests : IDisposable
         tracking = await _context.AwardTrackings.FirstAsync(a => a.MembershipNumber == "G001");
         tracking.GoldChallengeComplete.Should().BeFalse();
     }
+
+    // ===== Term Balance: fun-badge counting =====
+
+    [Fact]
+    public async Task GetTermBalanceAsync_CountsFunBadgesLinkedViaBadgeDefinitionId()
+    {
+        var term = new Term
+        {
+            Name = "Spring 2026",
+            StartDate = new DateTime(2026, 1, 1),
+            EndDate = new DateTime(2026, 4, 30),
+            SubsAmount = 20
+        };
+        _context.Terms.Add(term);
+
+        var funBadge = new BadgeDefinition
+        {
+            Name = "Disco Fun Badge",
+            BadgeType = BadgeType.FunBadge,
+            Section = Section.Brownie,
+            RequiredCompletions = 1
+            // Theme is null — fun badges are themeless
+        };
+        _context.BadgeDefinitions.Add(funBadge);
+
+        var meeting = new Meeting
+        {
+            Date = new DateTime(2026, 2, 10),
+            StartTime = new TimeOnly(18, 30),
+            EndTime = new TimeOnly(19, 30),
+            MeetingType = MeetingType.Regular,
+            Title = "Disco Night",
+            LocationName = "Hall"
+        };
+        _context.Meetings.Add(meeting);
+        await _context.SaveChangesAsync();
+
+        // Fun-badge activity linked directly via BadgeDefinitionId (no clause).
+        _context.MeetingActivities.Add(new MeetingActivity
+        {
+            MeetingId = meeting.Id,
+            Name = "Disco",
+            BadgeDefinitionId = funBadge.Id
+        });
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.GetTermBalanceAsync(term.Id);
+
+        result.FunBadgesWorkedOn.Should().Be(1);
+        result.TotalBadgesWorkedOn.Should().Be(0); // fun badges don't count toward themed total
+    }
+
+    [Fact]
+    public async Task GetTermBalanceAsync_DistinctFunBadgeCountedOncePerTerm()
+    {
+        var term = new Term
+        {
+            Name = "Spring 2026",
+            StartDate = new DateTime(2026, 1, 1),
+            EndDate = new DateTime(2026, 4, 30),
+            SubsAmount = 20
+        };
+        _context.Terms.Add(term);
+
+        var funBadge = new BadgeDefinition
+        {
+            Name = "Disco Fun Badge",
+            BadgeType = BadgeType.FunBadge,
+            Section = Section.Brownie,
+            RequiredCompletions = 1
+        };
+        _context.BadgeDefinitions.Add(funBadge);
+
+        var meeting1 = new Meeting
+        {
+            Date = new DateTime(2026, 2, 10),
+            StartTime = new TimeOnly(18, 30),
+            EndTime = new TimeOnly(19, 30),
+            MeetingType = MeetingType.Regular,
+            Title = "Meeting 1",
+            LocationName = "Hall"
+        };
+        var meeting2 = new Meeting
+        {
+            Date = new DateTime(2026, 2, 17),
+            StartTime = new TimeOnly(18, 30),
+            EndTime = new TimeOnly(19, 30),
+            MeetingType = MeetingType.Regular,
+            Title = "Meeting 2",
+            LocationName = "Hall"
+        };
+        _context.Meetings.AddRange(meeting1, meeting2);
+        await _context.SaveChangesAsync();
+
+        _context.MeetingActivities.AddRange(
+            new MeetingActivity { MeetingId = meeting1.Id, Name = "Disco A", BadgeDefinitionId = funBadge.Id },
+            new MeetingActivity { MeetingId = meeting2.Id, Name = "Disco B", BadgeDefinitionId = funBadge.Id });
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.GetTermBalanceAsync(term.Id);
+
+        result.FunBadgesWorkedOn.Should().Be(1); // same badge across two meetings = 1
+    }
+
+    [Fact]
+    public async Task GetTermBalanceAsync_CountsThemedAndFunBadgesIndependently()
+    {
+        var term = new Term
+        {
+            Name = "Spring 2026",
+            StartDate = new DateTime(2026, 1, 1),
+            EndDate = new DateTime(2026, 4, 30),
+            SubsAmount = 20
+        };
+        _context.Terms.Add(term);
+
+        var skillsBuilder = new BadgeDefinition
+        {
+            Name = "First Aid Stage 1",
+            Theme = Theme.BeWell,
+            BadgeType = BadgeType.SkillsBuilder,
+            Section = Section.Brownie,
+            RequiredCompletions = 4,
+            Clauses = new List<BadgeClause> { new() { Name = "C1", SortOrder = 0 } }
+        };
+        var interestBadge = new BadgeDefinition
+        {
+            Name = "Craft",
+            Theme = Theme.ExpressMyself,
+            BadgeType = BadgeType.InterestBadge,
+            Section = Section.Brownie,
+            RequiredCompletions = 3,
+            Clauses = new List<BadgeClause> { new() { Name = "C1", SortOrder = 0 } }
+        };
+        var funBadge = new BadgeDefinition
+        {
+            Name = "Disco",
+            BadgeType = BadgeType.FunBadge,
+            Section = Section.Brownie,
+            RequiredCompletions = 1
+        };
+        _context.BadgeDefinitions.AddRange(skillsBuilder, interestBadge, funBadge);
+
+        var meeting = new Meeting
+        {
+            Date = new DateTime(2026, 2, 10),
+            StartTime = new TimeOnly(18, 30),
+            EndTime = new TimeOnly(19, 30),
+            MeetingType = MeetingType.Regular,
+            Title = "Mixed Meeting",
+            LocationName = "Hall"
+        };
+        _context.Meetings.Add(meeting);
+        await _context.SaveChangesAsync();
+
+        _context.MeetingActivities.AddRange(
+            new MeetingActivity { MeetingId = meeting.Id, Name = "SB", BadgeClauseId = skillsBuilder.Clauses[0].Id },
+            new MeetingActivity { MeetingId = meeting.Id, Name = "IB", BadgeClauseId = interestBadge.Clauses[0].Id },
+            new MeetingActivity { MeetingId = meeting.Id, Name = "Disco", BadgeDefinitionId = funBadge.Id });
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.GetTermBalanceAsync(term.Id);
+
+        result.TotalBadgesWorkedOn.Should().Be(2); // 1 SB + 1 IB
+        result.FunBadgesWorkedOn.Should().Be(1);
+        result.ThemeBalances[Theme.BeWell].SkillsBuildersWorkedOn.Should().Be(1);
+        result.ThemeBalances[Theme.ExpressMyself].InterestBadgesWorkedOn.Should().Be(1);
+    }
 }
