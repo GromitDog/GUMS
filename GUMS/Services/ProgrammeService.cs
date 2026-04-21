@@ -944,7 +944,7 @@ public class ProgrammeService : IProgrammeService
         if (currentTerm == null)
             return new List<AwardDue>();
 
-        // Badge clause IDs that appear in future meetings still to come this term
+        // Badge clause IDs that appear in future meetings still to come this term (themed badges)
         var futurePlannedClauseIds = await _context.MeetingActivities
             .AsNoTracking()
             .Where(a => a.MeetingId.HasValue
@@ -955,20 +955,37 @@ public class ProgrammeService : IProgrammeService
             .Distinct()
             .ToHashSetAsync();
 
-        if (!futurePlannedClauseIds.Any())
+        // Fun badge IDs scheduled in future meetings this term (linked directly, no clause)
+        var futurePlannedFunBadgeIds = await _context.MeetingActivities
+            .AsNoTracking()
+            .Where(a => a.MeetingId.HasValue
+                     && a.BadgeDefinitionId.HasValue
+                     && a.BadgeDefinition!.BadgeType == BadgeType.FunBadge
+                     && a.Meeting!.Date > today
+                     && a.Meeting!.Date <= currentTerm.EndDate)
+            .Select(a => a.BadgeDefinitionId!.Value)
+            .Distinct()
+            .ToHashSetAsync();
+
+        if (!futurePlannedClauseIds.Any() && !futurePlannedFunBadgeIds.Any())
             return new List<AwardDue>();
 
-        // Only badges that have at least one clause appearing in future meetings
         var allBadges = await _context.BadgeDefinitions
             .Include(b => b.Clauses)
             .AsNoTracking()
             .ToListAsync();
 
+        // Themed badges with at least one clause scheduled in future meetings
         var relevantBadges = allBadges
             .Where(b => b.Clauses.Any(c => futurePlannedClauseIds.Contains(c.Id)))
             .ToList();
 
-        if (!relevantBadges.Any())
+        // Fun badges scheduled in future meetings — indexed for name lookup
+        var futureFunBadgeLookup = allBadges
+            .Where(b => futurePlannedFunBadgeIds.Contains(b.Id))
+            .ToDictionary(b => b.Id);
+
+        if (!relevantBadges.Any() && !futureFunBadgeLookup.Any())
             return new List<AwardDue>();
 
         // Active girls
@@ -987,7 +1004,7 @@ public class ProgrammeService : IProgrammeService
             .GroupBy(a => a.MembershipNumber)
             .ToDictionary(g => g.Key, g => g.Select(a => a.BadgeDefinitionId).ToHashSet());
 
-        // Current clause completions per girl (all activities, including standalone)
+        // Current clause completions per girl (themed badges)
         var completionRows = await _context.ActivityCompletions
             .AsNoTracking()
             .Where(c => c.Completed && c.MeetingActivity.BadgeClauseId.HasValue)
@@ -998,13 +1015,28 @@ public class ProgrammeService : IProgrammeService
             .GroupBy(x => x.MembershipNumber)
             .ToDictionary(g => g.Key, g => g.Select(x => x.ClauseId).ToHashSet());
 
+        // Fun badges already completed per girl (these already appear in GetAwardsDueAsync's current list)
+        var funCompletionRows = await _context.ActivityCompletions
+            .AsNoTracking()
+            .Where(c => c.Completed
+                     && c.MeetingActivity.BadgeDefinitionId.HasValue
+                     && c.MeetingActivity.BadgeDefinition!.BadgeType == BadgeType.FunBadge)
+            .Select(c => new { c.MembershipNumber, BadgeId = c.MeetingActivity.BadgeDefinitionId!.Value })
+            .ToListAsync();
+
+        var funCompletionsByGirl = funCompletionRows
+            .GroupBy(x => x.MembershipNumber)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.BadgeId).ToHashSet());
+
         var projected = new List<AwardDue>();
 
         foreach (var girl in girls)
         {
             var completedClauses = completionsByGirl.GetValueOrDefault(girl.MembershipNumber, new HashSet<int>());
             var awarded = awardedByGirl.GetValueOrDefault(girl.MembershipNumber, new HashSet<int>());
+            var completedFunBadges = funCompletionsByGirl.GetValueOrDefault(girl.MembershipNumber, new HashSet<int>());
 
+            // Themed badges — project when required-completions count would be met
             foreach (var badge in relevantBadges)
             {
                 if (awarded.Contains(badge.Id))
@@ -1029,6 +1061,26 @@ public class ProgrammeService : IProgrammeService
                         AwardName = badge.Name,
                         AwardType = "Badge",
                         BadgeDefinitionId = badge.Id
+                    });
+                }
+            }
+
+            // Fun badges — award on first completion, so any scheduled fun badge
+            // this girl hasn't already completed or been awarded is a projection.
+            foreach (var funBadgeId in futurePlannedFunBadgeIds)
+            {
+                if (awarded.Contains(funBadgeId)) continue;
+                if (completedFunBadges.Contains(funBadgeId)) continue;
+
+                if (futureFunBadgeLookup.TryGetValue(funBadgeId, out var funBadge))
+                {
+                    projected.Add(new AwardDue
+                    {
+                        MembershipNumber = girl.MembershipNumber,
+                        Name = girl.FullName,
+                        AwardName = funBadge.Name,
+                        AwardType = "FunBadge",
+                        BadgeDefinitionId = funBadgeId
                     });
                 }
             }

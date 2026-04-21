@@ -542,4 +542,147 @@ public class ProgrammeServiceTests : IDisposable
         result.ThemeBalances[Theme.BeWell].SkillsBuildersWorkedOn.Should().Be(1);
         result.ThemeBalances[Theme.ExpressMyself].InterestBadgesWorkedOn.Should().Be(1);
     }
+
+    // ===== Projected Awards: fun-badge forecast =====
+
+    [Fact]
+    public async Task GetProjectedAwardsForCurrentTermAsync_ProjectsFunBadgeForEachActiveGirl()
+    {
+        var today = DateTime.Today;
+
+        var term = new Term
+        {
+            Name = "Current Term",
+            StartDate = today.AddDays(-30),
+            EndDate = today.AddDays(30),
+            SubsAmount = 20
+        };
+        _context.Terms.Add(term);
+
+        var girls = new[]
+        {
+            new Person { MembershipNumber = "G001", FullName = "Alice", PersonType = PersonType.Girl, Section = Section.Brownie, DateJoined = today.AddYears(-1), IsActive = true },
+            new Person { MembershipNumber = "G002", FullName = "Bella", PersonType = PersonType.Girl, Section = Section.Brownie, DateJoined = today.AddYears(-1), IsActive = true }
+        };
+        _context.Persons.AddRange(girls);
+
+        var funBadge = new BadgeDefinition
+        {
+            Name = "Halloween Fun Badge",
+            BadgeType = BadgeType.FunBadge,
+            Section = Section.Brownie,
+            RequiredCompletions = 1
+        };
+        _context.BadgeDefinitions.Add(funBadge);
+
+        var futureMeeting = new Meeting
+        {
+            Date = today.AddDays(7),
+            StartTime = new TimeOnly(18, 30),
+            EndTime = new TimeOnly(19, 30),
+            MeetingType = MeetingType.Regular,
+            Title = "Halloween",
+            LocationName = "Hall"
+        };
+        _context.Meetings.Add(futureMeeting);
+        await _context.SaveChangesAsync();
+
+        _context.MeetingActivities.Add(new MeetingActivity
+        {
+            MeetingId = futureMeeting.Id,
+            Name = "Halloween activity",
+            BadgeDefinitionId = funBadge.Id
+        });
+        await _context.SaveChangesAsync();
+
+        var projected = await _sut.GetProjectedAwardsForCurrentTermAsync();
+
+        projected.Should().HaveCount(2);
+        projected.Should().AllSatisfy(p =>
+        {
+            p.AwardType.Should().Be("FunBadge");
+            p.BadgeDefinitionId.Should().Be(funBadge.Id);
+            p.AwardName.Should().Be("Halloween Fun Badge");
+        });
+        projected.Select(p => p.MembershipNumber).Should().BeEquivalentTo(new[] { "G001", "G002" });
+    }
+
+    [Fact]
+    public async Task GetProjectedAwardsForCurrentTermAsync_SkipsFunBadgeAlreadyCompletedOrAwarded()
+    {
+        var today = DateTime.Today;
+
+        var term = new Term
+        {
+            Name = "Current Term",
+            StartDate = today.AddDays(-30),
+            EndDate = today.AddDays(30),
+            SubsAmount = 20
+        };
+        _context.Terms.Add(term);
+
+        var alice = new Person { MembershipNumber = "G001", FullName = "Alice", PersonType = PersonType.Girl, Section = Section.Brownie, DateJoined = today.AddYears(-1), IsActive = true };
+        var bella = new Person { MembershipNumber = "G002", FullName = "Bella", PersonType = PersonType.Girl, Section = Section.Brownie, DateJoined = today.AddYears(-1), IsActive = true };
+        var cara = new Person { MembershipNumber = "G003", FullName = "Cara", PersonType = PersonType.Girl, Section = Section.Brownie, DateJoined = today.AddYears(-1), IsActive = true };
+        _context.Persons.AddRange(alice, bella, cara);
+
+        var funBadge = new BadgeDefinition
+        {
+            Name = "Spy Fun Badge",
+            BadgeType = BadgeType.FunBadge,
+            Section = Section.Brownie,
+            RequiredCompletions = 1
+        };
+        _context.BadgeDefinitions.Add(funBadge);
+
+        var pastMeeting = new Meeting
+        {
+            Date = today.AddDays(-5),
+            StartTime = new TimeOnly(18, 30),
+            EndTime = new TimeOnly(19, 30),
+            MeetingType = MeetingType.Regular,
+            Title = "Past",
+            LocationName = "Hall"
+        };
+        var futureMeeting = new Meeting
+        {
+            Date = today.AddDays(7),
+            StartTime = new TimeOnly(18, 30),
+            EndTime = new TimeOnly(19, 30),
+            MeetingType = MeetingType.Regular,
+            Title = "Future",
+            LocationName = "Hall"
+        };
+        _context.Meetings.AddRange(pastMeeting, futureMeeting);
+        await _context.SaveChangesAsync();
+
+        var pastActivity = new MeetingActivity { MeetingId = pastMeeting.Id, Name = "Spy past", BadgeDefinitionId = funBadge.Id };
+        var futureActivity = new MeetingActivity { MeetingId = futureMeeting.Id, Name = "Spy future", BadgeDefinitionId = funBadge.Id };
+        _context.MeetingActivities.AddRange(pastActivity, futureActivity);
+        await _context.SaveChangesAsync();
+
+        // Alice already completed the fun badge (past activity)
+        _context.ActivityCompletions.Add(new ActivityCompletion
+        {
+            MeetingActivityId = pastActivity.Id,
+            MembershipNumber = alice.MembershipNumber,
+            Completed = true
+        });
+
+        // Bella has already been awarded the fun badge
+        _context.AwardedBadges.Add(new AwardedBadge
+        {
+            MembershipNumber = bella.MembershipNumber,
+            BadgeDefinitionId = funBadge.Id,
+            DateAwarded = today.AddDays(-1)
+        });
+
+        await _context.SaveChangesAsync();
+
+        var projected = await _sut.GetProjectedAwardsForCurrentTermAsync();
+
+        // Only Cara remains — Alice is in GetAwardsDueAsync's current list, Bella is already awarded
+        projected.Where(p => p.AwardType == "FunBadge").Should().HaveCount(1);
+        projected.Single(p => p.AwardType == "FunBadge").MembershipNumber.Should().Be("G003");
+    }
 }
