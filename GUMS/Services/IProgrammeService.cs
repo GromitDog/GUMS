@@ -134,6 +134,7 @@ public class GirlOverviewRow
     public DateTime DateJoined { get; set; }
     public Dictionary<Theme, ThemeProgressSummary> Themes { get; set; } = new();
     public int ThemeAwardsEarned { get; set; }
+    public List<string> CompletedFunBadges { get; set; } = new();
 }
 
 public class ThemeProgressSummary

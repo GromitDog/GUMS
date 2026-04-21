@@ -275,6 +275,29 @@ public class ProgrammeService : IProgrammeService
                 DateJoined = girl.DateJoined
             };
 
+            // Fun badges completed by this girl (awarded or completed via activities)
+            var awardedFunBadgeNames = await _context.AwardedBadges
+                .AsNoTracking()
+                .Where(a => a.MembershipNumber == girl.MembershipNumber
+                    && a.BadgeDefinition.BadgeType == BadgeType.FunBadge)
+                .Select(a => a.BadgeDefinition.Name)
+                .ToListAsync();
+
+            var completedFunBadgeNames = await _context.ActivityCompletions
+                .AsNoTracking()
+                .Where(c => c.MembershipNumber == girl.MembershipNumber && c.Completed
+                    && c.MeetingActivity.BadgeDefinitionId.HasValue
+                    && c.MeetingActivity.BadgeDefinition!.BadgeType == BadgeType.FunBadge)
+                .Select(c => c.MeetingActivity.BadgeDefinition!.Name)
+                .Distinct()
+                .ToListAsync();
+
+            row.CompletedFunBadges = awardedFunBadgeNames
+                .Union(completedFunBadgeNames)
+                .Distinct()
+                .OrderBy(n => n)
+                .ToList();
+
             foreach (var theme in themes)
             {
                 var tp = themeProgress.FirstOrDefault(t => t.Theme == theme);

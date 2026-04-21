@@ -11,7 +11,7 @@ public partial class Overview
     private UnitOverview? _overview;
     private Section? _filterSection;
     private Theme? _filterTheme;
-    private string _filterType = "All"; // "All", "UMAs", "Badges"
+    private string _filterType = "All"; // "All", "UMAs", "SkillsBuilders", "InterestBadges", "FunBadges"
     private string _sortBy = "Progress"; // "Progress", "Name", "TimeInGuides"
     private bool _isLoading = true;
 
@@ -63,6 +63,9 @@ public partial class Overview
 
     private int GetAverageProgress(GirlOverviewRow girl)
     {
+        if (_filterType == "FunBadges")
+            return girl.CompletedFunBadges.Count;
+
         var themes = Enum.GetValues<Theme>();
         var total = 0;
         foreach (var theme in themes)
@@ -74,7 +77,13 @@ public partial class Overview
             var umaPct = summary.UmaMinutesRequired > 0
                 ? (int)Math.Min(summary.UmaMinutes * 100 / summary.UmaMinutesRequired, 100)
                 : 0;
-            total += (sbPct + ibPct + umaPct) / 3;
+            total += _filterType switch
+            {
+                "UMAs" => umaPct,
+                "SkillsBuilders" => sbPct,
+                "InterestBadges" => ibPct,
+                _ => (sbPct + ibPct + umaPct) / 3
+            };
         }
         return themes.Length > 0 ? total / themes.Length : 0;
     }
@@ -90,6 +99,8 @@ public partial class Overview
         };
     }
 
-    private bool ShowBadges => _filterType is "All" or "Badges";
+    private bool ShowSkillsBuilders => _filterType is "All" or "SkillsBuilders";
+    private bool ShowInterestBadges => _filterType is "All" or "InterestBadges";
     private bool ShowUmas => _filterType is "All" or "UMAs";
+    private bool ShowFunBadges => _filterType == "FunBadges";
 }

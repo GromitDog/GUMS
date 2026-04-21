@@ -45,8 +45,10 @@
                     <label class="form-label form-label-sm">Type</label>
                     <select class="form-select form-select-sm" @onchange="OnTypeFilterChanged">
                         <option value="All">All</option>
-                        <option value="UMAs">UMAs Only</option>
-                        <option value="Badges">Badges Only</option>
+                        <option value="UMAs">UMAs</option>
+                        <option value="SkillsBuilders">Skills Builders</option>
+                        <option value="InterestBadges">Interest Badges</option>
+                        <option value="FunBadges">Fun Badges</option>
                     </select>
                 </div>
                 <div class="col-md-3">
@@ -78,31 +80,34 @@
     }
     else
     {
-        <!-- Coverage Summary -->
-        <div class="card mb-4">
-            <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
-                <h6 class="mb-0">Theme Coverage</h6>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    @foreach (var theme in GetFilteredThemes())
-                    {
-                        var count = _overview.ThemeCoverage.GetValueOrDefault(theme, 0);
-                        var total = _overview.Girls.Count;
-                        var pct = total > 0 ? count * 100 / total : 0;
-                        <div class="col-md-2 text-center mb-2">
-                            <div class="mb-1">
-                                <strong style="color: @Badges.GetThemeColor(theme);">@GUMS.Services.ProgrammeService.GetThemeDisplayName(theme)</strong>
+        @if (!ShowFunBadges)
+        {
+            <!-- Coverage Summary -->
+            <div class="card mb-4">
+                <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
+                    <h6 class="mb-0">Theme Coverage</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var theme in GetFilteredThemes())
+                        {
+                            var count = _overview.ThemeCoverage.GetValueOrDefault(theme, 0);
+                            var total = _overview.Girls.Count;
+                            var pct = total > 0 ? count * 100 / total : 0;
+                            <div class="col-md-2 text-center mb-2">
+                                <div class="mb-1">
+                                    <strong style="color: @Badges.GetThemeColor(theme);">@GUMS.Services.ProgrammeService.GetThemeDisplayName(theme)</strong>
+                                </div>
+                                <div class="progress mb-1" style="height: 8px;">
+                                    <div class="progress-bar" style="width: @pct%; background-color: @Badges.GetThemeColor(theme);"></div>
+                                </div>
+                                <small class="text-muted">@count / @total girls</small>
                             </div>
-                            <div class="progress mb-1" style="height: 8px;">
-                                <div class="progress-bar" style="width: @pct%; background-color: @Badges.GetThemeColor(theme);"></div>
-                            </div>
-                            <small class="text-muted">@count / @total girls</small>
-                        </div>
-                    }
+                        }
+                    </div>
                 </div>
             </div>
-        </div>
+        }
 
         <!-- Girls Progress Cards -->
         <div class="row">
@@ -126,100 +131,132 @@
                                 </a>
                                 <span class="badge bg-info ms-2">@girl.Section</span>
                             </div>
-                            <span class="badge bg-secondary">@girl.ThemeAwardsEarned awards</span>
+                            @if (ShowFunBadges)
+                            {
+                                <span class="badge bg-secondary">@girl.CompletedFunBadges.Count fun @(girl.CompletedFunBadges.Count == 1 ? "badge" : "badges")</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@girl.ThemeAwardsEarned awards</span>
+                            }
                         </div>
                         <div class="card-body py-2">
-                            @foreach (var theme in GetFilteredThemes())
+                            @if (ShowFunBadges)
                             {
-                                var summary = girl.Themes.GetValueOrDefault(theme);
-                                var tc = Badges.GetThemeColor(theme);
-                                var sbPct = Math.Min(summary?.SkillsBuilderPercent ?? 0, 100);
-                                var ibPct = Math.Min(summary?.InterestBadgePercent ?? 0, 100);
-                                var umaPct = summary != null && summary.UmaMinutesRequired > 0
-                                    ? (int)Math.Min(summary.UmaMinutes * 100 / summary.UmaMinutesRequired, 100)
-                                    : 0;
-                                var overallPct = _filterType switch
+                                @if (girl.CompletedFunBadges.Any())
                                 {
-                                    "UMAs" => umaPct,
-                                    "Badges" => (sbPct + ibPct) / 2,
-                                    _ => (sbPct + ibPct + umaPct) / 3
-                                };
-                                var isAwarded = summary?.Status == ThemeStatus.ThemeAwardEarned;
-                                var circ = 2 * Math.PI * 18;
-                                <div class="mb-2">
-                                    <div class="d-flex align-items-center mb-1">
-                                        <strong style="color: @tc; font-size: 0.8rem;">
-                                            @GUMS.Services.ProgrammeService.GetThemeDisplayName(theme)
-                                        </strong>
-                                        @if (isAwarded)
+                                    <div class="d-flex flex-wrap gap-1">
+                                        @foreach (var badge in girl.CompletedFunBadges)
                                         {
-                                            <span class="badge ms-2" style="background-color: @tc; font-size: 0.6rem;">Award</span>
+                                            <span class="badge bg-light text-dark border" style="font-size: 0.75rem;">
+                                                <i class="bi bi-star-fill text-warning me-1"></i>@badge
+                                            </span>
                                         }
                                     </div>
-                                    <div class="d-flex align-items-center justify-content-around">
-                                        @if (ShowBadges)
-                                        {
-                                            @* Skills Builder donut — hidden on xs *@
-                                            <div class="text-center d-none d-sm-block">
+                                }
+                                else
+                                {
+                                    <p class="text-muted mb-0 small">No fun badges yet</p>
+                                }
+                            }
+                            else
+                            {
+                                @foreach (var theme in GetFilteredThemes())
+                                {
+                                    var summary = girl.Themes.GetValueOrDefault(theme);
+                                    var tc = Badges.GetThemeColor(theme);
+                                    var sbPct = Math.Min(summary?.SkillsBuilderPercent ?? 0, 100);
+                                    var ibPct = Math.Min(summary?.InterestBadgePercent ?? 0, 100);
+                                    var umaPct = summary != null && summary.UmaMinutesRequired > 0
+                                        ? (int)Math.Min(summary.UmaMinutes * 100 / summary.UmaMinutesRequired, 100)
+                                        : 0;
+                                    var overallPct = _filterType switch
+                                    {
+                                        "UMAs" => umaPct,
+                                        "SkillsBuilders" => sbPct,
+                                        "InterestBadges" => ibPct,
+                                        _ => (sbPct + ibPct + umaPct) / 3
+                                    };
+                                    var isAwarded = summary?.Status == ThemeStatus.ThemeAwardEarned;
+                                    var circ = 2 * Math.PI * 18;
+                                    <div class="mb-2">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <strong style="color: @tc; font-size: 0.8rem;">
+                                                @GUMS.Services.ProgrammeService.GetThemeDisplayName(theme)
+                                            </strong>
+                                            @if (isAwarded)
+                                            {
+                                                <span class="badge ms-2" style="background-color: @tc; font-size: 0.6rem;">Award</span>
+                                            }
+                                        </div>
+                                        <div class="d-flex align-items-center justify-content-around">
+                                            @if (ShowSkillsBuilders)
+                                            {
+                                                @* Skills Builder donut — hidden on xs *@
+                                                <div class="text-center d-none d-sm-block">
+                                                    <svg viewBox="0 0 50 50" width="48" height="48">
+                                                        <circle cx="25" cy="25" r="18" fill="none" stroke="#eee" stroke-width="5"/>
+                                                        <circle cx="25" cy="25" r="18" fill="none"
+                                                                stroke="@tc" stroke-width="5"
+                                                                stroke-dasharray="@((circ * sbPct / 100.0).ToString("F1")) @((circ * (100 - sbPct) / 100.0).ToString("F1"))"
+                                                                stroke-dashoffset="@((circ / 4.0).ToString("F1"))"
+                                                                stroke-linecap="round"/>
+                                                        <text x="25" y="27" text-anchor="middle" fill="@tc" style="font-size: 10px; font-weight: 600;">@sbPct</text>
+                                                    </svg>
+                                                    <div style="font-size: 0.6rem; color: #666;">Skills Builder</div>
+                                                </div>
+                                            }
+                                            @if (ShowInterestBadges)
+                                            {
+                                                @* Interest Badge donut — hidden on xs *@
+                                                <div class="text-center d-none d-sm-block">
+                                                    <svg viewBox="0 0 50 50" width="48" height="48">
+                                                        <circle cx="25" cy="25" r="18" fill="none" stroke="#eee" stroke-width="5"/>
+                                                        <circle cx="25" cy="25" r="18" fill="none"
+                                                                stroke="@tc" stroke-width="5"
+                                                                stroke-dasharray="@((circ * ibPct / 100.0).ToString("F1")) @((circ * (100 - ibPct) / 100.0).ToString("F1"))"
+                                                                stroke-dashoffset="@((circ / 4.0).ToString("F1"))"
+                                                                stroke-linecap="round"/>
+                                                        <text x="25" y="27" text-anchor="middle" fill="@tc" style="font-size: 10px; font-weight: 600;">@ibPct</text>
+                                                    </svg>
+                                                    <div style="font-size: 0.6rem; color: #666;">Interest Badge</div>
+                                                </div>
+                                            }
+                                            @if (ShowUmas)
+                                            {
+                                                @* UMA donut — hidden on xs *@
+                                                <div class="text-center d-none d-sm-block">
+                                                    <svg viewBox="0 0 50 50" width="48" height="48">
+                                                        <circle cx="25" cy="25" r="18" fill="none" stroke="#eee" stroke-width="5"/>
+                                                        <circle cx="25" cy="25" r="18" fill="none"
+                                                                stroke="@tc" stroke-width="5"
+                                                                stroke-dasharray="@((circ * umaPct / 100.0).ToString("F1")) @((circ * (100 - umaPct) / 100.0).ToString("F1"))"
+                                                                stroke-dashoffset="@((circ / 4.0).ToString("F1"))"
+                                                                stroke-linecap="round"/>
+                                                        <text x="25" y="27" text-anchor="middle" fill="@tc" style="font-size: 10px; font-weight: 600;">@umaPct</text>
+                                                    </svg>
+                                                    <div style="font-size: 0.6rem; color: #666;">UMA</div>
+                                                </div>
+                                            }
+                                            @* Overall donut — always visible *@
+                                            <div class="text-center">
                                                 <svg viewBox="0 0 50 50" width="48" height="48">
                                                     <circle cx="25" cy="25" r="18" fill="none" stroke="#eee" stroke-width="5"/>
                                                     <circle cx="25" cy="25" r="18" fill="none"
                                                             stroke="@tc" stroke-width="5"
-                                                            stroke-dasharray="@((circ * sbPct / 100.0).ToString("F1")) @((circ * (100 - sbPct) / 100.0).ToString("F1"))"
+                                                            stroke-dasharray="@((circ * overallPct / 100.0).ToString("F1")) @((circ * (100 - overallPct) / 100.0).ToString("F1"))"
                                                             stroke-dashoffset="@((circ / 4.0).ToString("F1"))"
                                                             stroke-linecap="round"/>
-                                                    <text x="25" y="27" text-anchor="middle" fill="@tc" style="font-size: 10px; font-weight: 600;">@sbPct</text>
+                                                    <text x="25" y="27" text-anchor="middle" fill="@tc" style="font-size: 10px; font-weight: 600;">@overallPct</text>
                                                 </svg>
-                                                <div style="font-size: 0.6rem; color: #666;">Skills Builder</div>
-                                            </div>
-                                            @* Interest Badge donut — hidden on xs *@
-                                            <div class="text-center d-none d-sm-block">
-                                                <svg viewBox="0 0 50 50" width="48" height="48">
-                                                    <circle cx="25" cy="25" r="18" fill="none" stroke="#eee" stroke-width="5"/>
-                                                    <circle cx="25" cy="25" r="18" fill="none"
-                                                            stroke="@tc" stroke-width="5"
-                                                            stroke-dasharray="@((circ * ibPct / 100.0).ToString("F1")) @((circ * (100 - ibPct) / 100.0).ToString("F1"))"
-                                                            stroke-dashoffset="@((circ / 4.0).ToString("F1"))"
-                                                            stroke-linecap="round"/>
-                                                    <text x="25" y="27" text-anchor="middle" fill="@tc" style="font-size: 10px; font-weight: 600;">@ibPct</text>
-                                                </svg>
-                                                <div style="font-size: 0.6rem; color: #666;">Interest Badge</div>
-                                            </div>
-                                        }
-                                        @if (ShowUmas)
-                                        {
-                                            @* UMA donut — hidden on xs *@
-                                            <div class="text-center d-none d-sm-block">
-                                                <svg viewBox="0 0 50 50" width="48" height="48">
-                                                    <circle cx="25" cy="25" r="18" fill="none" stroke="#eee" stroke-width="5"/>
-                                                    <circle cx="25" cy="25" r="18" fill="none"
-                                                            stroke="@tc" stroke-width="5"
-                                                            stroke-dasharray="@((circ * umaPct / 100.0).ToString("F1")) @((circ * (100 - umaPct) / 100.0).ToString("F1"))"
-                                                            stroke-dashoffset="@((circ / 4.0).ToString("F1"))"
-                                                            stroke-linecap="round"/>
-                                                    <text x="25" y="27" text-anchor="middle" fill="@tc" style="font-size: 10px; font-weight: 600;">@umaPct</text>
-                                                </svg>
-                                                <div style="font-size: 0.6rem; color: #666;">UMA</div>
-                                            </div>
-                                        }
-                                        @* Overall donut — always visible *@
-                                        <div class="text-center">
-                                            <svg viewBox="0 0 50 50" width="48" height="48">
-                                                <circle cx="25" cy="25" r="18" fill="none" stroke="#eee" stroke-width="5"/>
-                                                <circle cx="25" cy="25" r="18" fill="none"
-                                                        stroke="@tc" stroke-width="5"
-                                                        stroke-dasharray="@((circ * overallPct / 100.0).ToString("F1")) @((circ * (100 - overallPct) / 100.0).ToString("F1"))"
-                                                        stroke-dashoffset="@((circ / 4.0).ToString("F1"))"
-                                                        stroke-linecap="round"/>
-                                                <text x="25" y="27" text-anchor="middle" fill="@tc" style="font-size: 10px; font-weight: 600;">@overallPct</text>
-                                            </svg>
-                                            <div style="font-size: 0.6rem; color: #666;">
-                                                <span class="d-sm-none">Overall</span>
-                                                <span class="d-none d-sm-inline">All</span>
+                                                <div style="font-size: 0.6rem; color: #666;">
+                                                    <span class="d-sm-none">Overall</span>
+                                                    <span class="d-none d-sm-inline">All</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                }
                             }
                         </div>
                     </div>
