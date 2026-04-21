@@ -77,7 +77,7 @@ public partial class RecordAttendance
             // Default: all attendees completed all linked activities (if no existing completions)
             if (!existingCompletions.Any())
             {
-                foreach (var activity in _meetingActivities.Where(a => a.BadgeClauseId.HasValue || a.UmaDefinitionId.HasValue))
+                foreach (var activity in _meetingActivities.Where(a => a.BadgeClauseId.HasValue || a.UmaDefinitionId.HasValue || a.BadgeDefinitionId.HasValue))
                 {
                     foreach (var record in attendanceRecords.Where(a => a.Attended && memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == PersonType.Girl))
                     {
@@ -125,7 +125,7 @@ public partial class RecordAttendance
         // Default completions for linked activities when marking a girl as attended
         if (memberLookup.TryGetValue(record.MembershipNumber, out var person) && person.PersonType == PersonType.Girl)
         {
-            foreach (var activity in _meetingActivities.Where(a => a.BadgeClauseId.HasValue || a.UmaDefinitionId.HasValue))
+            foreach (var activity in _meetingActivities.Where(a => a.BadgeClauseId.HasValue || a.UmaDefinitionId.HasValue || a.BadgeDefinitionId.HasValue))
             {
                 var key = (activity.Id, record.MembershipNumber);
                 if (attended)
