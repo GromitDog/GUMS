@@ -71,7 +71,7 @@ Pages are in `GUMS/Components/Pages/`, organized by feature area (Register, Meet
 ## UI Conventions
 
 - **No Bootstrap JS** — all dropdowns, modals, and interactive elements must be Blazor-managed state (boolean flags toggling CSS classes)
-- **Brand colours** defined as CSS variables in `wwwroot/app.css`: `--gg-primary-blue: #007BC4`, `--gg-dark-navy: #161B4E`, `--gg-error: #e50000`, `--gg-success: #26b050`
+- **Brand colours** defined as CSS variables in `wwwroot/app.css`: `--gg-primary-blue: #007BC4`, `--gg-dark-navy: #161B4E`, `--gg-error: #e50000`, `--gg-success: #26b050`. Bootstrap colour utilities (`text-success`, `bg-danger`, `border-warning`, etc.) are globally overridden in `app.css` to use brand colours, so they are safe to use. For inline styles or custom elements, always use `var(--gg-*)` variables — never hardcode Bootstrap's default hex values (#198754, #dc3545, etc.)
 - **Font:** Poppins (Google Fonts)
 - **NavLink bug:** Always add `Match="NavLinkMatch.All"` for top-level nav pages to prevent prefix matching
 - **Modal pattern:** Use a `bool _showModal` flag + conditional `<div class="modal show d-block">` overlay with `rgba(0,0,0,0.5)` backdrop
@@ -86,3 +86,9 @@ Tests are in `GUMS.Tests/Services/` using xUnit + FluentAssertions + Moq. EF Cor
 - **Add tests for new functionality:** Every new service method or significant behaviour change must have corresponding unit tests. Follow the existing patterns in `GUMS.Tests/Services/`.
 - **Update tests when refactoring:** If a service method's implementation changes (e.g. how balances are calculated), update the corresponding tests to match. Stale tests that pass by accident or fail due to drift are worse than no tests.
 - **Accounting tests:** Balance accessors (`GetCashOnHandAsync`, `GetBankBalanceAsync`, `GetChequesPendingAsync`) calculate from transaction lines, NOT the `Account.Balance` field. Tests must create proper transactions to set up balances — never set `Account.Balance` directly.
+
+## Commit Cadence
+
+- **Commit after every logical change.** Once a coherent piece of work is complete and tests pass, commit it before starting the next task. Do not let unrelated modifications accumulate in the working tree.
+- **One commit, one concern.** Each commit should cover a single feature, fix, or refactor — not a mixed bag. If you've touched files for multiple reasons, split them into separate commits (use `git add <file>` or `git add -p` to stage hunks selectively).
+- **Commit messages focus on "why".** Briefly describe the change and its purpose, not a list of files touched.
