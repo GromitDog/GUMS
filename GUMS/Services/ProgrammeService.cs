@@ -723,13 +723,20 @@ public class ProgrammeService : IProgrammeService
                     var clause = activity.BadgeClause;
                     var badge = clause.BadgeDefinition;
 
-                    // Only count badges with themes (skip fun badges)
+                    var firstTimeSeen = badgesSeen.Add(badge.Id);
+
                     if (badge.Theme.HasValue)
                     {
-                        if (badgesSeen.Add(badge.Id))
+                        if (firstTimeSeen)
                         {
-                            balance.ThemeBalances[badge.Theme.Value].BadgesWorkedOn++;
+                            var tb = balance.ThemeBalances[badge.Theme.Value];
+                            tb.BadgesWorkedOn++;
                             balance.TotalBadgesWorkedOn++;
+
+                            if (badge.BadgeType == BadgeType.SkillsBuilder)
+                                tb.SkillsBuildersWorkedOn++;
+                            else if (badge.BadgeType == BadgeType.InterestBadge)
+                                tb.InterestBadgesWorkedOn++;
                         }
 
                         // Add clause's estimated minutes to the theme total
@@ -738,6 +745,10 @@ public class ProgrammeService : IProgrammeService
                             balance.ThemeBalances[badge.Theme.Value].MinutesPlanned += clause.EstimatedMinutes;
                             balance.TotalMinutesPlanned += clause.EstimatedMinutes;
                         }
+                    }
+                    else if (firstTimeSeen && badge.BadgeType == BadgeType.FunBadge)
+                    {
+                        balance.FunBadgesWorkedOn++;
                     }
                 }
             }

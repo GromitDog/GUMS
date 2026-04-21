@@ -106,6 +106,7 @@ public partial class TermBalance
             combined.TotalMinutesPlanned += balance.TotalMinutesPlanned;
             combined.TotalUmaMinutesPlanned += balance.TotalUmaMinutesPlanned;
             combined.TotalBadgesWorkedOn += balance.TotalBadgesWorkedOn;
+            combined.FunBadgesWorkedOn += balance.FunBadgesWorkedOn;
             combined.NightsAwayOffered += balance.NightsAwayOffered;
 
             foreach (var (theme, tb) in balance.ThemeBalances)
@@ -114,6 +115,8 @@ public partial class TermBalance
                 ctb.MinutesPlanned += tb.MinutesPlanned;
                 ctb.UmaMinutesPlanned += tb.UmaMinutesPlanned;
                 ctb.BadgesWorkedOn += tb.BadgesWorkedOn;
+                ctb.SkillsBuildersWorkedOn += tb.SkillsBuildersWorkedOn;
+                ctb.InterestBadgesWorkedOn += tb.InterestBadgesWorkedOn;
             }
         }
 
@@ -187,6 +190,38 @@ public partial class TermBalance
             return tb?.BadgesWorkedOn ?? 0;
         });
     }
+
+    private int GetFilteredSkillsBuilders(GUMS.Services.TermBalance? balance = null)
+    {
+        balance ??= _balance;
+        if (balance == null || _filterType == "UMAs") return 0;
+
+        return GetFilteredThemes().Sum(t =>
+            balance.ThemeBalances.GetValueOrDefault(t)?.SkillsBuildersWorkedOn ?? 0);
+    }
+
+    private int GetFilteredInterestBadges(GUMS.Services.TermBalance? balance = null)
+    {
+        balance ??= _balance;
+        if (balance == null || _filterType == "UMAs") return 0;
+
+        return GetFilteredThemes().Sum(t =>
+            balance.ThemeBalances.GetValueOrDefault(t)?.InterestBadgesWorkedOn ?? 0);
+    }
+
+    private int GetFilteredOtherBadges(GUMS.Services.TermBalance? balance = null)
+    {
+        balance ??= _balance;
+        if (balance == null || _filterType == "UMAs") return 0;
+
+        // Fun badges are themeless; only show when no theme filter is applied
+        if (_filterTheme.HasValue) return 0;
+
+        return balance.FunBadgesWorkedOn;
+    }
+
+    private static string Plural(int count, string singular, string plural) =>
+        count == 1 ? singular : plural;
 
     private double GetFilteredPercentage(ThemeBalance? tb, GUMS.Services.TermBalance? balance = null)
     {

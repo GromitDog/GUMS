@@ -179,6 +179,7 @@ public class TermBalance
     public int TotalMinutesPlanned { get; set; }
     public int TotalUmaMinutesPlanned { get; set; }
     public int TotalBadgesWorkedOn { get; set; }
+    public int FunBadgesWorkedOn { get; set; }
     public int NightsAwayOffered { get; set; }
 }
 
@@ -188,5 +189,7 @@ public class ThemeBalance
     public int MinutesPlanned { get; set; }
     public int UmaMinutesPlanned { get; set; }
     public int BadgesWorkedOn { get; set; }
+    public int SkillsBuildersWorkedOn { get; set; }
+    public int InterestBadgesWorkedOn { get; set; }
     public double PercentageOfTotal { get; set; }
 }

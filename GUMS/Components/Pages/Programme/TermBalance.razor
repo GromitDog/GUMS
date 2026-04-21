@@ -75,21 +75,31 @@
                     <div class="card-header" style="background-color: var(--gg-primary-blue); color: white;">
                         <h6 class="mb-0">Current Term - @_balance.TermName</h6>
                     </div>
-                    <div class="card-body text-center">
-                        <div class="mb-3">
-                            <h3>@GetFilteredTotalUmaMinutes()</h3>
-                            <small class="text-muted">UMA Minutes Planned</small>
-                        </div>
-                        @if (_filterType != "UMAs")
-                        {
-                            <div class="mb-3">
-                                <h3>@GetFilteredTotalBadges()</h3>
-                                <small class="text-muted">Badges Being Worked On</small>
+                    <div class="card-body">
+                        <div class="row text-center g-3">
+                            <div class="col-12 col-sm-6">
+                                <h3 class="mb-0">@GetFilteredTotalUmaMinutes()</h3>
+                                <small class="text-muted">@Plural(GetFilteredTotalUmaMinutes(), "UMA Minute Planned", "UMA Minutes Planned")</small>
                             </div>
-                        }
-                        <div>
-                            <h3>@_balance.NightsAwayOffered</h3>
-                            <small class="text-muted">Nights Away Offered</small>
+                            @if (_filterType != "UMAs")
+                            {
+                                <div class="col-12 col-sm-6">
+                                    <h3 class="mb-0">@GetFilteredSkillsBuilders()</h3>
+                                    <small class="text-muted">@Plural(GetFilteredSkillsBuilders(), "Skills Builder", "Skills Builders")</small>
+                                </div>
+                                <div class="col-12 col-sm-6">
+                                    <h3 class="mb-0">@GetFilteredInterestBadges()</h3>
+                                    <small class="text-muted">@Plural(GetFilteredInterestBadges(), "Interest Badge", "Interest Badges")</small>
+                                </div>
+                                <div class="col-12 col-sm-6">
+                                    <h3 class="mb-0">@GetFilteredOtherBadges()</h3>
+                                    <small class="text-muted">@Plural(GetFilteredOtherBadges(), "Other Badge", "Other Badges")</small>
+                                </div>
+                            }
+                            <div class="col-12 col-sm-6">
+                                <h3 class="mb-0">@_balance.NightsAwayOffered</h3>
+                                <small class="text-muted">@Plural(_balance.NightsAwayOffered, "Night Away Offered", "Nights Away Offered")</small>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -155,21 +165,31 @@
                         <div class="card-header" style="background-color: var(--gg-muted); color: white;">
                             <h6 class="mb-0">Previous - @_combinedPreviousBalance.TermName</h6>
                         </div>
-                        <div class="card-body text-center">
-                            <div class="mb-3">
-                                <h3>@GetFilteredTotalUmaMinutes(_combinedPreviousBalance)</h3>
-                                <small class="text-muted">UMA Minutes Planned</small>
-                            </div>
-                            @if (_filterType != "UMAs")
-                            {
-                                <div class="mb-3">
-                                    <h3>@GetFilteredTotalBadges(_combinedPreviousBalance)</h3>
-                                    <small class="text-muted">Badges Being Worked On</small>
+                        <div class="card-body">
+                            <div class="row text-center g-3">
+                                <div class="col-12 col-sm-6">
+                                    <h3 class="mb-0">@GetFilteredTotalUmaMinutes(_combinedPreviousBalance)</h3>
+                                    <small class="text-muted">@Plural(GetFilteredTotalUmaMinutes(_combinedPreviousBalance), "UMA Minute Planned", "UMA Minutes Planned")</small>
                                 </div>
-                            }
-                            <div>
-                                <h3>@_combinedPreviousBalance.NightsAwayOffered</h3>
-                                <small class="text-muted">Nights Away Offered</small>
+                                @if (_filterType != "UMAs")
+                                {
+                                    <div class="col-12 col-sm-6">
+                                        <h3 class="mb-0">@GetFilteredSkillsBuilders(_combinedPreviousBalance)</h3>
+                                        <small class="text-muted">@Plural(GetFilteredSkillsBuilders(_combinedPreviousBalance), "Skills Builder", "Skills Builders")</small>
+                                    </div>
+                                    <div class="col-12 col-sm-6">
+                                        <h3 class="mb-0">@GetFilteredInterestBadges(_combinedPreviousBalance)</h3>
+                                        <small class="text-muted">@Plural(GetFilteredInterestBadges(_combinedPreviousBalance), "Interest Badge", "Interest Badges")</small>
+                                    </div>
+                                    <div class="col-12 col-sm-6">
+                                        <h3 class="mb-0">@GetFilteredOtherBadges(_combinedPreviousBalance)</h3>
+                                        <small class="text-muted">@Plural(GetFilteredOtherBadges(_combinedPreviousBalance), "Other Badge", "Other Badges")</small>
+                                    </div>
+                                }
+                                <div class="col-12 col-sm-6">
+                                    <h3 class="mb-0">@_combinedPreviousBalance.NightsAwayOffered</h3>
+                                    <small class="text-muted">@Plural(_combinedPreviousBalance.NightsAwayOffered, "Night Away Offered", "Nights Away Offered")</small>
+                                </div>
                             </div>
                         </div>
                     </div>
