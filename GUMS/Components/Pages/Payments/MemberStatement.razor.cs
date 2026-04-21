@@ -24,8 +24,10 @@ public partial class MemberStatement
 
     private List<StatementLine> _lines = new();
     private decimal _totalCharged;
-    private decimal _totalPaid;
-    private decimal _totalRefundCredit;
+    private decimal _totalCashPaid;
+    private decimal _totalCreditApplied;
+    private decimal _totalRefundedToCredit;
+    private decimal _totalCashRefund;
     private decimal _totalOutstanding;
 
     protected override async Task OnInitializedAsync()
@@ -39,63 +41,72 @@ public partial class MemberStatement
         _payments = await PaymentService.GetByMembershipNumberAsync(MembershipNumber);
         _creditBalance = await CreditService.GetCreditBalanceAsync(MembershipNumber);
 
-        BuildStatement();
+        await BuildStatement();
         _isLoading = false;
     }
 
-    private void BuildStatement()
+    private async Task BuildStatement()
     {
         _lines.Clear();
 
-        // From a parent's perspective:
-        // - Pending/Paid payments = they were charged and (maybe) paid
-        // - Refunded payments that were converted to credit = refund, but credit was used elsewhere
-        // - Cash refunds = money back
-        // Keep it simple: Charged | Paid | Balance
+        // Identify which refunds went into the credit pool (vs handed back as cash).
+        // Credit deposits sourced from a payment tell us how much of that payment's
+        // RefundAmount was moved to credit rather than returned as cash.
+        var creditHistory = await CreditService.GetCreditHistoryAsync(MembershipNumber);
+        var refundedToCreditByPayment = creditHistory
+            .Where(ct => ct.Type == CreditTransactionType.Deposit && ct.SourcePaymentId != null)
+            .GroupBy(ct => ct.SourcePaymentId!.Value)
+            .ToDictionary(g => g.Key, g => g.Sum(ct => ct.Amount));
 
         foreach (var p in _payments
                      .Where(p => p.Status != PaymentStatus.Cancelled)
                      .OrderBy(p => p.DueDate))
         {
-            if (p.Status == PaymentStatus.Refunded)
+            var refundedToCredit = refundedToCreditByPayment.GetValueOrDefault(p.Id, 0m);
+            var cashRefund = Math.Max(0m, p.RefundAmount - refundedToCredit);
+            // Cash paid = what the parent actually paid in money toward this line
+            // (excludes credit applied, which is tracked separately).
+            var cashPaid = p.AmountPaid - p.CreditApplied;
+
+            // Only Pending lines contribute to running balance. Paid/Refunded lines
+            // are settled — a refund-to-credit is not "owed back" because the money
+            // is held in the credit pool (consumed by other lines as CreditApplied,
+            // or shown as the footer Credit held figure). Cash refunds zero out too —
+            // the parent received the money, cancelling what they paid.
+            var outstanding = p.Status == PaymentStatus.Pending ? p.OutstandingBalance : 0m;
+
+            _lines.Add(new StatementLine
             {
-                // Show the original charge and payment, then the refund/credit amount
-                _lines.Add(new StatementLine
+                Date = p.RefundDate ?? p.PaymentDate ?? p.DueDate,
+                Description = p.Reference,
+                Status = p.Status switch
                 {
-                    Date = p.RefundDate ?? p.PaymentDate ?? p.DueDate,
-                    Description = p.Reference,
-                    Status = "Refunded",
-                    Charged = p.Amount,
-                    Paid = p.AmountPaid,
-                    RefundCredit = p.RefundAmount
-                });
-            }
-            else
-            {
-                // Pending or Paid — paid includes cash + credit applied (parent doesn't distinguish)
-                _lines.Add(new StatementLine
-                {
-                    Date = p.PaymentDate ?? p.DueDate,
-                    Description = p.Reference,
-                    Status = p.Status == PaymentStatus.Paid ? "Paid" : "Due",
-                    Charged = p.Amount,
-                    Paid = p.AmountPaid
-                });
-            }
+                    PaymentStatus.Refunded => "Refunded",
+                    PaymentStatus.Paid => "Paid",
+                    _ => "Due"
+                },
+                Charged = p.Amount,
+                CashPaid = cashPaid,
+                CreditApplied = p.CreditApplied,
+                RefundedToCredit = refundedToCredit,
+                CashRefund = cashRefund,
+                Outstanding = outstanding
+            });
         }
 
-        // Calculate running balance: charged - paid - refunded
         decimal running = 0;
         foreach (var line in _lines)
         {
-            running += line.Charged - line.Paid - line.RefundCredit;
+            running += line.Outstanding;
             line.Balance = running;
         }
 
         _totalCharged = _lines.Sum(l => l.Charged);
-        _totalPaid = _lines.Sum(l => l.Paid);
-        _totalRefundCredit = _lines.Sum(l => l.RefundCredit);
-        _totalOutstanding = _lines.Where(l => l.Status == "Due").Sum(l => l.Charged - l.Paid);
+        _totalCashPaid = _lines.Sum(l => l.CashPaid);
+        _totalCreditApplied = _lines.Sum(l => l.CreditApplied);
+        _totalRefundedToCredit = _lines.Sum(l => l.RefundedToCredit);
+        _totalCashRefund = _lines.Sum(l => l.CashRefund);
+        _totalOutstanding = _lines.Sum(l => l.Outstanding);
     }
 
     private async Task Print()
@@ -109,8 +120,11 @@ public partial class MemberStatement
         public string Description { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public decimal Charged { get; set; }
-        public decimal Paid { get; set; }
-        public decimal RefundCredit { get; set; }
+        public decimal CashPaid { get; set; }
+        public decimal CreditApplied { get; set; }
+        public decimal RefundedToCredit { get; set; }
+        public decimal CashRefund { get; set; }
+        public decimal Outstanding { get; set; }
         public decimal Balance { get; set; }
     }
 }
