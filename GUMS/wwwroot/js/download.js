@@ -8,3 +8,12 @@ async function downloadFileFromStream(fileName, contentStreamReference) {
     a.click();
     URL.revokeObjectURL(url);
 }
+
+async function copyTextToClipboard(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}

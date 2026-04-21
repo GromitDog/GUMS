@@ -10,6 +10,9 @@
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-2">
         <h2>Member Register</h2>
         <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-outline-primary" @onclick="OpenEmailList">
+                <i class="bi bi-envelope"></i> Email list
+            </button>
             <a href="/Register/AddGirl" class="btn btn-primary">
                 <i class="bi bi-person-plus"></i> Add Girl
             </a>
@@ -18,6 +21,58 @@
             </a>
         </div>
     </div>
+
+    @if (_showEmailModal)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="bi bi-envelope"></i> Email list</h5>
+                        <button type="button" class="btn-close" @onclick="CloseEmailList"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted small mb-2">Emails are from active members only. Paste into the BCC field of your email client.</p>
+
+                        <div class="btn-group mb-3" role="group">
+                            <input type="radio" class="btn-check" name="emailFilter" id="emailFilterAll" checked="@(_emailFilter == "all")" @onchange="@(() => SetEmailFilter("all"))" />
+                            <label class="btn btn-outline-primary" for="emailFilterAll">All (@GetEmailCount("all"))</label>
+
+                            <input type="radio" class="btn-check" name="emailFilter" id="emailFilterParents" checked="@(_emailFilter == "parents")" @onchange="@(() => SetEmailFilter("parents"))" />
+                            <label class="btn btn-outline-primary" for="emailFilterParents">Girls' parents (@GetEmailCount("parents"))</label>
+
+                            <input type="radio" class="btn-check" name="emailFilter" id="emailFilterLeaders" checked="@(_emailFilter == "leaders")" @onchange="@(() => SetEmailFilter("leaders"))" />
+                            <label class="btn btn-outline-primary" for="emailFilterLeaders">Leaders (@GetEmailCount("leaders"))</label>
+                        </div>
+
+                        @{
+                            var emailText = GetEmailText();
+                        }
+
+                        @if (string.IsNullOrEmpty(emailText))
+                        {
+                            <div class="alert alert-info mb-0">No email addresses on file for this group.</div>
+                        }
+                        else
+                        {
+                            <textarea class="form-control" rows="6" readonly @ref="_emailTextarea">@emailText</textarea>
+                        }
+
+                        @if (!string.IsNullOrEmpty(_copyMessage))
+                        {
+                            <div class="mt-2 text-success small"><i class="bi bi-check-circle"></i> @_copyMessage</div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" @onclick="CloseEmailList">Close</button>
+                        <button type="button" class="btn btn-primary" @onclick="CopyEmails" disabled="@string.IsNullOrEmpty(emailText)">
+                            <i class="bi bi-clipboard"></i> Copy to clipboard
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 
     <!-- Filters and Search -->
     <div class="card mb-4">
