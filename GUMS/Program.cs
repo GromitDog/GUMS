@@ -104,6 +104,17 @@ using (var scope = app.Services.CreateScope())
         // Ensure default accounting accounts exist
         var accountingService = services.GetRequiredService<IAccountingService>();
         await accountingService.EnsureDefaultAccountsAsync();
+
+        // Backfill fun-badge completions for past meetings scheduled before
+        // the RecordAttendance UI exposed fun-badge activities. Idempotent —
+        // guarded on !Completions.Any() so subsequent runs are no-ops.
+        var programmeService = services.GetRequiredService<IProgrammeService>();
+        var backfilled = await programmeService.BackfillFunBadgeCompletionsAsync();
+        if (backfilled > 0)
+        {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("Backfilled {Count} fun-badge ActivityCompletion rows.", backfilled);
+        }
     }
     catch (Exception ex)
     {

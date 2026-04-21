@@ -685,4 +685,150 @@ public class ProgrammeServiceTests : IDisposable
         projected.Where(p => p.AwardType == "FunBadge").Should().HaveCount(1);
         projected.Single(p => p.AwardType == "FunBadge").MembershipNumber.Should().Be("G003");
     }
+
+    // ===== Backfill: historical fun-badge completions =====
+
+    [Fact]
+    public async Task BackfillFunBadgeCompletionsAsync_CreatesOneCompletionPerAttendedGirl()
+    {
+        var today = DateTime.Today;
+
+        var alice = new Person { MembershipNumber = "G001", FullName = "Alice", PersonType = PersonType.Girl, Section = Section.Brownie, DateJoined = today.AddYears(-1), IsActive = true };
+        var bella = new Person { MembershipNumber = "G002", FullName = "Bella", PersonType = PersonType.Girl, Section = Section.Brownie, DateJoined = today.AddYears(-1), IsActive = true };
+        var leader = new Person { MembershipNumber = "L001", FullName = "Leader", PersonType = PersonType.Leader, Section = Section.Brownie, DateJoined = today.AddYears(-2), IsActive = true };
+        _context.Persons.AddRange(alice, bella, leader);
+
+        var funBadge = new BadgeDefinition
+        {
+            Name = "Disco",
+            BadgeType = BadgeType.FunBadge,
+            Section = Section.Brownie,
+            RequiredCompletions = 1
+        };
+        _context.BadgeDefinitions.Add(funBadge);
+
+        var meeting = new Meeting
+        {
+            Date = today.AddDays(-10),
+            StartTime = new TimeOnly(18, 30),
+            EndTime = new TimeOnly(19, 30),
+            MeetingType = MeetingType.Regular,
+            Title = "Past",
+            LocationName = "Hall"
+        };
+        _context.Meetings.Add(meeting);
+        await _context.SaveChangesAsync();
+
+        _context.MeetingActivities.Add(new MeetingActivity
+        {
+            MeetingId = meeting.Id,
+            Name = "Disco activity",
+            BadgeDefinitionId = funBadge.Id
+        });
+
+        // Both girls attended; leader attended too (should be skipped — leaders don't earn badges)
+        _context.Attendances.AddRange(
+            new Attendance { MeetingId = meeting.Id, MembershipNumber = alice.MembershipNumber, Attended = true },
+            new Attendance { MeetingId = meeting.Id, MembershipNumber = bella.MembershipNumber, Attended = true },
+            new Attendance { MeetingId = meeting.Id, MembershipNumber = leader.MembershipNumber, Attended = true });
+        await _context.SaveChangesAsync();
+
+        var created = await _sut.BackfillFunBadgeCompletionsAsync();
+
+        created.Should().Be(2);
+        var completions = await _context.ActivityCompletions.ToListAsync();
+        completions.Should().HaveCount(2);
+        completions.Select(c => c.MembershipNumber).Should().BeEquivalentTo(new[] { "G001", "G002" });
+        completions.Should().AllSatisfy(c => c.Completed.Should().BeTrue());
+    }
+
+    [Fact]
+    public async Task BackfillFunBadgeCompletionsAsync_IsIdempotent()
+    {
+        var today = DateTime.Today;
+
+        var alice = new Person { MembershipNumber = "G001", FullName = "Alice", PersonType = PersonType.Girl, Section = Section.Brownie, DateJoined = today.AddYears(-1), IsActive = true };
+        _context.Persons.Add(alice);
+
+        var funBadge = new BadgeDefinition
+        {
+            Name = "Disco",
+            BadgeType = BadgeType.FunBadge,
+            Section = Section.Brownie,
+            RequiredCompletions = 1
+        };
+        _context.BadgeDefinitions.Add(funBadge);
+
+        var meeting = new Meeting
+        {
+            Date = today.AddDays(-10),
+            StartTime = new TimeOnly(18, 30),
+            EndTime = new TimeOnly(19, 30),
+            MeetingType = MeetingType.Regular,
+            Title = "Past",
+            LocationName = "Hall"
+        };
+        _context.Meetings.Add(meeting);
+        await _context.SaveChangesAsync();
+
+        _context.MeetingActivities.Add(new MeetingActivity
+        {
+            MeetingId = meeting.Id,
+            Name = "Disco activity",
+            BadgeDefinitionId = funBadge.Id
+        });
+        _context.Attendances.Add(new Attendance { MeetingId = meeting.Id, MembershipNumber = alice.MembershipNumber, Attended = true });
+        await _context.SaveChangesAsync();
+
+        var firstRun = await _sut.BackfillFunBadgeCompletionsAsync();
+        var secondRun = await _sut.BackfillFunBadgeCompletionsAsync();
+
+        firstRun.Should().Be(1);
+        secondRun.Should().Be(0);
+        (await _context.ActivityCompletions.CountAsync()).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task BackfillFunBadgeCompletionsAsync_SkipsFutureMeetings()
+    {
+        var today = DateTime.Today;
+
+        var alice = new Person { MembershipNumber = "G001", FullName = "Alice", PersonType = PersonType.Girl, Section = Section.Brownie, DateJoined = today.AddYears(-1), IsActive = true };
+        _context.Persons.Add(alice);
+
+        var funBadge = new BadgeDefinition
+        {
+            Name = "Disco",
+            BadgeType = BadgeType.FunBadge,
+            Section = Section.Brownie,
+            RequiredCompletions = 1
+        };
+        _context.BadgeDefinitions.Add(funBadge);
+
+        var futureMeeting = new Meeting
+        {
+            Date = today.AddDays(7),
+            StartTime = new TimeOnly(18, 30),
+            EndTime = new TimeOnly(19, 30),
+            MeetingType = MeetingType.Regular,
+            Title = "Future",
+            LocationName = "Hall"
+        };
+        _context.Meetings.Add(futureMeeting);
+        await _context.SaveChangesAsync();
+
+        _context.MeetingActivities.Add(new MeetingActivity
+        {
+            MeetingId = futureMeeting.Id,
+            Name = "Disco activity",
+            BadgeDefinitionId = funBadge.Id
+        });
+        _context.Attendances.Add(new Attendance { MeetingId = futureMeeting.Id, MembershipNumber = alice.MembershipNumber, Attended = true });
+        await _context.SaveChangesAsync();
+
+        var created = await _sut.BackfillFunBadgeCompletionsAsync();
+
+        created.Should().Be(0);
+        (await _context.ActivityCompletions.CountAsync()).Should().Be(0);
+    }
 }

@@ -1089,6 +1089,68 @@ public class ProgrammeService : IProgrammeService
         return projected;
     }
 
+    // ===== One-off Backfills =====
+
+    public async Task<int> BackfillFunBadgeCompletionsAsync()
+    {
+        var today = DateTime.Today;
+
+        // Past meetings with a fun-badge activity and no completions yet.
+        var activitiesNeedingBackfill = await _context.MeetingActivities
+            .AsNoTracking()
+            .Where(a => a.MeetingId.HasValue
+                     && a.BadgeDefinitionId.HasValue
+                     && a.BadgeDefinition!.BadgeType == BadgeType.FunBadge
+                     && a.Meeting!.Date <= today
+                     && !a.Completions.Any())
+            .Select(a => new { a.Id, MeetingId = a.MeetingId!.Value })
+            .ToListAsync();
+
+        if (!activitiesNeedingBackfill.Any())
+            return 0;
+
+        var meetingIds = activitiesNeedingBackfill.Select(a => a.MeetingId).Distinct().ToList();
+
+        // Attendees marked Attended on those meetings, restricted to girls.
+        var girlMembershipNumbers = await _context.Persons
+            .AsNoTracking()
+            .Where(p => p.PersonType == PersonType.Girl)
+            .Select(p => p.MembershipNumber)
+            .ToHashSetAsync();
+
+        var attendancesByMeeting = (await _context.Attendances
+                .AsNoTracking()
+                .Where(at => meetingIds.Contains(at.MeetingId) && at.Attended)
+                .Select(at => new { at.MeetingId, at.MembershipNumber })
+                .ToListAsync())
+            .Where(a => girlMembershipNumbers.Contains(a.MembershipNumber))
+            .GroupBy(a => a.MeetingId)
+            .ToDictionary(g => g.Key, g => g.Select(a => a.MembershipNumber).Distinct().ToList());
+
+        var created = 0;
+        foreach (var activity in activitiesNeedingBackfill)
+        {
+            if (!attendancesByMeeting.TryGetValue(activity.MeetingId, out var attendees))
+                continue;
+
+            foreach (var membershipNumber in attendees)
+            {
+                _context.ActivityCompletions.Add(new ActivityCompletion
+                {
+                    MeetingActivityId = activity.Id,
+                    MembershipNumber = membershipNumber,
+                    Completed = true
+                });
+                created++;
+            }
+        }
+
+        if (created > 0)
+            await _context.SaveChangesAsync();
+
+        return created;
+    }
+
     public static string GetThemeDisplayName(Theme theme) => theme switch
     {
         Theme.KnowMyself => "Know Myself",

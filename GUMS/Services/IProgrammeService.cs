@@ -44,6 +44,18 @@ public interface IProgrammeService
 
     // ===== Term Balance =====
     Task<TermBalance> GetTermBalanceAsync(int termId);
+
+    // ===== One-off Backfills =====
+    /// <summary>
+    /// Creates ActivityCompletion rows for fun-badge activities attached to
+    /// past meetings that never received completions (the RecordAttendance UI
+    /// did not expose them until a later release). For every past meeting with
+    /// a fun-badge activity and no existing completions, every girl marked
+    /// Attended on that meeting is recorded as having completed it.
+    /// Idempotent — the !Completions.Any() guard makes subsequent runs no-ops.
+    /// </summary>
+    /// <returns>The number of ActivityCompletion rows created.</returns>
+    Task<int> BackfillFunBadgeCompletionsAsync();
 }
 
 // ===== DTOs =====
