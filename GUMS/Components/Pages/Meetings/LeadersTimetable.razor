@@ -1,0 +1,389 @@
+@page "/Meetings/LeadersTimetable"
+@page "/Meetings/LeadersTimetable/{TermId:int}"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Leaders' Programme - GUMS</PageTitle>
+
+<style>
+    .timetable-wrapper {
+        max-width: 900px;
+        margin: 0 auto;
+        font-family: Arial, sans-serif;
+    }
+
+    .timetable-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .timetable-heading h1 {
+        font-size: 1.8rem;
+        font-weight: bold;
+        text-decoration: underline;
+        margin: 0 0 0.25rem 0;
+        text-align: center;
+    }
+
+    .timetable-heading h2 {
+        font-size: 1.5rem;
+        font-weight: bold;
+        text-decoration: underline;
+        margin: 0 0 1rem 0;
+        text-align: center;
+    }
+
+    .timetable-heading .leaders-subtitle {
+        font-size: 1rem;
+        font-style: italic;
+        text-align: center;
+        color: var(--gg-muted, #555);
+        margin: 0 0 0.75rem 0;
+    }
+
+    .timetable-logo img {
+        max-height: 90px;
+        border: 3px solid #1a2b6b;
+        padding: 6px;
+        background: #1a2b6b;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+
+    .timetable-intro {
+        margin-bottom: 1.25rem;
+        font-size: 0.95rem;
+    }
+
+    .timetable-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+    }
+
+    .timetable-table th {
+        border: 1px solid #333;
+        padding: 8px 12px;
+        font-size: 1.05rem;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .timetable-table td {
+        border: 1px solid #888;
+        padding: 6px 12px;
+        vertical-align: top;
+    }
+
+    .timetable-table .row-grey {
+        background-color: #d3d3d3;
+        text-align: center;
+    }
+
+    .timetable-table .row-grey td {
+        text-align: center;
+    }
+
+    .timetable-table .row-nonstandard td.lt-date,
+    .timetable-table .row-nonstandard td.lt-title {
+        font-weight: bold;
+    }
+
+    /* Expanded per-meeting leaders' detail row */
+    .lt-detail-row td {
+        background-color: #fafafa;
+        padding: 10px 14px;
+    }
+
+    .lt-detail-row .lt-detail-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.6rem;
+    }
+
+    @@media (min-width: 768px) {
+        .lt-detail-row .lt-detail-grid {
+            grid-template-columns: 3fr 2fr;
+        }
+    }
+
+    .lt-detail-section h6 {
+        margin: 0 0 0.35rem 0;
+        font-size: 0.85rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--gg-primary-blue);
+    }
+
+    .lt-activity-list {
+        list-style: none;
+        padding-left: 0;
+        margin: 0;
+    }
+
+    .lt-activity-list li {
+        padding: 4px 0;
+        border-bottom: 1px dashed #ccc;
+    }
+
+    .lt-activity-list li:last-child {
+        border-bottom: none;
+    }
+
+    .lt-activity-desc {
+        color: #555;
+        font-size: 0.9rem;
+        display: block;
+    }
+
+    .lt-consent-flag {
+        display: inline-block;
+        margin-left: 6px;
+        padding: 1px 6px;
+        font-size: 0.75rem;
+        border: 1px solid var(--gg-error, #e50000);
+        color: var(--gg-error, #e50000);
+        border-radius: 3px;
+    }
+
+    .lt-leader-notes {
+        background: #fffbe6;
+        border-left: 4px solid #e0b000;
+        padding: 8px 10px;
+        font-size: 0.92rem;
+        white-space: pre-wrap;
+    }
+
+    .lt-parent-notes {
+        background: #eef5ff;
+        border-left: 4px solid var(--gg-primary-blue);
+        padding: 8px 10px;
+        font-size: 0.92rem;
+        white-space: pre-wrap;
+        margin-top: 0.5rem;
+    }
+
+    .lt-empty {
+        color: #888;
+        font-style: italic;
+        font-size: 0.9rem;
+    }
+
+    @@media print {
+        .no-print {
+            display: none !important;
+        }
+        body {
+            font-size: 10pt;
+        }
+        .container-fluid, .container {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+        }
+        .timetable-wrapper {
+            max-width: 100%;
+        }
+        .lt-detail-row td {
+            background-color: #f5f5f5 !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+        }
+        .lt-leader-notes, .lt-parent-notes {
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+        }
+    }
+</style>
+
+<div class="container-fluid py-3">
+
+    <!-- Controls (hidden on print) -->
+    <div class="no-print mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <a href="/Meetings" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i> Back to Meetings
+            </a>
+            @if (_allTerms.Any())
+            {
+                <div class="d-flex align-items-center gap-2">
+                    <label class="mb-0 fw-semibold">Term:</label>
+                    <select class="form-select form-select-sm" style="width: auto;"
+                            value="@(_term?.Id ?? 0)"
+                            @onchange="OnTermChanged">
+                        @foreach (var t in _allTerms.OrderByDescending(t => t.StartDate))
+                        {
+                            <option value="@t.Id">@t.Name</option>
+                        }
+                    </select>
+                </div>
+            }
+            <a href="/Meetings/Timetable@(_term != null ? "/" + _term.Id : "")" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-people"></i> Switch to parents' version
+            </a>
+        </div>
+        <button class="btn btn-primary btn-sm" @onclick="Print">
+            <i class="bi bi-printer"></i> Print / Save as PDF
+        </button>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (_term == null)
+    {
+        <div class="alert alert-info no-print">
+            <i class="bi bi-info-circle"></i> No term found. Please create a term first.
+        </div>
+    }
+    else if (_config == null)
+    {
+        <div class="alert alert-warning no-print">
+            <i class="bi bi-exclamation-triangle"></i> Unit configuration not found.
+        </div>
+    }
+    else
+    {
+        <div class="timetable-wrapper">
+
+            <!-- Header -->
+            <div class="timetable-header">
+                <div class="timetable-heading">
+                    <h1>Timetable</h1>
+                    <h2>@_term.Name</h2>
+                    <p class="leaders-subtitle">Leaders' version — activities planned &amp; internal notes</p>
+                    <p class="timetable-intro">
+                        Unless otherwise stated, all meetings are held at @_config.DefaultLocationName,
+                        @Timetable.FormatTime(_config.DefaultMeetingStartTime)-@Timetable.FormatTime(_config.DefaultMeetingEndTime).
+                    </p>
+                </div>
+                <div class="timetable-logo">
+                    <img src="/unitLogoWhite.png" alt="Unit logo" />
+                </div>
+            </div>
+
+            <!-- Timetable -->
+            <table class="timetable-table">
+                <thead>
+                    <tr>
+                        <th style="width: 18%;">Date</th>
+                        <th style="width: 37%;">Activity</th>
+                        <th style="width: 45%;">Other details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _rows)
+                    {
+                        var isGrey = row.IsMissingWeek || row.IsPostTerm;
+                        <tr class="@(isGrey ? "row-grey" : row.IsNonStandardDay ? "row-nonstandard" : "")">
+                            <td class="lt-date">
+                                @if (row.IsNonStandardDay)
+                                {
+                                    <strong>
+                                        @if (row.EndDate.HasValue)
+                                        {
+                                            @Timetable.FormatDateRange(row.Date, row.EndDate.Value)
+                                        }
+                                        else
+                                        {
+                                            @($"{row.Date.ToString("ddd")} {Timetable.FormatDate(row.Date)}")
+                                        }
+                                    </strong>
+                                }
+                                else
+                                {
+                                    @Timetable.FormatDate(row.Date)
+                                }
+                            </td>
+                            <td class="lt-title">
+                                @if (isGrey)
+                                {
+                                    <strong>@row.Title</strong>
+                                }
+                                else
+                                {
+                                    @row.Title
+                                }
+                            </td>
+                            <td>
+                                @if (isGrey && !string.IsNullOrEmpty(row.OtherDetails))
+                                {
+                                    <strong>@row.OtherDetails</strong>
+                                }
+                                else if (row.IsNextTerm)
+                                {
+                                    <em>@row.OtherDetails</em>
+                                }
+                                else
+                                {
+                                    @row.OtherDetails
+                                }
+                            </td>
+                        </tr>
+
+                        @if (row.Meeting != null)
+                        {
+                            <tr class="lt-detail-row">
+                                <td colspan="3">
+                                    <div class="lt-detail-grid">
+                                        <div class="lt-detail-section">
+                                            <h6>Activities planned</h6>
+                                            @if (row.Meeting.MeetingActivities.Any())
+                                            {
+                                                <ul class="lt-activity-list">
+                                                    @foreach (var a in row.Meeting.MeetingActivities.OrderBy(a => a.SortOrder))
+                                                    {
+                                                        <li>
+                                                            <strong>@a.Name</strong>
+                                                            @if (a.RequiresConsent)
+                                                            {
+                                                                <span class="lt-consent-flag" title="Requires consent">consent</span>
+                                                            }
+                                                            @if (!string.IsNullOrWhiteSpace(a.Description))
+                                                            {
+                                                                <span class="lt-activity-desc">@a.Description</span>
+                                                            }
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            }
+                                            else
+                                            {
+                                                <div class="lt-empty">No activities planned yet.</div>
+                                            }
+                                        </div>
+                                        <div class="lt-detail-section">
+                                            <h6>Notes</h6>
+                                            @if (!string.IsNullOrWhiteSpace(row.Meeting.LeaderNotes))
+                                            {
+                                                <div class="lt-leader-notes" title="Leaders only"><strong>Leaders:</strong> @row.Meeting.LeaderNotes</div>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(row.Meeting.ProgrammeNotes))
+                                            {
+                                                <div class="lt-parent-notes" title="Visible to parents"><strong>Parents:</strong> @row.Meeting.ProgrammeNotes</div>
+                                            }
+                                            @if (string.IsNullOrWhiteSpace(row.Meeting.LeaderNotes) && string.IsNullOrWhiteSpace(row.Meeting.ProgrammeNotes))
+                                            {
+                                                <div class="lt-empty">No notes.</div>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+
+        </div>
+    }
+</div>

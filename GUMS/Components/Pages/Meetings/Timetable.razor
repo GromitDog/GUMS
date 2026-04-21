@@ -104,8 +104,8 @@
 <div class="container-fluid py-3">
 
     <!-- Controls (hidden on print) -->
-    <div class="no-print mb-3 d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center gap-3">
+    <div class="no-print mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
             <a href="/Meetings" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-arrow-left"></i> Back to Meetings
             </a>
@@ -123,6 +123,9 @@
                     </select>
                 </div>
             }
+            <a href="/Meetings/LeadersTimetable@(_term != null ? "/" + _term.Id : "")" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-clipboard-check"></i> Switch to leaders' version
+            </a>
         </div>
         <button class="btn btn-primary btn-sm" onclick="window.print()">
             <i class="bi bi-printer"></i> Print / Save as PDF
