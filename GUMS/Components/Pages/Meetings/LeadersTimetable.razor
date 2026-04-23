@@ -336,14 +336,14 @@
                                 <td colspan="3">
                                     <div class="lt-detail-grid">
                                         <div class="lt-detail-section">
-                                            <h6>Activities planned</h6>
+                                            <h6>Programme Activities Planned</h6>
                                             @if (row.Meeting.MeetingActivities.Any())
                                             {
                                                 <ul class="lt-activity-list">
                                                     @foreach (var a in row.Meeting.MeetingActivities.OrderBy(a => a.SortOrder))
                                                     {
                                                         <li>
-                                                            <strong>@a.Name</strong>
+                                                            <strong>@(a.UmaDefinitionId.HasValue ? $"UMA - {a.Name}" : a.Name)</strong>
                                                             @if (a.RequiresConsent)
                                                             {
                                                                 <span class="lt-consent-flag" title="Requires consent">consent</span>
