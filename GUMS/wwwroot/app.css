@@ -261,6 +261,21 @@ h1:focus {
 .btn-outline-info { color: var(--gg-bright-cyan) !important; border-color: var(--gg-bright-cyan) !important; }
 .btn-outline-info:hover { background-color: var(--gg-bright-cyan) !important; border-color: var(--gg-bright-cyan) !important; color: white !important; }
 
+/* Checked state for .btn-check radio/checkbox groups — keep brand colours instead of Bootstrap default blue */
+.btn-check:checked + .btn-outline-primary,
+.btn-check:active + .btn-outline-primary { background-color: var(--gg-primary-blue) !important; border-color: var(--gg-primary-blue) !important; color: white !important; }
+.btn-check:checked + .btn-outline-secondary,
+.btn-check:active + .btn-outline-secondary { background-color: var(--gg-muted) !important; border-color: var(--gg-muted) !important; color: white !important; }
+.btn-check:checked + .btn-outline-success,
+.btn-check:active + .btn-outline-success { background-color: var(--gg-success) !important; border-color: var(--gg-success) !important; color: white !important; }
+.btn-check:checked + .btn-outline-danger,
+.btn-check:active + .btn-outline-danger { background-color: var(--gg-error) !important; border-color: var(--gg-error) !important; color: white !important; }
+.btn-check:checked + .btn-outline-warning,
+.btn-check:active + .btn-outline-warning { background-color: var(--gg-theme-take-action) !important; border-color: var(--gg-theme-take-action) !important; color: white !important; }
+.btn-check:checked + .btn-outline-info,
+.btn-check:active + .btn-outline-info { background-color: var(--gg-bright-cyan) !important; border-color: var(--gg-bright-cyan) !important; color: white !important; }
+.btn-check:focus + .btn { box-shadow: 0 0 0 0.2rem rgba(0, 123, 196, 0.25) !important; }
+
 /* Alerts */
 .alert-success { background-color: rgba(38, 176, 80, 0.1); border-color: var(--gg-success); color: var(--gg-dark-navy); }
 .alert-warning { background-color: rgba(240, 142, 44, 0.1); border-color: var(--gg-theme-take-action); color: var(--gg-dark-navy); }

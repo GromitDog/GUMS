@@ -99,7 +99,13 @@ public class MeetingService : IMeetingService
             return (false, "Cost per attendee cannot be negative.", null);
         }
 
-        if (meeting.CostPerAttendee.HasValue && meeting.CostPerAttendee.Value > 0 && !meeting.PaymentDeadline.HasValue)
+        if (meeting.CostPerLeader.HasValue && meeting.CostPerLeader.Value < 0)
+        {
+            return (false, "Cost per leader cannot be negative.", null);
+        }
+
+        var anyCost = (meeting.CostPerAttendee ?? 0) > 0 || (meeting.CostPerLeader ?? 0) > 0;
+        if (anyCost && !meeting.PaymentDeadline.HasValue)
         {
             return (false, "Payment deadline is required when meeting has a cost.", null);
         }
@@ -142,7 +148,13 @@ public class MeetingService : IMeetingService
             return (false, "Cost per attendee cannot be negative.");
         }
 
-        if (meeting.CostPerAttendee.HasValue && meeting.CostPerAttendee.Value > 0 && !meeting.PaymentDeadline.HasValue)
+        if (meeting.CostPerLeader.HasValue && meeting.CostPerLeader.Value < 0)
+        {
+            return (false, "Cost per leader cannot be negative.");
+        }
+
+        var anyCost = (meeting.CostPerAttendee ?? 0) > 0 || (meeting.CostPerLeader ?? 0) > 0;
+        if (anyCost && !meeting.PaymentDeadline.HasValue)
         {
             return (false, "Payment deadline is required when meeting has a cost.");
         }
@@ -158,10 +170,14 @@ public class MeetingService : IMeetingService
         existingMeeting.MeetingType = meeting.MeetingType;
         existingMeeting.Title = meeting.Title;
         existingMeeting.Description = meeting.Description;
+        existingMeeting.ProgrammeNotes = meeting.ProgrammeNotes;
+        existingMeeting.LeaderNotes = meeting.LeaderNotes;
         existingMeeting.LocationName = meeting.LocationName;
         existingMeeting.LocationAddress = meeting.LocationAddress;
         existingMeeting.CostPerAttendee = meeting.CostPerAttendee;
+        existingMeeting.CostPerLeader = meeting.CostPerLeader;
         existingMeeting.PaymentDeadline = meeting.PaymentDeadline;
+        existingMeeting.IncomeAccountId = meeting.IncomeAccountId;
         existingMeeting.EndDate = meeting.EndDate;
 
         await _context.SaveChangesAsync();

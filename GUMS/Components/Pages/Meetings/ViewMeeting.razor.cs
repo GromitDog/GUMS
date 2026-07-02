@@ -10,6 +10,7 @@ public partial class ViewMeeting
     [Inject] public required IMeetingService MeetingService { get; set; }
     [Inject] public required IAttendanceService AttendanceService { get; set; }
     [Inject] public required IPaymentService PaymentService { get; set; }
+    [Inject] public required IPersonService PersonService { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
 
     [Parameter]
@@ -129,19 +130,36 @@ public partial class ViewMeeting
 
     // ===== Event Payments =====
 
-    private bool HasEventCost => meeting?.CostPerAttendee.HasValue == true && meeting.CostPerAttendee.Value > 0;
+    private bool HasEventCost =>
+        meeting != null
+        && (((meeting.CostPerAttendee ?? 0) > 0) || ((meeting.CostPerLeader ?? 0) > 0));
 
     private async Task LoadEventPaymentInfo()
     {
-        if (!HasEventCost) return;
+        if (!HasEventCost || meeting == null) return;
 
         attendees = await AttendanceService.GetAttendanceForMeetingAsync(MeetingId);
-        var consentedMembers = attendees.Where(a => a.ConsentFormReceived || a.ConsentEmailReceived).ToList();
+        var activeMembers = (await PersonService.GetActiveAsync())
+            .ToDictionary(p => p.MembershipNumber);
+
+        var girlsWithConsent = attendees
+            .Where(a => a.ConsentFormReceived || a.ConsentEmailReceived)
+            .Where(a => activeMembers.TryGetValue(a.MembershipNumber, out var p) && p.PersonType == PersonType.Girl)
+            .ToList();
+        var leadersPlanning = attendees
+            .Where(a => a.PlanningToAttend)
+            .Where(a => activeMembers.TryGetValue(a.MembershipNumber, out var p) && p.PersonType == PersonType.Leader)
+            .ToList();
+
+        // Only members who should actually have a payment given their cost
+        var members = new List<Attendance>();
+        if ((meeting.CostPerAttendee ?? 0) > 0) members.AddRange(girlsWithConsent);
+        if ((meeting.CostPerLeader ?? 0) > 0) members.AddRange(leadersPlanning);
 
         eventPaymentsCount = 0;
         consentedWithoutPayment = 0;
 
-        foreach (var a in consentedMembers)
+        foreach (var a in members)
         {
             if (await PaymentService.HasActivityPaymentAsync(MeetingId, a.MembershipNumber))
                 eventPaymentsCount++;
@@ -169,10 +187,25 @@ public partial class ViewMeeting
 
         try
         {
-            var consentedMembers = attendees.Where(a => a.ConsentFormReceived || a.ConsentEmailReceived).ToList();
-            var created = 0;
+            var activeMembers = (await PersonService.GetActiveAsync())
+                .ToDictionary(p => p.MembershipNumber);
 
-            foreach (var a in consentedMembers)
+            // Girls with consent pay at CostPerAttendee; leaders planning to attend pay at CostPerLeader
+            var girlsWithConsent = attendees
+                .Where(a => a.ConsentFormReceived || a.ConsentEmailReceived)
+                .Where(a => activeMembers.TryGetValue(a.MembershipNumber, out var p) && p.PersonType == PersonType.Girl)
+                .ToList();
+            var leadersPlanning = attendees
+                .Where(a => a.PlanningToAttend)
+                .Where(a => activeMembers.TryGetValue(a.MembershipNumber, out var p) && p.PersonType == PersonType.Leader)
+                .ToList();
+
+            var members = new List<Attendance>();
+            if ((meeting.CostPerAttendee ?? 0) > 0) members.AddRange(girlsWithConsent);
+            if ((meeting.CostPerLeader ?? 0) > 0) members.AddRange(leadersPlanning);
+
+            var created = 0;
+            foreach (var a in members)
             {
                 var result = await PaymentService.CreateActivityPaymentAsync(MeetingId, a.MembershipNumber);
                 if (result.Success) created++;

@@ -4,5 +4,6 @@ public enum BadgeType
 {
     SkillsBuilder,
     InterestBadge,
-    FunBadge
+    FunBadge,
+    PatrolBadge
 }

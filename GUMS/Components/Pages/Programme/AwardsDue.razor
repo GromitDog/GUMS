@@ -104,6 +104,9 @@
                                                 case "FunBadge":
                                                     <span class="badge" style="background-color: #e91e8c;">Fun Badge</span>
                                                     break;
+                                                case "PatrolBadge":
+                                                    <span class="badge" style="background-color: var(--gg-dark-navy);"><i class="bi bi-people-fill"></i> Patrol</span>
+                                                    break;
                                                 case "NightsAway":
                                                     <span class="badge bg-indigo" style="background-color: #6610f2;"><i class="bi bi-moon-stars"></i> Nights Away</span>
                                                     break;
@@ -133,6 +136,57 @@
                                                     @onclick="() => MarkAwarded(award)"
                                                     title="Mark Awarded">
                                                 <i class="bi bi-check-lg"></i> <span class="d-none d-md-inline">Mark Awarded</span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        if (_recentAwards.Any())
+        {
+            <div class="card mb-4">
+                <div class="card-header" style="background-color: var(--gg-success); color: white;">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history"></i> Recently Awarded
+                        <small class="fw-normal ms-2 opacity-75">last 30 days — click Undo if marked by mistake</small>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Girl</th>
+                                    <th>Badge</th>
+                                    <th class="d-none d-md-table-cell">Awarded</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var recent in _recentAwards)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a href="/Programme/Progress/@recent.MembershipNumber">
+                                                @(recent.GirlName ?? recent.MembershipNumber)
+                                            </a>
+                                        </td>
+                                        <td><strong>@recent.BadgeName</strong></td>
+                                        <td class="d-none d-md-table-cell text-muted small">
+                                            @recent.DateAwarded.ToString("dd MMM yyyy")
+                                        </td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-outline-warning"
+                                                    disabled="@_isSaving"
+                                                    @onclick="() => UndoAward(recent)"
+                                                    title="Un-award this badge and restore stock">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                                <span class="d-none d-md-inline">Undo</span>
                                             </button>
                                         </td>
                                     </tr>

@@ -791,9 +791,9 @@ public class AttendanceServiceTests : IDisposable
         // Arrange
         var term = await CreateTestTermAsync(new DateTime(2026, 1, 6), new DateTime(2026, 4, 3));
 
-        // Create meetings in the past (within term)
-        var meeting1 = await CreateTestMeetingAsync(DateTime.Today.AddDays(-14));
-        var meeting2 = await CreateTestMeetingAsync(DateTime.Today.AddDays(-7));
+        // Create meetings in the past (within the term window)
+        var meeting1 = await CreateTestMeetingAsync(new DateTime(2026, 2, 3));
+        var meeting2 = await CreateTestMeetingAsync(new DateTime(2026, 2, 10));
 
         // Create members who joined before term started
         var person1 = await CreateTestPersonAsync("M001");
@@ -825,7 +825,7 @@ public class AttendanceServiceTests : IDisposable
     {
         // Arrange
         var term = await CreateTestTermAsync(new DateTime(2026, 1, 6), new DateTime(2026, 4, 3));
-        var meeting = await CreateTestMeetingAsync(DateTime.Today.AddDays(-7));
+        var meeting = await CreateTestMeetingAsync(new DateTime(2026, 2, 10));
 
         var leader = await CreateTestPersonAsync("L001", PersonType.Leader);
         leader.DateJoined = new DateTime(2024, 1, 1);
@@ -846,7 +846,7 @@ public class AttendanceServiceTests : IDisposable
     {
         // Arrange
         var term = await CreateTestTermAsync(new DateTime(2026, 1, 6), new DateTime(2026, 4, 3));
-        var meeting = await CreateTestMeetingAsync(DateTime.Today.AddDays(-7));
+        var meeting = await CreateTestMeetingAsync(new DateTime(2026, 2, 10));
 
         var newMember = await CreateTestPersonAsync("M001");
         newMember.DateJoined = new DateTime(2026, 2, 1); // Joined after term started

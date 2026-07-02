@@ -56,11 +56,19 @@
                                 <div class="card-body text-center">
                                     <h6 class="text-muted">Expected Income</h6>
                                     <h3 style="color: var(--gg-primary-blue);">@_comparison.ExpectedIncome.ToString("C")</h3>
-                                    <small class="text-muted">
-                                        @_comparison.TotalConsented attending
-                                        (@_comparison.ConsentedGirlCount @(_comparison.ConsentedGirlCount == 1 ? "girl" : "girls")
-                                        + @_comparison.ConsentedAdultCount @(_comparison.ConsentedAdultCount == 1 ? "leader" : "leaders"))
-                                        &times; @_comparison.CostPerAttendee!.Value.ToString("C")
+                                    <small class="text-muted d-block">
+                                        @_comparison.ConsentedGirlCount @(_comparison.ConsentedGirlCount == 1 ? "girl" : "girls")
+                                        &times;
+                                        @((_comparison.CostPerAttendee ?? 0) > 0
+                                            ? _comparison.CostPerAttendee!.Value.ToString("C")
+                                            : "free")
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        @_comparison.ConsentedAdultCount @(_comparison.ConsentedAdultCount == 1 ? "leader" : "leaders")
+                                        &times;
+                                        @((_comparison.CostPerLeader ?? 0) > 0
+                                            ? _comparison.CostPerLeader!.Value.ToString("C")
+                                            : "free")
                                     </small>
                                 </div>
                             </div>

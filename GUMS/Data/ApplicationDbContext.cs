@@ -59,6 +59,9 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     public DbSet<EventContactOverride> EventContactOverrides { get; set; }
     public DbSet<EventAdditionalPerson> EventAdditionalPeople { get; set; }
 
+    // Patrol DbSets
+    public DbSet<Patrol> Patrols { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -79,6 +82,39 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
                 .WithOne(ec => ec.Person)
                 .HasForeignKey(ec => ec.PersonId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Patrol membership
+            entity.HasOne(p => p.Patrol)
+                .WithMany(pa => pa.Members)
+                .HasForeignKey(p => p.PatrolId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(p => p.PatrolId);
+
+            // At most one Leader and one Seconder per patrol
+            entity.HasIndex(p => new { p.PatrolId, p.PatrolRole })
+                .IsUnique()
+                .HasFilter("\"PatrolRole\" <> 0");
+
+            // A role-holder must belong to a patrol
+            entity.ToTable(t => t.HasCheckConstraint(
+                "CK_Person_PatrolRole_Requires_Patrol",
+                "\"PatrolRole\" = 0 OR \"PatrolId\" IS NOT NULL"));
+        });
+
+        // Patrol configuration
+        modelBuilder.Entity<Patrol>(entity =>
+        {
+            entity.HasKey(p => p.Id);
+            entity.HasIndex(p => new { p.Section, p.Name }).IsUnique();
+            entity.HasIndex(p => p.EmblemBadgeDefinitionId);
+
+            entity.Property(p => p.Name).IsRequired().HasMaxLength(100);
+
+            entity.HasOne(p => p.EmblemBadge)
+                .WithMany()
+                .HasForeignKey(p => p.EmblemBadgeDefinitionId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // EmergencyContact configuration

@@ -335,9 +335,26 @@ public class PaymentService : IPaymentService
             return (false, "Meeting not found.", null);
         }
 
-        if (!meeting.CostPerAttendee.HasValue || meeting.CostPerAttendee.Value <= 0)
+        // Look up the person to determine which cost applies (girl vs leader)
+        var member = await _context.Persons
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.MembershipNumber == membershipNumber);
+
+        if (member == null)
         {
-            return (false, "Meeting has no cost defined.", null);
+            return (false, "Member not found.", null);
+        }
+
+        var cost = member.PersonType == PersonType.Leader
+            ? meeting.CostPerLeader
+            : meeting.CostPerAttendee;
+
+        if (!cost.HasValue || cost.Value <= 0)
+        {
+            // Clean skip — leaders legitimately don't always pay, girls with no cost set shouldn't generate
+            return (false, member.PersonType == PersonType.Leader
+                ? "Leaders don't pay for this meeting."
+                : "Meeting has no cost defined.", null);
         }
 
         // Check if payment already exists
@@ -346,12 +363,7 @@ public class PaymentService : IPaymentService
             return (false, "Activity payment already exists for this member and meeting.", null);
         }
 
-        // Get member name for reference
-        var member = await _context.Persons
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.MembershipNumber == membershipNumber);
-
-        var memberName = member?.FullName ?? membershipNumber;
+        var memberName = member.FullName ?? membershipNumber;
 
         // Determine due date
         var dueDate = meeting.PaymentDeadline ?? meeting.Date;
@@ -359,7 +371,7 @@ public class PaymentService : IPaymentService
         var payment = new Payment
         {
             MembershipNumber = membershipNumber,
-            Amount = meeting.CostPerAttendee.Value,
+            Amount = cost.Value,
             PaymentType = PaymentType.Activity,
             DueDate = dueDate,
             Status = PaymentStatus.Pending,

@@ -21,6 +21,12 @@ public interface IProgrammeService
     Task<List<AwardDue>> GetAwardsDueAsync();
     Task<(bool Success, string ErrorMessage)> MarkBadgeAwardedAsync(string membershipNumber, int badgeDefinitionId);
     Task<(bool Success, string ErrorMessage)> UnmarkBadgeAwardedAsync(string membershipNumber, int badgeDefinitionId);
+
+    /// <summary>Badges awarded in the last `days` days across all girls, newest first.</summary>
+    Task<List<AwardedBadgeSummary>> GetRecentAwardsAsync(int days = 30);
+
+    /// <summary>All awarded badges for a specific girl, newest first.</summary>
+    Task<List<AwardedBadgeSummary>> GetAwardedBadgesForGirlAsync(string membershipNumber);
     Task<(bool Success, string ErrorMessage)> SetGoldChallengeCompleteAsync(string membershipNumber, bool complete);
     Task<(bool Success, string ErrorMessage)> MarkThemeAwardedAsync(string membershipNumber, Theme theme);
     Task<(bool Success, string ErrorMessage)> MarkLevelAwardedAsync(string membershipNumber, string level);
@@ -181,6 +187,17 @@ public class AwardDue
     public int? Milestone { get; set; }
     public Theme? Theme { get; set; }
     public DateTime? CompletedDate { get; set; }
+}
+
+public class AwardedBadgeSummary
+{
+    public int AwardedBadgeId { get; set; }
+    public string MembershipNumber { get; set; } = string.Empty;
+    public string? GirlName { get; set; }
+    public int BadgeDefinitionId { get; set; }
+    public string BadgeName { get; set; } = string.Empty;
+    public BadgeType BadgeType { get; set; }
+    public DateTime DateAwarded { get; set; }
 }
 
 public class TermBalance

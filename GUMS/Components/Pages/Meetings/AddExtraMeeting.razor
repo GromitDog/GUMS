@@ -107,13 +107,19 @@
 
                                         <div class="row g-3">
                                             <div class="col-md-6">
-                                                <label class="form-label">Cost Per Attendee (£)</label>
+                                                <label class="form-label">Cost Per Girl (£)</label>
                                                 <InputNumber class="form-control" @bind-Value="_meeting.CostPerAttendee"
                                                            placeholder="0.00" step="0.01" />
-                                                <small class="text-muted">Leave as 0 if this event is free</small>
+                                                <small class="text-muted">Leave as 0 if girls don't pay</small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Cost Per Leader (£)</label>
+                                                <InputNumber class="form-control" @bind-Value="_meeting.CostPerLeader"
+                                                           placeholder="0.00" step="0.01" />
+                                                <small class="text-muted">Leave blank if leaders don't pay</small>
                                             </div>
 
-                                            @if (_meeting.CostPerAttendee.HasValue && _meeting.CostPerAttendee.Value > 0)
+                                            @if ((_meeting.CostPerAttendee ?? 0) > 0 || (_meeting.CostPerLeader ?? 0) > 0)
                                             {
                                                 <div class="col-md-6">
                                                     <label class="form-label">Payment Deadline</label>

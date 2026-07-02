@@ -261,6 +261,37 @@ public class InventoryService : IInventoryService
         await _context.SaveChangesAsync();
     }
 
+    public async Task TryIncrementForBadgeAsync(int badgeDefinitionId, int awardedBadgeId)
+    {
+        var item = await _context.BadgeStockItems
+            .FirstOrDefaultAsync(i => i.BadgeDefinitionId == badgeDefinitionId && i.IsActive);
+
+        if (item == null)
+            return;
+
+        var priorAward = await _context.BadgeStockTransactions
+            .AnyAsync(t => t.BadgeStockItemId == item.Id
+                        && t.AwardedBadgeId == awardedBadgeId
+                        && t.TransactionType == StockTransactionType.Award);
+
+        if (!priorAward)
+            return;
+
+        item.CurrentQuantity++;
+        _context.BadgeStockTransactions.Add(new BadgeStockTransaction
+        {
+            BadgeStockItemId = item.Id,
+            TransactionDate = DateTime.Today,
+            Quantity = 1,
+            TransactionType = StockTransactionType.Adjustment,
+            AwardedBadgeId = awardedBadgeId,
+            Notes = "Award reversed",
+            CreatedDate = DateTime.UtcNow
+        });
+
+        await _context.SaveChangesAsync();
+    }
+
     public async Task TryDecrementForThemeAwardAsync(Theme theme)
     {
         var item = await _context.BadgeStockItems

@@ -539,11 +539,76 @@ public class ProgrammeService : IProgrammeService
 
         if (record != null)
         {
+            await _inventory.TryIncrementForBadgeAsync(badgeDefinitionId, record.Id);
+
             _context.AwardedBadges.Remove(record);
             await _context.SaveChangesAsync();
         }
 
         return (true, string.Empty);
+    }
+
+    public async Task<List<AwardedBadgeSummary>> GetRecentAwardsAsync(int days = 30)
+    {
+        var since = DateTime.Today.AddDays(-days);
+
+        var rows = await _context.AwardedBadges
+            .AsNoTracking()
+            .Include(a => a.BadgeDefinition)
+            .Where(a => a.DateAwarded >= since)
+            .OrderByDescending(a => a.DateAwarded)
+            .ThenByDescending(a => a.Id)
+            .Take(50)
+            .ToListAsync();
+
+        if (!rows.Any()) return new List<AwardedBadgeSummary>();
+
+        var membershipNumbers = rows.Select(r => r.MembershipNumber).Distinct().ToList();
+        var girls = await _context.Persons
+            .AsNoTracking()
+            .Where(p => membershipNumbers.Contains(p.MembershipNumber))
+            .ToDictionaryAsync(p => p.MembershipNumber, p => p.FullName);
+
+        return rows.Select(r => new AwardedBadgeSummary
+        {
+            AwardedBadgeId = r.Id,
+            MembershipNumber = r.MembershipNumber,
+            GirlName = girls.GetValueOrDefault(r.MembershipNumber),
+            BadgeDefinitionId = r.BadgeDefinitionId,
+            BadgeName = r.BadgeDefinition?.Name ?? "(unknown)",
+            BadgeType = r.BadgeDefinition?.BadgeType ?? BadgeType.FunBadge,
+            DateAwarded = r.DateAwarded
+        }).ToList();
+    }
+
+    public async Task<List<AwardedBadgeSummary>> GetAwardedBadgesForGirlAsync(string membershipNumber)
+    {
+        var rows = await _context.AwardedBadges
+            .AsNoTracking()
+            .Include(a => a.BadgeDefinition)
+            .Where(a => a.MembershipNumber == membershipNumber)
+            .OrderByDescending(a => a.DateAwarded)
+            .ThenByDescending(a => a.Id)
+            .ToListAsync();
+
+        if (!rows.Any()) return new List<AwardedBadgeSummary>();
+
+        var girlName = await _context.Persons
+            .AsNoTracking()
+            .Where(p => p.MembershipNumber == membershipNumber)
+            .Select(p => p.FullName)
+            .FirstOrDefaultAsync();
+
+        return rows.Select(r => new AwardedBadgeSummary
+        {
+            AwardedBadgeId = r.Id,
+            MembershipNumber = r.MembershipNumber,
+            GirlName = girlName,
+            BadgeDefinitionId = r.BadgeDefinitionId,
+            BadgeName = r.BadgeDefinition?.Name ?? "(unknown)",
+            BadgeType = r.BadgeDefinition?.BadgeType ?? BadgeType.FunBadge,
+            DateAwarded = r.DateAwarded
+        }).ToList();
     }
 
     public async Task<(bool Success, string ErrorMessage)> SetGoldChallengeCompleteAsync(string membershipNumber, bool complete)

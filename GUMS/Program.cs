@@ -78,6 +78,7 @@ builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IHomeContactService, HomeContactService>();
 builder.Services.AddScoped<ICreditService, CreditService>();
 builder.Services.AddScoped<ICostCentreService, CostCentreService>();
+builder.Services.AddScoped<IPatrolService, PatrolService>();
 
 // Add services to the container.
 builder.Services.AddRazorPages();
@@ -104,6 +105,10 @@ using (var scope = app.Services.CreateScope())
         // Ensure default accounting accounts exist
         var accountingService = services.GetRequiredService<IAccountingService>();
         await accountingService.EnsureDefaultAccountsAsync();
+
+        // Ensure default patrol role badges (Sixer, Patrol Leader, etc.) exist
+        var patrolService = services.GetRequiredService<IPatrolService>();
+        await patrolService.EnsureDefaultPatrolBadgesAsync();
 
         // Backfill fun-badge completions for past meetings scheduled before
         // the RecordAttendance UI exposed fun-badge activities. Idempotent —

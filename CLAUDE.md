@@ -82,9 +82,10 @@ Pages are in `GUMS/Components/Pages/`, organized by feature area (Register, Meet
 Tests are in `GUMS.Tests/Services/` using xUnit + FluentAssertions + Moq. EF Core InMemory provider is used for database isolation. 9 test suites covering the core services.
 
 **Mandatory testing rules:**
-- **Run tests after every change:** Always run `dotnet test GUMS.Tests/GUMS.Tests.csproj` after modifying service code, entities, or interfaces. Work is NOT complete if any tests are failing.
+- **ZERO failing tests before declaring work done.** Always run `dotnet test GUMS.Tests/GUMS.Tests.csproj` after modifying service code, entities, or interfaces. A task is NOT complete — and must not be reported as complete — while any test is failing, including pre-existing failures unrelated to the change. If a pre-existing failure is uncovered, fix it (or raise it and pause) before claiming the task is done. "Not my bug" is not an acceptable excuse.
 - **Add tests for new functionality:** Every new service method or significant behaviour change must have corresponding unit tests. Follow the existing patterns in `GUMS.Tests/Services/`.
 - **Update tests when refactoring:** If a service method's implementation changes (e.g. how balances are calculated), update the corresponding tests to match. Stale tests that pass by accident or fail due to drift are worse than no tests.
+- **No time-dependent assertions.** Never anchor test data to `DateTime.Today` or `DateTime.Now` when the test also uses fixed dates (e.g. a hardcoded term window). Use fixed dates throughout so the test is deterministic regardless of when it runs.
 - **Accounting tests:** Balance accessors (`GetCashOnHandAsync`, `GetBankBalanceAsync`, `GetChequesPendingAsync`) calculate from transaction lines, NOT the `Account.Balance` field. Tests must create proper transactions to set up balances — never set `Account.Balance` directly.
 
 ## Commit Cadence

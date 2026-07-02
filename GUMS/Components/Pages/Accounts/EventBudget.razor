@@ -72,6 +72,119 @@
         }
         else
         {
+            <!-- Cost & Income Projections -->
+            @if (_estimate != null)
+            {
+                <div class="card mb-4">
+                    <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
+                        <h5 class="mb-0 text-white"><i class="bi bi-graph-up-arrow"></i> Cost &amp; Income Projections</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end mb-3">
+                            <div class="col-md-5">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="leadersPaySwitch"
+                                           @bind="_leadersPay" @bind:after="RecalculateAsync" />
+                                    <label class="form-check-label" for="leadersPaySwitch">
+                                        <strong>Leaders pay towards this event</strong>
+                                    </label>
+                                </div>
+                                <small class="text-muted">
+                                    @if (_leadersPay)
+                                    {
+                                        <span>Costs are shared &mdash; each girl and adult pays their own way.</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Leaders go free &mdash; the girls cover the adults' costs too.</span>
+                                    }
+                                </small>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label mb-1">Adults attending</label>
+                                <input type="number" class="form-control" min="0" step="1"
+                                       @bind="_adultCount" @bind:after="RecalculateAsync" />
+                            </div>
+                            <div class="col-md-4">
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-people"></i> @_estimate.GirlCount girls on the roll,
+                                    @_estimate.ActiveLeaderCount active @(_estimate.ActiveLeaderCount == 1 ? "leader" : "leaders")
+                                </small>
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-cash"></i>
+                                    @if (_estimate.HasCharge)
+                                    {
+                                        <span>
+                                            Charging @((_estimate.CostPerAttendee ?? 0).ToString("C"))/girl@(_leadersPay && (_estimate.CostPerLeader ?? 0) > 0 ? $", {(_estimate.CostPerLeader ?? 0):C}/leader" : "")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span>No charge set &mdash; <a href="/Meetings/Edit/@MeetingId">set a cost on the event</a> to project income.</span>
+                                    }
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-1">
+                                <thead>
+                                    <tr>
+                                        <th>Attendance</th>
+                                        <th class="text-end">Girls</th>
+                                        <th class="text-end">Adults</th>
+                                        <th class="text-end">Total cost</th>
+                                        <th class="text-end">Cost / girl</th>
+                                        <th class="text-end">Cost / adult</th>
+                                        @if (_estimate.HasCharge)
+                                        {
+                                            <th class="text-end">Projected income</th>
+                                            <th class="text-end">Surplus / (shortfall)</th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var s in _estimate.Scenarios)
+                                    {
+                                        <tr>
+                                            <td>@s.Label</td>
+                                            <td class="text-end">@s.Girls</td>
+                                            <td class="text-end">@s.Adults</td>
+                                            <td class="text-end">@s.TotalCost.ToString("C")</td>
+                                            <td class="text-end fw-bold">@s.CostPerGirl.ToString("C")</td>
+                                            <td class="text-end">
+                                                @if (_leadersPay)
+                                                {
+                                                    <span>@s.CostPerAdult.ToString("C")</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted" title="Covered by the girls">&mdash;</span>
+                                                }
+                                            </td>
+                                            @if (_estimate.HasCharge)
+                                            {
+                                                <td class="text-end">@s.ProjectedIncome.ToString("C")</td>
+                                                <td class="text-end">
+                                                    <span class="@(s.Surplus >= 0 ? "text-success" : "text-danger")">
+                                                        @s.Surplus.ToString("C")
+                                                    </span>
+                                                </td>
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Cost / girl</strong> and <strong>cost / adult</strong> are the break-even charges needed to
+                            recover the total cost. Fixed costs are split evenly across every head.
+                        </small>
+                    </div>
+                </div>
+            }
+
             <div class="row">
                 <div class="col-lg-8">
                     <!-- Budget Items -->
@@ -192,52 +305,6 @@
                 </div>
 
                 <div class="col-lg-4">
-                    <!-- Estimate Summary -->
-                    @if (_estimate != null)
-                    {
-                        <div class="card mb-4">
-                            <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
-                                <h6 class="mb-0 text-white">
-                                    <i class="bi bi-graph-up"></i> Cost Estimates
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between">
-                                        <strong>High &mdash; @_estimate.HighGirls girls with @_estimate.AdultCount adults</strong>
-                                        <span>@_estimate.HighTotal.ToString("C")</span>
-                                    </div>
-                                    <small class="text-muted">
-                                        @_estimate.HighPerGirl.ToString("C") per girl
-                                        &middot; @_estimate.HighPerPerson.ToString("C") per head
-                                    </small>
-                                </div>
-
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between">
-                                        <strong>Mid &mdash; @_estimate.MidGirls girls with @_estimate.AdultCount adults</strong>
-                                        <span>@_estimate.MidTotal.ToString("C")</span>
-                                    </div>
-                                    <small class="text-muted">
-                                        @_estimate.MidPerGirl.ToString("C") per girl
-                                        &middot; @_estimate.MidPerPerson.ToString("C") per head
-                                    </small>
-                                </div>
-
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between">
-                                        <strong>Low &mdash; @_estimate.LowGirls girls with @_estimate.AdultCount adults</strong>
-                                        <span>@_estimate.LowTotal.ToString("C")</span>
-                                    </div>
-                                    <small class="text-muted">
-                                        @_estimate.LowPerGirl.ToString("C") per girl
-                                        &middot; @_estimate.LowPerPerson.ToString("C") per head
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                    }
-
                     <!-- Notes -->
                     <div class="card">
                         <div class="card-body">

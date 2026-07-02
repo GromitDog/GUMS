@@ -9,11 +9,13 @@ public partial class AwardsDue
 {
     [Inject] public required IProgrammeService ProgrammeService { get; set; }
     [Inject] public required IInventoryService InventoryService { get; set; }
+    [Inject] public required IPatrolService PatrolService { get; set; }
 
     private List<AwardDue> _awards = new();
     private List<AwardDue> _projectedAwards = new();
     private List<BadgeStockItem> _stockItems = new();
     private List<StockSummaryRow> _stockSummary = new();
+    private List<AwardedBadgeSummary> _recentAwards = new();
     private bool _isLoading = true;
     private bool _isSaving;
 
@@ -30,12 +32,15 @@ public partial class AwardsDue
             var awardsTask = ProgrammeService.GetAwardsDueAsync();
             var projectedTask = ProgrammeService.GetProjectedAwardsForCurrentTermAsync();
             var stockTask = InventoryService.GetAllStockItemsAsync();
+            var patrolAwardsTask = PatrolService.GetPatrolAwardsDueAsync();
+            var recentTask = ProgrammeService.GetRecentAwardsAsync(30);
 
-            await Task.WhenAll(awardsTask, projectedTask, stockTask);
+            await Task.WhenAll(awardsTask, projectedTask, stockTask, patrolAwardsTask, recentTask);
 
-            _awards = awardsTask.Result;
+            _awards = awardsTask.Result.Concat(patrolAwardsTask.Result).ToList();
             _projectedAwards = projectedTask.Result;
             _stockItems = stockTask.Result;
+            _recentAwards = recentTask.Result;
 
             BuildStockSummary();
         }
@@ -100,6 +105,8 @@ public partial class AwardsDue
             _stockItems.FirstOrDefault(s => s.BadgeDefinitionId == row.BadgeDefinitionId),
         "FunBadge" when row.BadgeDefinitionId.HasValue =>
             _stockItems.FirstOrDefault(s => s.BadgeDefinitionId == row.BadgeDefinitionId),
+        "PatrolBadge" when row.BadgeDefinitionId.HasValue =>
+            _stockItems.FirstOrDefault(s => s.BadgeDefinitionId == row.BadgeDefinitionId),
         "ThemeAward" when row.AwardTheme.HasValue =>
             _stockItems.FirstOrDefault(s => s.StockType == BadgeStockType.ThemeAward && s.AwardTheme == row.AwardTheme),
         "Bronze" =>
@@ -130,6 +137,7 @@ public partial class AwardsDue
             {
                 case "Badge" when award.BadgeDefinitionId.HasValue:
                 case "FunBadge" when award.BadgeDefinitionId.HasValue:
+                case "PatrolBadge" when award.BadgeDefinitionId.HasValue:
                     await ProgrammeService.MarkBadgeAwardedAsync(award.MembershipNumber, award.BadgeDefinitionId.Value);
                     break;
                 case "ThemeAward" when award.Theme.HasValue:
@@ -144,6 +152,21 @@ public partial class AwardsDue
                     await ProgrammeService.MarkLevelAwardedAsync(award.MembershipNumber, award.AwardType);
                     break;
             }
+            await LoadAwards();
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task UndoAward(AwardedBadgeSummary summary)
+    {
+        if (_isSaving) return;
+        _isSaving = true;
+        try
+        {
+            await ProgrammeService.UnmarkBadgeAwardedAsync(summary.MembershipNumber, summary.BadgeDefinitionId);
             await LoadAwards();
         }
         finally

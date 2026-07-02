@@ -818,6 +818,7 @@ public class PaymentServiceTests : IDisposable
     public async Task CreateActivityPaymentAsync_ShouldFail_WhenMeetingHasNoCost()
     {
         // Arrange
+        await CreateTestPersonAsync("M001");
         var meeting = await CreateTestMeetingAsync(costPerAttendee: null);
 
         // Act
@@ -832,6 +833,7 @@ public class PaymentServiceTests : IDisposable
     public async Task CreateActivityPaymentAsync_ShouldFail_WhenPaymentAlreadyExists()
     {
         // Arrange
+        await CreateTestPersonAsync("M001");
         var meeting = await CreateTestMeetingAsync(costPerAttendee: 15.00m);
         await CreateTestPaymentAsync("M001", type: PaymentType.Activity, meetingId: meeting.Id);
 
@@ -847,6 +849,7 @@ public class PaymentServiceTests : IDisposable
     public async Task CreateActivityPaymentAsync_ShouldUsePaymentDeadlineAsDueDate()
     {
         // Arrange
+        await CreateTestPersonAsync("M001");
         var meeting = await CreateTestMeetingAsync(date: new DateTime(2026, 3, 15), costPerAttendee: 15.00m);
         meeting.PaymentDeadline = new DateTime(2026, 3, 8);
         await _context.SaveChangesAsync();
@@ -856,6 +859,56 @@ public class PaymentServiceTests : IDisposable
 
         // Assert
         result.Payment!.DueDate.Should().Be(new DateTime(2026, 3, 8));
+    }
+
+    [Fact]
+    public async Task CreateActivityPaymentAsync_LeaderWithNoLeaderCost_ShouldSkip()
+    {
+        // Arrange
+        await CreateTestPersonAsync("L001", PersonType.Leader);
+        var meeting = await CreateTestMeetingAsync(costPerAttendee: 15.00m); // No CostPerLeader
+
+        // Act
+        var result = await _sut.CreateActivityPaymentAsync(meeting.Id, "L001");
+
+        // Assert: clean skip — not created, informative message
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("don't pay");
+        result.Payment.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateActivityPaymentAsync_LeaderWithLeaderCost_ShouldUseLeaderAmount()
+    {
+        // Arrange
+        await CreateTestPersonAsync("L001", PersonType.Leader);
+        var meeting = await CreateTestMeetingAsync(costPerAttendee: 15.00m);
+        meeting.CostPerLeader = 5.00m;
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _sut.CreateActivityPaymentAsync(meeting.Id, "L001");
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Payment!.Amount.Should().Be(5.00m);
+    }
+
+    [Fact]
+    public async Task CreateActivityPaymentAsync_GirlWithCostPerAttendee_ShouldUseAttendeeAmount()
+    {
+        // Arrange
+        await CreateTestPersonAsync("M001", PersonType.Girl);
+        var meeting = await CreateTestMeetingAsync(costPerAttendee: 15.00m);
+        meeting.CostPerLeader = 5.00m; // Should NOT be used for girls
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _sut.CreateActivityPaymentAsync(meeting.Id, "M001");
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Payment!.Amount.Should().Be(15.00m);
     }
 
     #endregion

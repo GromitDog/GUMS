@@ -388,6 +388,53 @@ public class MeetingServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_ShouldFail_WhenCostPerLeaderIsNegative()
+    {
+        // Arrange
+        var meeting = new Meeting
+        {
+            Date = DateTime.Today,
+            StartTime = new TimeOnly(18, 30),
+            EndTime = new TimeOnly(19, 30),
+            MeetingType = MeetingType.Extra,
+            Title = "Paid Meeting",
+            LocationName = "Hall",
+            CostPerLeader = -5
+        };
+
+        // Act
+        var result = await _sut.CreateAsync(meeting);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("per leader cannot be negative");
+    }
+
+    [Fact]
+    public async Task CreateAsync_ShouldRequirePaymentDeadline_WhenOnlyCostPerLeaderSet()
+    {
+        // Arrange: leader cost set, girl cost zero, no deadline
+        var meeting = new Meeting
+        {
+            Date = DateTime.Today,
+            StartTime = new TimeOnly(18, 30),
+            EndTime = new TimeOnly(19, 30),
+            MeetingType = MeetingType.Extra,
+            Title = "Leaders Pay Meeting",
+            LocationName = "Hall",
+            CostPerLeader = 5,
+            PaymentDeadline = null
+        };
+
+        // Act
+        var result = await _sut.CreateAsync(meeting);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Payment deadline is required");
+    }
+
+    [Fact]
     public async Task CreateAsync_ShouldFail_WhenCostWithoutPaymentDeadline()
     {
         // Arrange
@@ -435,6 +482,30 @@ public class MeetingServiceTests : IDisposable
         var updated = await _context.Meetings.FindAsync(meeting.Id);
         updated!.Title.Should().Be("Updated Title");
         updated.Description.Should().Be("New Description");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldPersistNotesAndIncomeAccount()
+    {
+        // Arrange
+        var meeting = CreateMeeting("Original", DateTime.Today);
+        _context.Meetings.Add(meeting);
+        await _context.SaveChangesAsync();
+
+        meeting.ProgrammeNotes = "bring a toilet roll tube";
+        meeting.LeaderNotes = "no hall this week";
+        meeting.IncomeAccountId = 42;
+
+        // Act
+        var result = await _sut.UpdateAsync(meeting);
+
+        // Assert
+        result.Success.Should().BeTrue();
+
+        var updated = await _context.Meetings.AsNoTracking().FirstAsync(m => m.Id == meeting.Id);
+        updated.ProgrammeNotes.Should().Be("bring a toilet roll tube");
+        updated.LeaderNotes.Should().Be("no hall this week");
+        updated.IncomeAccountId.Should().Be(42);
     }
 
     [Fact]

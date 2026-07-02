@@ -788,6 +788,145 @@ public class ProgrammeServiceTests : IDisposable
         (await _context.ActivityCompletions.CountAsync()).Should().Be(1);
     }
 
+    // ===== Unmark badge (undo mistakes) =====
+
+    [Fact]
+    public async Task UnmarkBadgeAwardedAsync_InvokesInventoryIncrement()
+    {
+        var inventory = new Mock<IInventoryService>();
+        var sut = new ProgrammeService(_context, inventory.Object);
+
+        var badge = new BadgeDefinition
+        {
+            Name = "Test Badge",
+            BadgeType = BadgeType.InterestBadge,
+            Section = Section.Brownie,
+            RequiredCompletions = 1
+        };
+        _context.BadgeDefinitions.Add(badge);
+        await _context.SaveChangesAsync();
+
+        _context.AwardedBadges.Add(new AwardedBadge
+        {
+            MembershipNumber = "G001",
+            BadgeDefinitionId = badge.Id,
+            DateAwarded = DateTime.Today
+        });
+        await _context.SaveChangesAsync();
+        var awardedId = (await _context.AwardedBadges.FirstAsync()).Id;
+
+        var result = await sut.UnmarkBadgeAwardedAsync("G001", badge.Id);
+
+        result.Success.Should().BeTrue();
+        inventory.Verify(i => i.TryIncrementForBadgeAsync(badge.Id, awardedId), Times.Once);
+        (await _context.AwardedBadges.AnyAsync()).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task MarkThenUnmark_LeavesStockUnchanged_EndToEnd()
+    {
+        var inventory = new InventoryService(_context, new Mock<IAccountingService>().Object);
+        var sut = new ProgrammeService(_context, inventory);
+
+        var badge = new BadgeDefinition
+        {
+            Name = "E2E Badge",
+            BadgeType = BadgeType.InterestBadge,
+            Section = Section.Brownie,
+            RequiredCompletions = 1
+        };
+        _context.BadgeDefinitions.Add(badge);
+        await _context.SaveChangesAsync();
+
+        _context.BadgeStockItems.Add(new BadgeStockItem
+        {
+            Name = "E2E Badge",
+            StockType = BadgeStockType.InterestBadge,
+            BadgeDefinitionId = badge.Id,
+            CurrentQuantity = 10,
+            IsActive = true
+        });
+        await _context.SaveChangesAsync();
+
+        await sut.MarkBadgeAwardedAsync("G001", badge.Id);
+
+        var afterMark = await _context.BadgeStockItems.FirstAsync(s => s.BadgeDefinitionId == badge.Id);
+        afterMark.CurrentQuantity.Should().Be(9);
+
+        await sut.UnmarkBadgeAwardedAsync("G001", badge.Id);
+
+        var afterUnmark = await _context.BadgeStockItems.FirstAsync(s => s.BadgeDefinitionId == badge.Id);
+        afterUnmark.CurrentQuantity.Should().Be(10);
+        (await _context.AwardedBadges.AnyAsync()).Should().BeFalse();
+    }
+
+    // ===== Recent awards listing =====
+
+    [Fact]
+    public async Task GetRecentAwardsAsync_ReturnsAwardsWithinWindow_NewestFirst()
+    {
+        var badge = new BadgeDefinition
+        {
+            Name = "Recent Badge",
+            BadgeType = BadgeType.FunBadge,
+            Section = Section.Brownie,
+            RequiredCompletions = 1
+        };
+        _context.BadgeDefinitions.Add(badge);
+
+        _context.Persons.Add(new Person
+        {
+            MembershipNumber = "G001",
+            FullName = "Alice",
+            PersonType = PersonType.Girl,
+            Section = Section.Brownie,
+            DateJoined = DateTime.Today.AddYears(-1),
+            IsActive = true
+        });
+        await _context.SaveChangesAsync();
+
+        _context.AwardedBadges.AddRange(
+            new AwardedBadge { MembershipNumber = "G001", BadgeDefinitionId = badge.Id, DateAwarded = DateTime.Today.AddDays(-2) },
+            new AwardedBadge { MembershipNumber = "G001", BadgeDefinitionId = badge.Id, DateAwarded = DateTime.Today.AddDays(-50) });
+        await _context.SaveChangesAsync();
+
+        var recent = await _sut.GetRecentAwardsAsync(days: 30);
+
+        recent.Should().HaveCount(1);
+        recent[0].BadgeName.Should().Be("Recent Badge");
+        recent[0].GirlName.Should().Be("Alice");
+        recent[0].BadgeType.Should().Be(BadgeType.FunBadge);
+    }
+
+    [Fact]
+    public async Task GetAwardedBadgesForGirlAsync_ReturnsOnlyThatGirl()
+    {
+        var badgeA = new BadgeDefinition { Name = "A", BadgeType = BadgeType.FunBadge, Section = Section.Brownie, RequiredCompletions = 1 };
+        var badgeB = new BadgeDefinition { Name = "B", BadgeType = BadgeType.FunBadge, Section = Section.Brownie, RequiredCompletions = 1 };
+        _context.BadgeDefinitions.AddRange(badgeA, badgeB);
+
+        _context.Persons.Add(new Person
+        {
+            MembershipNumber = "G001",
+            FullName = "Alice",
+            PersonType = PersonType.Girl,
+            Section = Section.Brownie,
+            DateJoined = DateTime.Today.AddYears(-1),
+            IsActive = true
+        });
+        await _context.SaveChangesAsync();
+
+        _context.AwardedBadges.AddRange(
+            new AwardedBadge { MembershipNumber = "G001", BadgeDefinitionId = badgeA.Id, DateAwarded = DateTime.Today },
+            new AwardedBadge { MembershipNumber = "G002", BadgeDefinitionId = badgeB.Id, DateAwarded = DateTime.Today });
+        await _context.SaveChangesAsync();
+
+        var list = await _sut.GetAwardedBadgesForGirlAsync("G001");
+
+        list.Should().HaveCount(1);
+        list[0].BadgeName.Should().Be("A");
+    }
+
     [Fact]
     public async Task BackfillFunBadgeCompletionsAsync_SkipsFutureMeetings()
     {

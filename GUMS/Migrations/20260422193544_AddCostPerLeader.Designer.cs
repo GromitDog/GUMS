@@ -3,6 +3,7 @@ using System;
 using GUMS.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GUMS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260422193544_AddCostPerLeader")]
+    partial class AddCostPerLeader
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -659,17 +662,11 @@ namespace GUMS.Migrations
                     b.Property<DateTime>("LastModifiedDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<bool?>("LeadersPay")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int>("MeetingId")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Notes")
                         .HasColumnType("TEXT");
-
-                    b.Property<int?>("PlannedAdultCount")
-                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -1065,33 +1062,6 @@ namespace GUMS.Migrations
                     b.ToTable("NightsAwayBadges");
                 });
 
-            modelBuilder.Entity("GUMS.Data.Entities.Patrol", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("EmblemBadgeDefinitionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Section")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EmblemBadgeDefinitionId");
-
-                    b.HasIndex("Section", "Name")
-                        .IsUnique();
-
-                    b.ToTable("Patrols");
-                });
-
             modelBuilder.Entity("GUMS.Data.Entities.Payment", b =>
                 {
                     b.Property<int>("Id")
@@ -1224,12 +1194,6 @@ namespace GUMS.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("PatrolId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("PatrolRole")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int>("PersonType")
                         .HasColumnType("INTEGER");
 
@@ -1252,16 +1216,7 @@ namespace GUMS.Migrations
                     b.HasIndex("MembershipNumber")
                         .IsUnique();
 
-                    b.HasIndex("PatrolId");
-
-                    b.HasIndex("PatrolId", "PatrolRole")
-                        .IsUnique()
-                        .HasFilter("\"PatrolRole\" <> 0");
-
-                    b.ToTable("Persons", t =>
-                        {
-                            t.HasCheckConstraint("CK_Person_PatrolRole_Requires_Patrol", "\"PatrolRole\" = 0 OR \"PatrolId\" IS NOT NULL");
-                        });
+                    b.ToTable("Persons");
                 });
 
             modelBuilder.Entity("GUMS.Data.Entities.Term", b =>
@@ -1994,17 +1949,6 @@ namespace GUMS.Migrations
                     b.Navigation("UmaDefinition");
                 });
 
-            modelBuilder.Entity("GUMS.Data.Entities.Patrol", b =>
-                {
-                    b.HasOne("GUMS.Data.Entities.BadgeDefinition", "EmblemBadge")
-                        .WithMany()
-                        .HasForeignKey("EmblemBadgeDefinitionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("EmblemBadge");
-                });
-
             modelBuilder.Entity("GUMS.Data.Entities.Payment", b =>
                 {
                     b.HasOne("GUMS.Data.Entities.Account", "IncomeAccount")
@@ -2034,16 +1978,6 @@ namespace GUMS.Migrations
                     b.Navigation("RefundTransaction");
 
                     b.Navigation("Term");
-                });
-
-            modelBuilder.Entity("GUMS.Data.Entities.Person", b =>
-                {
-                    b.HasOne("GUMS.Data.Entities.Patrol", "Patrol")
-                        .WithMany("Members")
-                        .HasForeignKey("PatrolId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Patrol");
                 });
 
             modelBuilder.Entity("GUMS.Data.Entities.Transaction", b =>
@@ -2203,11 +2137,6 @@ namespace GUMS.Migrations
             modelBuilder.Entity("GUMS.Data.Entities.MeetingActivity", b =>
                 {
                     b.Navigation("Completions");
-                });
-
-            modelBuilder.Entity("GUMS.Data.Entities.Patrol", b =>
-                {
-                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("GUMS.Data.Entities.Person", b =>

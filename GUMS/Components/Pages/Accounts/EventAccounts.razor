@@ -6,128 +6,343 @@
 
 <PageTitle>Event Accounts - GUMS</PageTitle>
 
+<style>
+    .event-accounts { max-width: 1200px; margin: 0 auto; }
+
+    .event-accounts .page-head {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 1rem;
+        padding-bottom: 1rem;
+        margin-bottom: 1.75rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .event-accounts .page-head .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--gg-muted);
+        margin-bottom: 0.25rem;
+    }
+    .event-accounts .page-head h2 {
+        margin: 0;
+        font-size: 1.6rem;
+        color: var(--gg-dark-navy);
+    }
+    .event-accounts .page-head .head-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .event-accounts .head-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.45rem 0.9rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        text-decoration: none;
+        color: var(--gg-dark-navy);
+        background: #f3f4f6;
+        border: 1px solid transparent;
+        transition: all 0.2s ease;
+    }
+    .event-accounts .head-link:hover { background: var(--gg-primary-blue); color: white; }
+
+    .event-accounts .tiles {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    .event-accounts .tile {
+        position: relative;
+        padding: 1rem 1.1rem 1.1rem;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 1px 2px rgba(22, 27, 78, 0.06), 0 1px 3px rgba(22, 27, 78, 0.04);
+        overflow: hidden;
+    }
+    .event-accounts .tile::before {
+        content: "";
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        width: 4px;
+        background: var(--gg-primary-blue);
+    }
+    .event-accounts .tile.accent-success::before { background: var(--gg-success); }
+    .event-accounts .tile.accent-danger::before { background: var(--gg-error); }
+    .event-accounts .tile.accent-warning::before { background: var(--gg-theme-take-action); }
+    .event-accounts .tile-label {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--gg-muted);
+        margin: 0 0 0.3rem;
+        font-weight: 500;
+    }
+    .event-accounts .tile-value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--gg-dark-navy);
+        margin: 0;
+        line-height: 1.1;
+    }
+    .event-accounts .tile-value.income { color: var(--gg-success); }
+    .event-accounts .tile-value.expense { color: var(--gg-error); }
+    .event-accounts .tile-value.outstanding { color: var(--gg-theme-take-action); }
+    .event-accounts .tile-sub { font-size: 0.78rem; color: var(--gg-muted); margin-top: 0.3rem; }
+
+    .event-accounts .net-position {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding: 0.9rem 1.25rem;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--gg-dark-navy), #1f2559);
+        color: white;
+        margin-bottom: 2rem;
+    }
+    .event-accounts .net-position .label {
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.78rem;
+        opacity: 0.8;
+    }
+    .event-accounts .net-position .value { font-size: 1.6rem; font-weight: 700; }
+    .event-accounts .net-position .value.positive { color: #7fe59b; }
+    .event-accounts .net-position .value.negative { color: #ff9a9a; }
+
+    .event-accounts .panel { margin-bottom: 1.75rem; }
+    .event-accounts .panel-heading {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding-bottom: 0.5rem;
+        margin-bottom: 0.9rem;
+        border-bottom: 2px solid var(--gg-primary-blue);
+    }
+    .event-accounts .panel-heading.income { border-bottom-color: var(--gg-success); }
+    .event-accounts .panel-heading.expense { border-bottom-color: var(--gg-error); }
+    .event-accounts .panel-heading h5 {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: var(--gg-dark-navy);
+    }
+    .event-accounts .panel-heading .accent-dot {
+        display: inline-block;
+        width: 10px; height: 10px;
+        border-radius: 50%;
+        background: var(--gg-primary-blue);
+    }
+    .event-accounts .panel-heading.income .accent-dot { background: var(--gg-success); }
+    .event-accounts .panel-heading.expense .accent-dot { background: var(--gg-error); }
+    .event-accounts .panel-empty {
+        padding: 1.5rem 1rem;
+        text-align: center;
+        color: var(--gg-muted);
+        font-style: italic;
+    }
+
+    .event-accounts table.ledger {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+    .event-accounts table.ledger thead th {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--gg-muted);
+        font-weight: 600;
+        padding: 0.5rem 0.6rem;
+        border-bottom: 1px solid #e5e7eb;
+        text-align: left;
+    }
+    .event-accounts table.ledger thead th.num { text-align: right; }
+    .event-accounts table.ledger tbody td {
+        padding: 0.55rem 0.6rem;
+        border-bottom: 1px solid #f3f4f6;
+        vertical-align: middle;
+    }
+    .event-accounts table.ledger tbody tr:hover td { background: #fafbfc; }
+    .event-accounts table.ledger td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .event-accounts table.ledger tfoot td {
+        padding: 0.6rem;
+        font-weight: 600;
+        border-top: 2px solid #e5e7eb;
+    }
+    .event-accounts .muted { color: var(--gg-muted); }
+    .event-accounts .credit-amt { color: var(--gg-theme-take-action); font-weight: 600; }
+    .event-accounts .outstanding-amt { color: var(--gg-error); }
+
+    .event-accounts .link-panel {
+        margin-top: 1rem;
+        padding: 1rem 1.1rem;
+        background: #f9fafb;
+        border-radius: 10px;
+        border: 1px dashed #d1d5db;
+    }
+    .event-accounts .link-panel-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    .event-accounts .link-panel-head h6 { margin: 0; font-size: 0.95rem; color: var(--gg-dark-navy); }
+    .event-accounts .link-toggle {
+        background: none;
+        border: none;
+        color: var(--gg-primary-blue);
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 0;
+    }
+    .event-accounts .link-toggle:hover { color: var(--gg-dark-navy); text-decoration: underline; }
+
+    .event-accounts .inline-alert {
+        padding: 0.7rem 1rem;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    .event-accounts .inline-alert.success {
+        background: rgba(38, 176, 80, 0.1);
+        color: var(--gg-dark-navy);
+        border-left: 3px solid var(--gg-success);
+    }
+    .event-accounts .inline-alert.error {
+        background: rgba(229, 0, 0, 0.08);
+        color: var(--gg-dark-navy);
+        border-left: 3px solid var(--gg-error);
+    }
+    .event-accounts .inline-alert .close-btn {
+        margin-left: auto;
+        background: none; border: none;
+        color: var(--gg-muted);
+        cursor: pointer;
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+
+    .event-accounts .state-badge {
+        display: inline-block;
+        padding: 0.15rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+    }
+    .event-accounts .state-badge.refunded {
+        background: #e5e7eb;
+        color: #4b5563;
+    }
+</style>
+
 <div class="container-fluid py-4">
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/Accounts">Accounts</a></li>
-            <li class="breadcrumb-item active">Event Accounts</li>
-        </ol>
-    </nav>
+    <div class="event-accounts">
 
-    @if (_isLoading)
-    {
-        <div class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
+        @if (_isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
             </div>
-        </div>
-    }
-    else if (_summary == null)
-    {
-        <div class="alert alert-danger">
-            <i class="bi bi-exclamation-triangle-fill"></i> Event not found.
-        </div>
-    }
-    else
-    {
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-2">
-            <h2>@_summary.MeetingTitle - Financial Summary</h2>
-            <div class="d-flex flex-wrap gap-2">
-                <a href="/Accounts/EventBudget/@MeetingId" class="btn btn-outline-info">
-                    <i class="bi bi-calculator"></i> <span class="d-none d-md-inline">Budget</span>
-                </a>
-                <a href="/Accounts/BudgetComparison/@MeetingId" class="btn btn-outline-primary">
-                    <i class="bi bi-bar-chart"></i> <span class="d-none d-md-inline">Budget vs Actual</span>
-                </a>
-                <a href="/Meetings/View/@MeetingId" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Back
-                </a>
+        }
+        else if (_summary == null)
+        {
+            <div class="inline-alert error">
+                <i class="bi bi-exclamation-triangle-fill"></i> Event not found.
             </div>
-        </div>
+        }
+        else
+        {
+            <div class="page-head">
+                <div>
+                    <p class="eyebrow">Event accounts</p>
+                    <h2>@_summary.MeetingTitle</h2>
+                </div>
+                <div class="head-actions">
+                    <a href="/Accounts/EventBudget/@MeetingId" class="head-link">
+                        <i class="bi bi-calculator"></i> Budget
+                    </a>
+                    <a href="/Accounts/BudgetComparison/@MeetingId" class="head-link">
+                        <i class="bi bi-bar-chart"></i> Budget vs Actual
+                    </a>
+                    <a href="/Meetings/View/@MeetingId" class="head-link">
+                        <i class="bi bi-arrow-left"></i> Back to event
+                    </a>
+                </div>
+            </div>
 
-        <!-- Summary Cards -->
-        <div class="row mb-4 g-2">
-            <div class="col-6 col-md-3">
-                <div class="card h-100">
-                    <div class="card-body text-center py-2 py-md-3">
-                        <h6 class="text-muted mb-1 small">Total Received</h6>
-                        <h3 class="mb-0 text-success fs-5 fs-md-3">@((_summary.TotalIncome + _summary.TotalCreditApplied).ToString("C"))</h3>
-                        @if (_summary.TotalCreditApplied > 0)
-                        {
-                            <small class="text-muted">incl. @_summary.TotalCreditApplied.ToString("C") credit</small>
-                        }
-                    </div>
+            <div class="tiles">
+                <div class="tile accent-success">
+                    <p class="tile-label">Total received</p>
+                    <p class="tile-value income">@((_summary.TotalIncome + _summary.TotalCreditApplied).ToString("C"))</p>
+                    @if (_summary.TotalCreditApplied > 0)
+                    {
+                        <p class="tile-sub">incl. @_summary.TotalCreditApplied.ToString("C") credit</p>
+                    }
+                </div>
+                <div class="tile">
+                    <p class="tile-label">Cash received</p>
+                    <p class="tile-value">@_summary.TotalIncome.ToString("C")</p>
+                    <p class="tile-sub">@_summary.PaidCount of @_summary.PaymentCount paid</p>
+                </div>
+                <div class="tile accent-danger">
+                    <p class="tile-label">Total expenses</p>
+                    <p class="tile-value expense">@_summary.TotalExpenses.ToString("C")</p>
+                </div>
+                <div class="tile @(_summary.TotalOutstanding > 0 ? "accent-warning" : "accent-success")">
+                    <p class="tile-label">Outstanding</p>
+                    @if (_summary.TotalOutstanding > 0)
+                    {
+                        <p class="tile-value outstanding">@_summary.TotalOutstanding.ToString("C")</p>
+                        <p class="tile-sub">@_summary.PendingCount pending</p>
+                    }
+                    else
+                    {
+                        <p class="tile-value income">@(0m.ToString("C"))</p>
+                        <p class="tile-sub"><i class="bi bi-check-circle"></i> All settled</p>
+                    }
                 </div>
             </div>
-            <div class="col-6 col-md-3">
-                <div class="card h-100">
-                    <div class="card-body text-center py-2 py-md-3">
-                        <h6 class="text-muted mb-1 small">Cash Received</h6>
-                        <h3 class="mb-0 fs-5 fs-md-3" style="color: var(--gg-primary-blue);">@_summary.TotalIncome.ToString("C")</h3>
-                        <small class="text-muted">@_summary.PaidCount of @_summary.PaymentCount paid</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="card h-100">
-                    <div class="card-body text-center py-2 py-md-3">
-                        <h6 class="text-muted mb-1 small">Total Expenses</h6>
-                        <h3 class="mb-0 text-danger fs-5 fs-md-3">@_summary.TotalExpenses.ToString("C")</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="card h-100 @(_summary.TotalOutstanding > 0 ? "border-warning" : "border-success")">
-                    <div class="card-body text-center py-2 py-md-3">
-                        <h6 class="text-muted mb-1 small">Outstanding</h6>
-                        @if (_summary.TotalOutstanding > 0)
-                        {
-                            <h3 class="mb-0 fs-5 fs-md-3" style="color: #ff9800;">@_summary.TotalOutstanding.ToString("C")</h3>
-                            <small class="text-muted">@_summary.PendingCount pending</small>
-                        }
-                        else
-                        {
-                            <h3 class="mb-0 text-success fs-5 fs-md-3">@(0m.ToString("C"))</h3>
-                            <small class="text-success"><i class="bi bi-check-circle"></i> All settled</small>
-                        }
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Net Position -->
-        <div class="card mb-4 @(_summary.NetPosition >= 0 ? "border-success" : "border-danger")">
-            <div class="card-body text-center py-2">
-                <span class="text-muted me-2">Net Position:</span>
-                <strong class="fs-5 @(_summary.NetPosition >= 0 ? "text-success" : "text-danger")">
+            <div class="net-position">
+                <span class="label">Net position</span>
+                <span class="value @(_summary.NetPosition >= 0 ? "positive" : "negative")">
                     @_summary.NetPosition.ToString("C")
-                </strong>
+                </span>
             </div>
-        </div>
 
-        <div class="row">
-            <!-- Income Breakdown -->
-            <div class="col-lg-7">
-                <div class="card mb-4">
-                    <div class="card-header" style="background-color: var(--gg-success); color: white;">
-                        <h5 class="mb-0"><i class="bi bi-graph-up-arrow"></i> Payments</h5>
-                    </div>
-                    <div class="card-body">
+            <div class="row g-4">
+                <div class="col-lg-7">
+                    <div class="panel">
+                        <div class="panel-heading income">
+                            <span class="accent-dot"></span>
+                            <h5>Payments</h5>
+                        </div>
                         @if (!_summary.IncomeBreakdown.Any())
                         {
-                            <p class="text-muted text-center py-3">No payments recorded for this event.</p>
+                            <div class="panel-empty">No payments recorded for this event.</div>
                         }
                         else
                         {
                             <div class="table-responsive">
-                                <table class="table table-sm table-hover mb-0">
+                                <table class="ledger">
                                     <thead>
                                         <tr>
                                             <th>Member</th>
-                                            <th class="d-none d-md-table-cell text-end">Due</th>
-                                            <th class="text-end">Paid</th>
-                                            <th class="text-end">Credit</th>
-                                            <th class="d-none d-md-table-cell text-end">Outstanding</th>
+                                            <th class="num d-none d-md-table-cell">Due</th>
+                                            <th class="num">Paid</th>
+                                            <th class="num">Credit</th>
+                                            <th class="num d-none d-md-table-cell">Outstanding</th>
                                             <th>Status</th>
                                             <th class="d-none d-lg-table-cell">Method</th>
                                         </tr>
@@ -137,35 +352,35 @@
                                         {
                                             <tr>
                                                 <td>@item.Description</td>
-                                                <td class="d-none d-md-table-cell text-end">@item.Amount.ToString("C")</td>
-                                                <td class="text-end">
+                                                <td class="num d-none d-md-table-cell">@item.Amount.ToString("C")</td>
+                                                <td class="num">
                                                     @if (item.AmountPaid > 0)
                                                     {
                                                         @item.AmountPaid.ToString("C")
                                                     }
                                                     else
                                                     {
-                                                        <span class="text-muted">—</span>
+                                                        <span class="muted">—</span>
                                                     }
                                                 </td>
-                                                <td class="text-end">
+                                                <td class="num">
                                                     @if (item.CreditApplied > 0)
                                                     {
-                                                        <strong style="color: #ff9800;">@item.CreditApplied.ToString("C")</strong>
+                                                        <span class="credit-amt">@item.CreditApplied.ToString("C")</span>
                                                     }
                                                     else
                                                     {
-                                                        <span class="text-muted">—</span>
+                                                        <span class="muted">—</span>
                                                     }
                                                 </td>
-                                                <td class="d-none d-md-table-cell text-end">
+                                                <td class="num d-none d-md-table-cell">
                                                     @if (item.Outstanding > 0)
                                                     {
-                                                        <span class="text-danger">@item.Outstanding.ToString("C")</span>
+                                                        <span class="outstanding-amt">@item.Outstanding.ToString("C")</span>
                                                     }
                                                     else
                                                     {
-                                                        <span class="text-muted">—</span>
+                                                        <span class="muted">—</span>
                                                     }
                                                 </td>
                                                 <td>
@@ -179,41 +394,41 @@
                                                     }
                                                     else if (item.Status == PaymentStatus.Refunded)
                                                     {
-                                                        <span class="badge bg-secondary">Refunded</span>
+                                                        <span class="state-badge refunded">Refunded</span>
                                                     }
                                                 </td>
-                                                <td class="d-none d-lg-table-cell">
+                                                <td class="d-none d-lg-table-cell muted">
                                                     @if (item.PaymentMethod.HasValue)
                                                     {
-                                                        <small class="text-muted">@FormatPaymentMethod(item.PaymentMethod.Value)</small>
+                                                        @FormatPaymentMethod(item.PaymentMethod.Value)
                                                     }
                                                 </td>
                                             </tr>
                                         }
                                     </tbody>
                                     <tfoot>
-                                        <tr class="table-success fw-bold">
+                                        <tr>
                                             <td>Total</td>
-                                            <td class="d-none d-md-table-cell text-end">@_summary.TotalAmountDue.ToString("C")</td>
-                                            <td class="text-end">@_summary.TotalIncome.ToString("C")</td>
-                                            <td class="text-end">
+                                            <td class="num d-none d-md-table-cell">@_summary.TotalAmountDue.ToString("C")</td>
+                                            <td class="num">@_summary.TotalIncome.ToString("C")</td>
+                                            <td class="num">
                                                 @if (_summary.TotalCreditApplied > 0)
                                                 {
-                                                    <span style="color: #ff9800;">@_summary.TotalCreditApplied.ToString("C")</span>
+                                                    <span class="credit-amt">@_summary.TotalCreditApplied.ToString("C")</span>
                                                 }
                                                 else
                                                 {
-                                                    <span>—</span>
+                                                    <span class="muted">—</span>
                                                 }
                                             </td>
-                                            <td class="d-none d-md-table-cell text-end">
+                                            <td class="num d-none d-md-table-cell">
                                                 @if (_summary.TotalOutstanding > 0)
                                                 {
-                                                    <span class="text-danger">@_summary.TotalOutstanding.ToString("C")</span>
+                                                    <span class="outstanding-amt">@_summary.TotalOutstanding.ToString("C")</span>
                                                 }
                                                 else
                                                 {
-                                                    <span>—</span>
+                                                    <span class="muted">—</span>
                                                 }
                                             </td>
                                             <td colspan="2"></td>
@@ -224,26 +439,24 @@
                         }
                     </div>
                 </div>
-            </div>
 
-            <!-- Expense Breakdown -->
-            <div class="col-lg-5">
-                <div class="card mb-4">
-                    <div class="card-header" style="background-color: var(--gg-error); color: white;">
-                        <h5 class="mb-0"><i class="bi bi-graph-down-arrow"></i> Expenses</h5>
-                    </div>
-                    <div class="card-body">
+                <div class="col-lg-5">
+                    <div class="panel">
+                        <div class="panel-heading expense">
+                            <span class="accent-dot"></span>
+                            <h5>Expenses</h5>
+                        </div>
                         @if (!_summary.ExpenseBreakdown.Any())
                         {
-                            <p class="text-muted text-center py-3">No expenses recorded for this event.</p>
+                            <div class="panel-empty">No expenses recorded for this event.</div>
                         }
                         else
                         {
-                            <table class="table table-sm mb-0">
+                            <table class="ledger">
                                 <thead>
                                     <tr>
                                         <th>Category</th>
-                                        <th class="text-end">Amount</th>
+                                        <th class="num">Amount</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -251,14 +464,14 @@
                                     {
                                         <tr>
                                             <td>@item.CategoryName</td>
-                                            <td class="text-end">@item.Amount.ToString("C")</td>
+                                            <td class="num">@item.Amount.ToString("C")</td>
                                         </tr>
                                     }
                                 </tbody>
                                 <tfoot>
-                                    <tr class="table-danger">
-                                        <td><strong>Total</strong></td>
-                                        <td class="text-end"><strong>@_summary.TotalExpenses.ToString("C")</strong></td>
+                                    <tr>
+                                        <td>Total</td>
+                                        <td class="num">@_summary.TotalExpenses.ToString("C")</td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -266,74 +479,75 @@
                     </div>
                 </div>
             </div>
-        </div>
 
-        @if (!string.IsNullOrEmpty(_linkSuccess))
-        {
-            <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
-                <i class="bi bi-check-circle-fill"></i> @_linkSuccess
-                <button type="button" class="btn-close" @onclick="() => _linkSuccess = string.Empty"></button>
-            </div>
-        }
-
-        @if (!string.IsNullOrEmpty(_linkError))
-        {
-            <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
-                <i class="bi bi-exclamation-triangle-fill"></i> @_linkError
-                <button type="button" class="btn-close" @onclick="() => _linkError = string.Empty"></button>
-            </div>
-        }
-
-        <!-- Link existing payments -->
-        @if (_unlinkedPayments.Any())
-        {
-            <div class="card mt-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0"><i class="bi bi-link-45deg"></i> Link existing payments to this event</h6>
-                    <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleLinkPanel">
-                        @(_showLinkPanel ? "Hide" : $"Show {_unlinkedPayments.Count} unlinked payment{(_unlinkedPayments.Count != 1 ? "s" : "")}")
-                    </button>
+            @if (!string.IsNullOrEmpty(_linkSuccess))
+            {
+                <div class="inline-alert success">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>@_linkSuccess</span>
+                    <button type="button" class="close-btn" @onclick="() => _linkSuccess = string.Empty">&times;</button>
                 </div>
-                @if (_showLinkPanel)
-                {
-                    <div class="card-body">
-                        <p class="text-muted small mb-3">These paid one-off payments aren't linked to any event. Tick the ones that belong to this event and click Link.</p>
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th style="width:2rem;"></th>
-                                        <th class="d-none d-md-table-cell">Reference</th>
-                                        <th>Member</th>
-                                        <th class="text-end">Amount paid</th>
-                                        <th class="d-none d-md-table-cell">Date paid</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var p in _unlinkedPayments)
-                                    {
-                                        <tr>
-                                            <td>
-                                                <input type="checkbox" class="form-check-input"
-                                                       checked="@_selectedPaymentIds.Contains(p.Id)"
-                                                       @onchange="() => TogglePayment(p.Id)" />
-                                            </td>
-                                            <td class="d-none d-md-table-cell">@p.Reference</td>
-                                            <td>@p.MembershipNumber</td>
-                                            <td class="text-end">@p.AmountPaid.ToString("C")</td>
-                                            <td class="d-none d-md-table-cell">@(p.PaymentDate?.ToString("d MMM yyyy") ?? "-")</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                        <button class="btn btn-primary" @onclick="LinkSelectedPayments"
-                                disabled="@(!_selectedPaymentIds.Any() || _isLinking)">
-                            <i class="bi bi-link-45deg"></i> Link selected (@_selectedPaymentIds.Count)
+            }
+
+            @if (!string.IsNullOrEmpty(_linkError))
+            {
+                <div class="inline-alert error">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <span>@_linkError</span>
+                    <button type="button" class="close-btn" @onclick="() => _linkError = string.Empty">&times;</button>
+                </div>
+            }
+
+            @if (_unlinkedPayments.Any())
+            {
+                <div class="link-panel">
+                    <div class="link-panel-head">
+                        <h6><i class="bi bi-link-45deg"></i> Link existing payments to this event</h6>
+                        <button class="link-toggle" @onclick="ToggleLinkPanel">
+                            @(_showLinkPanel ? "Hide" : $"Show {_unlinkedPayments.Count} unlinked payment{(_unlinkedPayments.Count != 1 ? "s" : "")}")
                         </button>
                     </div>
-                }
-            </div>
+                    @if (_showLinkPanel)
+                    {
+                        <div class="mt-3">
+                            <p class="muted small mb-3">These paid one-off payments aren't linked to any event. Tick the ones that belong to this event and click Link.</p>
+                            <div class="table-responsive">
+                                <table class="ledger">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:2rem;"></th>
+                                            <th class="d-none d-md-table-cell">Reference</th>
+                                            <th>Member</th>
+                                            <th class="num">Amount paid</th>
+                                            <th class="d-none d-md-table-cell">Date paid</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var p in _unlinkedPayments)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <input type="checkbox" class="form-check-input"
+                                                           checked="@_selectedPaymentIds.Contains(p.Id)"
+                                                           @onchange="() => TogglePayment(p.Id)" />
+                                                </td>
+                                                <td class="d-none d-md-table-cell">@p.Reference</td>
+                                                <td>@p.MembershipNumber</td>
+                                                <td class="num">@p.AmountPaid.ToString("C")</td>
+                                                <td class="d-none d-md-table-cell muted">@(p.PaymentDate?.ToString("d MMM yyyy") ?? "-")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button class="btn btn-primary mt-3" @onclick="LinkSelectedPayments"
+                                    disabled="@(!_selectedPaymentIds.Any() || _isLinking)">
+                                <i class="bi bi-link-45deg"></i> Link selected (@_selectedPaymentIds.Count)
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
         }
-    }
+    </div>
 </div>

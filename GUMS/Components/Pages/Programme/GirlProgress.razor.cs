@@ -13,6 +13,7 @@ public partial class GirlProgress
     [Parameter] public string MembershipNumber { get; set; } = string.Empty;
 
     private GUMS.Services.GirlProgress? _progress;
+    private List<AwardedBadgeSummary> _awardedBadges = new();
     private bool _isLoading = true;
     private bool _isSaving;
 
@@ -39,12 +40,30 @@ public partial class GirlProgress
         try
         {
             _progress = await ProgrammeService.GetGirlProgressAsync(MembershipNumber);
+            _awardedBadges = await ProgrammeService.GetAwardedBadgesForGirlAsync(MembershipNumber);
             await LoadUmaData();
             ComputeNearCompleteItems();
         }
         finally
         {
             _isLoading = false;
+        }
+    }
+
+    private async Task UndoAward(AwardedBadgeSummary summary)
+    {
+        if (_isSaving) return;
+        _isSaving = true;
+        try
+        {
+            await ProgrammeService.UnmarkBadgeAwardedAsync(summary.MembershipNumber, summary.BadgeDefinitionId);
+            _progress = await ProgrammeService.GetGirlProgressAsync(MembershipNumber);
+            _awardedBadges = await ProgrammeService.GetAwardedBadgesForGirlAsync(MembershipNumber);
+            ComputeNearCompleteItems();
+        }
+        finally
+        {
+            _isSaving = false;
         }
     }
 

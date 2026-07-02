@@ -44,6 +44,13 @@ public class Meeting
     [Range(0, 10000)]
     public decimal? CostPerAttendee { get; set; }
 
+    /// <summary>
+    /// Cost charged to leaders attending this event.
+    /// Null or 0 means leaders don't pay. If set, used instead of CostPerAttendee for payment generation.
+    /// </summary>
+    [Range(0, 10000)]
+    public decimal? CostPerLeader { get; set; }
+
     public DateTime? PaymentDeadline { get; set; }
 
     /// <summary>

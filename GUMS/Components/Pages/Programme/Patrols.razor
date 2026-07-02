@@ -1,0 +1,274 @@
+@page "/Programme/Patrols"
+@using Microsoft.AspNetCore.Authorization
+@using GUMS.Data.Enums
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>@GroupPlural - GUMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Home</a></li>
+            <li class="breadcrumb-item active">@GroupPlural</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h2 class="mb-0">@GroupPlural</h2>
+        @if (_sectionSupported)
+        {
+            <button class="btn btn-primary" @onclick="OpenCreateModal" disabled="@_isSaving">
+                <i class="bi bi-plus-lg"></i> New @GroupSingular
+            </button>
+        }
+    </div>
+
+    @if (!_sectionSupported)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            This unit doesn't use patrols or sixes. Only Brownie and Guide units are organised this way.
+        </div>
+    }
+    else if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @_errorMessage
+                <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+            </div>
+        }
+
+        @if (!_patrols.Any())
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-people" style="font-size: 3rem; color: #ccc;"></i>
+                <p class="text-muted mt-2">
+                    No @GroupPlural.ToLower() yet.
+                    Click "New @GroupSingular" to get started.
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3 mb-4">
+                @foreach (var patrol in _patrols)
+                {
+                    var emblemId = patrol.EmblemBadgeDefinitionId;
+                    var isRenaming = _renamingPatrolId == patrol.Id;
+                    var isConfirmingDelete = _confirmDeletePatrolId == patrol.Id;
+
+                    <div class="col">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-header d-flex justify-content-between align-items-center"
+                                 style="background-color: var(--gg-primary-blue); color: white;">
+                                @if (isRenaming)
+                                {
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control" @bind="_renamePatrolName"
+                                               @bind:event="oninput" placeholder="Patrol name" />
+                                        <button class="btn btn-light" @onclick="SaveRename" disabled="@_isSaving">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                        <button class="btn btn-outline-light" @onclick="CancelRename">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div>
+                                        <h5 class="mb-0">@patrol.Name</h5>
+                                        <small class="opacity-75">@patrol.Name Emblem</small>
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-sm btn-outline-light" title="Rename"
+                                                @onclick="() => StartRename(patrol)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-light" title="Delete"
+                                                disabled="@(patrol.Members.Any())"
+                                                @onclick="() => AskConfirmDelete(patrol.Id)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+
+                            @if (isConfirmingDelete)
+                            {
+                                <div class="card-body bg-light">
+                                    <p class="mb-2"><strong>Delete @patrol.Name?</strong></p>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-danger" @onclick="ConfirmDelete" disabled="@_isSaving">
+                                            Yes, delete
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="CancelDelete">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="card-body">
+                                @if (!patrol.Members.Any())
+                                {
+                                    <p class="text-muted fst-italic mb-3">No members yet.</p>
+                                }
+                                else
+                                {
+                                    <ul class="list-group list-group-flush mb-3">
+                                        @foreach (var girl in OrderedMembers(patrol))
+                                        {
+                                            var hasEmblem = HasBadge(girl.MembershipNumber, emblemId);
+                                            var roleBadgeId = girl.PatrolRole == PatrolRole.Leader
+                                                ? _roleBadgeIds.GetValueOrDefault(PatrolRole.Leader)
+                                                : girl.PatrolRole == PatrolRole.Seconder
+                                                    ? _roleBadgeIds.GetValueOrDefault(PatrolRole.Seconder)
+                                                    : 0;
+                                            var hasRoleBadge = roleBadgeId > 0 && HasBadge(girl.MembershipNumber, roleBadgeId);
+                                            var isRoleHolder = girl.PatrolRole != PatrolRole.Member;
+
+                                            <li class="list-group-item px-0">
+                                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                                    <div class="flex-grow-1">
+                                                        <div class="fw-bold">
+                                                            @if (isRoleHolder)
+                                                            {
+                                                                <span class="badge bg-secondary me-1">@RoleDisplay(patrol.Section, girl.PatrolRole)</span>
+                                                            }
+                                                            @girl.FullName
+                                                        </div>
+                                                        <div class="small mt-1">
+                                                            <div class="form-check form-check-inline">
+                                                                <input class="form-check-input" type="checkbox"
+                                                                       id="emblem-@girl.MembershipNumber"
+                                                                       checked="@hasEmblem"
+                                                                       disabled="@_isSaving"
+                                                                       @onchange="() => ToggleBadge(girl.MembershipNumber, emblemId, hasEmblem)" />
+                                                                <label class="form-check-label" for="emblem-@girl.MembershipNumber">
+                                                                    Emblem received
+                                                                </label>
+                                                            </div>
+                                                            @if (isRoleHolder && roleBadgeId > 0)
+                                                            {
+                                                                <div class="form-check form-check-inline">
+                                                                    <input class="form-check-input" type="checkbox"
+                                                                           id="role-@girl.MembershipNumber"
+                                                                           checked="@hasRoleBadge"
+                                                                           disabled="@_isSaving"
+                                                                           @onchange="() => ToggleBadge(girl.MembershipNumber, roleBadgeId, hasRoleBadge)" />
+                                                                    <label class="form-check-label" for="role-@girl.MembershipNumber">
+                                                                        @RoleDisplay(patrol.Section, girl.PatrolRole) badge received
+                                                                    </label>
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex flex-column gap-1" style="min-width: 120px;">
+                                                        <select class="form-select form-select-sm"
+                                                                value="@girl.PatrolRole"
+                                                                disabled="@_isSaving"
+                                                                @onchange="(e) => ChangeRole(girl.MembershipNumber, e)">
+                                                            <option value="@PatrolRole.Member">Member</option>
+                                                            <option value="@PatrolRole.Leader">@LeaderLabel(patrol.Section)</option>
+                                                            <option value="@PatrolRole.Seconder">@SeconderLabel(patrol.Section)</option>
+                                                        </select>
+                                                        <button class="btn btn-sm btn-outline-danger"
+                                                                title="Remove from patrol"
+                                                                disabled="@_isSaving"
+                                                                @onclick="() => RemoveMember(girl.MembershipNumber)">
+                                                            <i class="bi bi-x"></i> Remove
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+
+                                @if (_unassigned.Any())
+                                {
+                                    <select class="form-select form-select-sm"
+                                            disabled="@_isSaving"
+                                            value=""
+                                            @onchange="(e) => AddMember(patrol.Id, e)">
+                                        <option value="">Add a member…</option>
+                                        @foreach (var girl in _unassigned)
+                                        {
+                                            <option value="@girl.MembershipNumber">@girl.FullName</option>
+                                        }
+                                    </select>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        @if (_unassigned.Any())
+        {
+            <div class="card">
+                <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
+                    <h5 class="mb-0">
+                        <i class="bi bi-person-dash"></i> Unassigned @MembersPlural
+                        <span class="badge bg-light text-dark ms-2">@_unassigned.Count</span>
+                    </h5>
+                </div>
+                <ul class="list-group list-group-flush">
+                    @foreach (var girl in _unassigned)
+                    {
+                        <li class="list-group-item">@girl.FullName</li>
+                    }
+                </ul>
+            </div>
+        }
+    }
+</div>
+
+@if (_showCreateModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        New @GroupSingular
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Name</label>
+                    <input type="text" class="form-control" @bind="_newPatrolName"
+                           @bind:event="oninput"
+                           placeholder="e.g. Rabbit, Kingfisher" />
+                    <div class="form-text">
+                        A badge called "@_newPatrolName Emblem" will be created automatically.
+                    </div>
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger mt-3">@_errorMessage</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseCreateModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="CreatePatrol"
+                            disabled="@(_isSaving || string.IsNullOrWhiteSpace(_newPatrolName))">
+                        Create
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}

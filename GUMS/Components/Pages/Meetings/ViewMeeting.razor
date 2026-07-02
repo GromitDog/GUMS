@@ -157,7 +157,7 @@
                                 </div>
                             }
 
-                            @if (meeting.CostPerAttendee.HasValue && meeting.CostPerAttendee.Value > 0)
+                            @if (HasEventCost)
                             {
                                 <div class="col-md-12">
                                     <div class="card" style="background-color: #FFF9E6; border-color: #FFE08A;">
@@ -166,7 +166,16 @@
                                                 <i class="bi bi-currency-pound"></i> Cost Information
                                             </h6>
                                             <p class="mb-1">
-                                                <strong>Cost per attendee:</strong> £@meeting.CostPerAttendee.Value.ToString("F2")
+                                                <strong>Cost per girl:</strong>
+                                                @((meeting.CostPerAttendee ?? 0) > 0
+                                                    ? $"£{meeting.CostPerAttendee!.Value:F2}"
+                                                    : "Free")
+                                            </p>
+                                            <p class="mb-1">
+                                                <strong>Cost per leader:</strong>
+                                                @((meeting.CostPerLeader ?? 0) > 0
+                                                    ? $"£{meeting.CostPerLeader!.Value:F2}"
+                                                    : "Free")
                                             </p>
                                             @if (meeting.PaymentDeadline.HasValue)
                                             {
@@ -325,7 +334,7 @@
                             <a href="/Meetings/Attendance/@MeetingId" class="btn btn-success">
                                 <i class="bi bi-people"></i> @(attendanceStats?.HasBeenRecorded == true ? "Edit Attendance" : "Record Attendance")
                             </a>
-                            @if (meeting.CostPerAttendee.HasValue && meeting.CostPerAttendee.Value > 0)
+                            @if (HasEventCost)
                             {
                                 <a href="/Accounts/EventAccounts/@MeetingId" class="btn btn-outline-success">
                                     <i class="bi bi-currency-pound"></i> View Event Accounts
@@ -387,12 +396,21 @@
                             </p>
                         }
 
-                        @if (meeting.CostPerAttendee.HasValue && meeting.CostPerAttendee.Value > 0)
+                        @if (HasEventCost)
                         {
                             <hr />
-                            <p class="mb-1">
-                                <i class="bi bi-currency-pound"></i> <strong>Has Cost:</strong> £@meeting.CostPerAttendee.Value.ToString("F2")
-                            </p>
+                            @if ((meeting.CostPerAttendee ?? 0) > 0)
+                            {
+                                <p class="mb-1">
+                                    <i class="bi bi-currency-pound"></i> <strong>Girls:</strong> £@meeting.CostPerAttendee!.Value.ToString("F2")
+                                </p>
+                            }
+                            @if ((meeting.CostPerLeader ?? 0) > 0)
+                            {
+                                <p class="mb-1">
+                                    <i class="bi bi-currency-pound"></i> <strong>Leaders:</strong> £@meeting.CostPerLeader!.Value.ToString("F2")
+                                </p>
+                            }
                             <p class="mb-1">
                                 <i class="bi bi-cash-coin"></i> <strong>Payments:</strong>
                                 @eventPaymentsCount generated
@@ -421,7 +439,7 @@
         </div>
 
         <!-- Generate Payments Confirmation Modal -->
-        @if (showGeneratePaymentsConfirm && meeting.CostPerAttendee.HasValue)
+        @if (showGeneratePaymentsConfirm && HasEventCost)
         {
             <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
                 <div class="modal-dialog modal-dialog-centered">
@@ -433,8 +451,19 @@
                             <button type="button" class="btn-close" @onclick="CancelGeneratePayments"></button>
                         </div>
                         <div class="modal-body">
-                            <p>This will create payment records for <strong>@consentedWithoutPayment</strong> member@(consentedWithoutPayment != 1 ? "s" : "") who said yes for <strong>@meeting.Title</strong>.</p>
-                            <p class="mb-1"><strong>Amount per person:</strong> £@meeting.CostPerAttendee.Value.ToString("F2")</p>
+                            <p>This will create payment records for <strong>@consentedWithoutPayment</strong> member@(consentedWithoutPayment != 1 ? "s" : "") for <strong>@meeting.Title</strong>.</p>
+                            <p class="mb-1">
+                                <strong>Girls:</strong>
+                                @((meeting.CostPerAttendee ?? 0) > 0
+                                    ? $"£{meeting.CostPerAttendee!.Value:F2} each"
+                                    : "don't pay")
+                            </p>
+                            <p class="mb-1">
+                                <strong>Leaders:</strong>
+                                @((meeting.CostPerLeader ?? 0) > 0
+                                    ? $"£{meeting.CostPerLeader!.Value:F2} each"
+                                    : "don't pay")
+                            </p>
                             @if (meeting.PaymentDeadline.HasValue)
                             {
                                 <p class="mb-0"><strong>Due date:</strong> @meeting.PaymentDeadline.Value.ToString("dd MMM yyyy")</p>

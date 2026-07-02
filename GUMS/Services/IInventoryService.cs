@@ -28,6 +28,9 @@ public interface IInventoryService
     Task TryDecrementForLevelAsync(string level);
     Task TryDecrementForNightsAwayAsync(int milestone);
 
+    /// <summary>Reverses a prior Award decrement for a specific AwardedBadge. No-op if no matching Award transaction exists.</summary>
+    Task TryIncrementForBadgeAsync(int badgeDefinitionId, int awardedBadgeId);
+
     // Alerts
     Task<List<LowStockAlert>> GetLowStockAlertsAsync();
 }

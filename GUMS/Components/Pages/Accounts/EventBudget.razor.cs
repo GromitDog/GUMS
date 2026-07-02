@@ -33,6 +33,10 @@ public partial class EventBudget
     private int? _itemExpenseAccountId;
     private string _budgetNotes = string.Empty;
 
+    // Projection what-if state (persisted on the budget)
+    private bool _leadersPay;
+    private int _adultCount;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
@@ -55,6 +59,11 @@ public partial class EventBudget
             {
                 _budgetNotes = _budget.Notes ?? string.Empty;
                 _estimate = await BudgetService.GetBudgetEstimateAsync(MeetingId);
+                if (_estimate != null)
+                {
+                    _leadersPay = _estimate.LeadersPay;
+                    _adultCount = _estimate.AdultCount;
+                }
             }
         }
         catch (Exception ex)
@@ -186,6 +195,27 @@ public partial class EventBudget
             tracked.LastModifiedDate = DateTime.UtcNow;
             await DbContext.SaveChangesAsync();
             _successMessage = "Notes saved.";
+        }
+    }
+
+    private async Task RecalculateAsync()
+    {
+        if (_budget == null) return;
+
+        if (_adultCount < 0) _adultCount = 0;
+
+        var save = await BudgetService.UpdateBudgetPlanningAsync(MeetingId, _leadersPay, _adultCount);
+        if (!save.Success)
+        {
+            _errorMessage = save.ErrorMessage;
+            return;
+        }
+
+        _estimate = await BudgetService.GetBudgetEstimateAsync(MeetingId);
+        if (_estimate != null)
+        {
+            _leadersPay = _estimate.LeadersPay;
+            _adultCount = _estimate.AdultCount;
         }
     }
 

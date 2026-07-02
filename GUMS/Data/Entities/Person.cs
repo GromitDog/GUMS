@@ -55,6 +55,12 @@ public class Person
     // Extra nights away from previous units (leaders only)
     public int ExtraNightsAway { get; set; }
 
+    // Patrol / Six assignment (nullable — girl may be unassigned)
+    public int? PatrolId { get; set; }
+    public Patrol? Patrol { get; set; }
+
+    public PatrolRole PatrolRole { get; set; } = PatrolRole.Member;
+
     // Navigation properties
     public List<EmergencyContact> EmergencyContacts { get; set; } = new();
 }

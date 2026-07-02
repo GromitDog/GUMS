@@ -107,7 +107,7 @@ public class BudgetService : IBudgetService
     }
 
     /// <inheritdoc/>
-    public async Task<BudgetEstimate?> GetBudgetEstimateAsync(int meetingId)
+    public async Task<BudgetEstimate?> GetBudgetEstimateAsync(int meetingId, bool? leadersPayOverride = null, int? adultCountOverride = null)
     {
         var budget = await _context.EventBudgets
             .AsNoTracking()
@@ -121,12 +121,19 @@ public class BudgetService : IBudgetService
         var girlCount = await _context.Persons
             .CountAsync(p => p.IsActive && !p.IsDataRemoved && p.PersonType == PersonType.Girl);
 
-        var adultCount = await _context.Persons
+        var activeLeaderCount = await _context.Persons
             .CountAsync(p => p.IsActive && !p.IsDataRemoved && p.PersonType == PersonType.Leader);
 
-        var highGirls = girlCount;
-        var midGirls = (int)Math.Round(girlCount * 0.75m);
-        var lowGirls = (int)Math.Round(girlCount * 0.5m);
+        // Leaders pay: explicit override → stored choice → derive from the meeting's leader charge.
+        var leadersPay = leadersPayOverride
+            ?? budget.LeadersPay
+            ?? (budget.Meeting.CostPerLeader ?? 0) > 0;
+
+        // Adults for the split: explicit override → stored planned count → current active leaders.
+        var adultCount = adultCountOverride
+            ?? budget.PlannedAdultCount
+            ?? activeLeaderCount;
+        if (adultCount < 0) adultCount = 0;
 
         var estimate = new BudgetEstimate
         {
@@ -134,28 +141,89 @@ public class BudgetService : IBudgetService
             MeetingTitle = budget.Meeting.Title,
             GirlCount = girlCount,
             AdultCount = adultCount,
-            HighGirls = highGirls,
-            MidGirls = midGirls,
-            LowGirls = lowGirls
+            ActiveLeaderCount = activeLeaderCount,
+            LeadersPay = leadersPay,
+            CostPerAttendee = budget.Meeting.CostPerAttendee,
+            CostPerLeader = budget.Meeting.CostPerLeader
         };
 
-        estimate.HighTotal = CalculateScenarioTotal(budget.Items, highGirls, adultCount);
-        estimate.MidTotal = CalculateScenarioTotal(budget.Items, midGirls, adultCount);
-        estimate.LowTotal = CalculateScenarioTotal(budget.Items, lowGirls, adultCount);
+        var scenarios = new[]
+        {
+            ("Full turnout", girlCount),
+            ("Likely (75%)", (int)Math.Round(girlCount * 0.75m)),
+            ("Low (50%)", (int)Math.Round(girlCount * 0.5m))
+        };
 
-        var highHeadcount = highGirls + adultCount;
-        var midHeadcount = midGirls + adultCount;
-        var lowHeadcount = lowGirls + adultCount;
+        foreach (var (label, girls) in scenarios)
+        {
+            var total = CalculateScenarioTotal(budget.Items, girls, adultCount);
+            var (perGirl, perAdult) = CalculateBreakEven(budget.Items, girls, adultCount, leadersPay);
 
-        estimate.HighPerPerson = highHeadcount > 0 ? estimate.HighTotal / highHeadcount : 0;
-        estimate.MidPerPerson = midHeadcount > 0 ? estimate.MidTotal / midHeadcount : 0;
-        estimate.LowPerPerson = lowHeadcount > 0 ? estimate.LowTotal / lowHeadcount : 0;
+            var income = (budget.Meeting.CostPerAttendee ?? 0) * girls;
+            if (leadersPay)
+                income += (budget.Meeting.CostPerLeader ?? 0) * adultCount;
 
-        estimate.HighPerGirl = highGirls > 0 ? estimate.HighTotal / highGirls : 0;
-        estimate.MidPerGirl = midGirls > 0 ? estimate.MidTotal / midGirls : 0;
-        estimate.LowPerGirl = lowGirls > 0 ? estimate.LowTotal / lowGirls : 0;
+            estimate.Scenarios.Add(new BudgetScenario
+            {
+                Label = label,
+                Girls = girls,
+                Adults = adultCount,
+                TotalCost = total,
+                CostPerGirl = perGirl,
+                CostPerAdult = perAdult,
+                ProjectedIncome = income
+            });
+        }
 
         return estimate;
+    }
+
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage)> UpdateBudgetPlanningAsync(int meetingId, bool? leadersPay, int? plannedAdultCount)
+    {
+        var budget = await _context.EventBudgets.FirstOrDefaultAsync(b => b.MeetingId == meetingId);
+        if (budget == null)
+            return (false, "Budget not found.");
+
+        if (plannedAdultCount is < 0)
+            return (false, "Adult count cannot be negative.");
+
+        budget.LeadersPay = leadersPay;
+        budget.PlannedAdultCount = plannedAdultCount;
+        budget.LastModifiedDate = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        return (true, string.Empty);
+    }
+
+    /// <summary>
+    /// Works out the break-even charge per girl and per adult for a scenario.
+    /// When leaders don't pay, the whole cost falls on the girls and the per-adult charge is zero.
+    /// When leaders pay, per-girl/per-adult items are charged directly, per-head items to everyone,
+    /// and fixed totals split evenly across every head.
+    /// </summary>
+    private static (decimal PerGirl, decimal PerAdult) CalculateBreakEven(
+        List<EventBudgetItem> items, int girls, int adults, bool leadersPay)
+    {
+        var total = CalculateScenarioTotal(items, girls, adults);
+
+        if (!leadersPay)
+        {
+            var perGirlOnly = girls > 0 ? total / girls : 0;
+            return (perGirlOnly, 0m);
+        }
+
+        var perGirlItems = items.Where(i => i.CostType == BudgetCostType.PerGirl).Sum(i => i.Amount);
+        var perAdultItems = items.Where(i => i.CostType == BudgetCostType.PerAdult).Sum(i => i.Amount);
+        var perHeadItems = items.Where(i => i.CostType == BudgetCostType.PerPerson).Sum(i => i.Amount);
+        var fixedTotal = items.Where(i => i.CostType == BudgetCostType.FixedTotal).Sum(i => i.Amount);
+
+        var heads = girls + adults;
+        var fixedShare = heads > 0 ? fixedTotal / heads : 0;
+
+        var perGirl = perGirlItems + perHeadItems + fixedShare;
+        var perAdult = perAdultItems + perHeadItems + fixedShare;
+        return (perGirl, perAdult);
     }
 
     /// <inheritdoc/>
@@ -193,6 +261,7 @@ public class BudgetService : IBudgetService
 
         // Income: expected vs received — include Activity and Other payments linked to this meeting
         var costPerAttendee = budget.Meeting.CostPerAttendee;
+        var costPerLeader = budget.Meeting.CostPerLeader;
         var activityPayments = await _context.Payments
             .AsNoTracking()
             .Where(p => p.MeetingId == meetingId
@@ -205,9 +274,10 @@ public class BudgetService : IBudgetService
             MeetingId = meetingId,
             MeetingTitle = budget.Meeting.Title,
             CostPerAttendee = costPerAttendee,
+            CostPerLeader = costPerLeader,
             ConsentedGirlCount = girlCount,
             ConsentedAdultCount = adultCount,
-            ExpectedIncome = costPerAttendee.HasValue ? costPerAttendee.Value * (girlCount + adultCount) : 0,
+            ExpectedIncome = (costPerAttendee ?? 0) * girlCount + (costPerLeader ?? 0) * adultCount,
             PaidCount = activityPayments.Count(p => p.Status == PaymentStatus.Paid),
             ActualIncome = activityPayments.Where(p => p.Status == PaymentStatus.Paid).Sum(p => p.AmountPaid)
         };
