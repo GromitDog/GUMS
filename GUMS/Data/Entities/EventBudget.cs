@@ -24,6 +24,12 @@ public class EventBudget
     /// </summary>
     public int? PlannedAdultCount { get; set; }
 
+    /// <summary>
+    /// Planned number of girls attending (the last position of the turnout slider).
+    /// Null means "assume a full turnout".
+    /// </summary>
+    public int? PlannedGirlCount { get; set; }
+
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
     public DateTime LastModifiedDate { get; set; } = DateTime.UtcNow;
@@ -31,4 +37,5 @@ public class EventBudget
     // Navigation properties
     public Meeting Meeting { get; set; } = null!;
     public List<EventBudgetItem> Items { get; set; } = new();
+    public List<EventBudgetIncome> IncomeItems { get; set; } = new();
 }

@@ -271,4 +271,115 @@ public class BudgetServiceTests : IDisposable
 
         result.Success.Should().BeFalse();
     }
+
+    // ---- Income lines ----------------------------------------------------
+
+    [Fact]
+    public async Task AddBudgetIncomeAsync_AddsLine_AndGetBudgetIncludesIt()
+    {
+        var meeting = await AddMeeting();
+        var budget = await AddCanonicalBudget(meeting.Id);
+
+        var result = await _sut.AddBudgetIncomeAsync(new EventBudgetIncome
+        {
+            EventBudgetId = budget.Id,
+            Description = "District grant",
+            Amount = 50m
+        });
+
+        result.Success.Should().BeTrue();
+        var loaded = await _sut.GetBudgetForMeetingAsync(meeting.Id);
+        loaded!.IncomeItems.Should().ContainSingle();
+        loaded.IncomeItems[0].Description.Should().Be("District grant");
+        loaded.IncomeItems[0].Amount.Should().Be(50m);
+    }
+
+    [Fact]
+    public async Task AddBudgetIncomeAsync_ReturnsFalse_WhenDescriptionEmpty()
+    {
+        var meeting = await AddMeeting();
+        var budget = await AddCanonicalBudget(meeting.Id);
+
+        var result = await _sut.AddBudgetIncomeAsync(new EventBudgetIncome
+        {
+            EventBudgetId = budget.Id,
+            Description = "  ",
+            Amount = 50m
+        });
+
+        result.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteBudgetIncomeAsync_RemovesLine()
+    {
+        var meeting = await AddMeeting();
+        var budget = await AddCanonicalBudget(meeting.Id);
+        var income = new EventBudgetIncome { EventBudgetId = budget.Id, Description = "Cake sale", Amount = 30m };
+        _context.EventBudgetIncomes.Add(income);
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.DeleteBudgetIncomeAsync(income.Id);
+
+        result.Success.Should().BeTrue();
+        (await _context.EventBudgetIncomes.CountAsync()).Should().Be(0);
+    }
+
+    // ---- SaveEventChargesAsync -------------------------------------------
+
+    [Fact]
+    public async Task SaveEventChargesAsync_LeadersPay_WritesBothChargesAndPlannedCounts()
+    {
+        var meeting = await AddMeeting();
+        await AddCanonicalBudget(meeting.Id);
+
+        var result = await _sut.SaveEventChargesAsync(
+            meeting.Id, costPerGirl: 9m, costPerLeader: 7m, plannedGirlCount: 8, plannedAdultCount: 2, leadersPay: true);
+
+        result.Success.Should().BeTrue();
+        var savedMeeting = await _context.Meetings.AsNoTracking().FirstAsync(m => m.Id == meeting.Id);
+        savedMeeting.CostPerAttendee.Should().Be(9m);
+        savedMeeting.CostPerLeader.Should().Be(7m);
+
+        var savedBudget = await _context.EventBudgets.AsNoTracking().FirstAsync(b => b.MeetingId == meeting.Id);
+        savedBudget.LeadersPay.Should().BeTrue();
+        savedBudget.PlannedGirlCount.Should().Be(8);
+        savedBudget.PlannedAdultCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task SaveEventChargesAsync_LeadersDontPay_ClearsLeaderCharge()
+    {
+        var meeting = await AddMeeting(costPerLeader: 5m);
+        await AddCanonicalBudget(meeting.Id);
+
+        var result = await _sut.SaveEventChargesAsync(
+            meeting.Id, costPerGirl: 10m, costPerLeader: 5m, plannedGirlCount: 8, plannedAdultCount: 2, leadersPay: false);
+
+        result.Success.Should().BeTrue();
+        var savedMeeting = await _context.Meetings.AsNoTracking().FirstAsync(m => m.Id == meeting.Id);
+        savedMeeting.CostPerAttendee.Should().Be(10m);
+        savedMeeting.CostPerLeader.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SaveEventChargesAsync_ReturnsFalse_WhenMeetingMissing()
+    {
+        var result = await _sut.SaveEventChargesAsync(
+            meetingId: 999, costPerGirl: 5m, costPerLeader: null, plannedGirlCount: 8, plannedAdultCount: 2, leadersPay: false);
+
+        result.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SaveEventChargesAsync_ReturnsFalse_WhenChargeNegative()
+    {
+        var meeting = await AddMeeting();
+        await AddCanonicalBudget(meeting.Id);
+
+        var result = await _sut.SaveEventChargesAsync(
+            meeting.Id, costPerGirl: -1m, costPerLeader: null, plannedGirlCount: 8, plannedAdultCount: 2, leadersPay: false);
+
+        result.Success.Should().BeFalse();
+    }
 }

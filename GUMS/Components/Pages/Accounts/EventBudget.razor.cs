@@ -33,9 +33,22 @@ public partial class EventBudget
     private int? _itemExpenseAccountId;
     private string _budgetNotes = string.Empty;
 
-    // Projection what-if state (persisted on the budget)
+    // Interactive planner state (persisted to the event/budget on Save)
     private bool _leadersPay;
-    private int _adultCount;
+    private int _girls;
+    private int _adults;
+    private decimal _chargePerGirl;
+    private decimal _chargePerAdult;
+
+    // Income form state
+    private bool _showIncomeForm;
+    private string _incomeDescription = string.Empty;
+    private decimal _incomeAmount;
+
+    /// <summary>Live plan recomputed from the in-memory budget on every render (slider tick).</summary>
+    private BudgetPlanResult? Plan => _budget == null
+        ? null
+        : BudgetPlanner.CalculatePlan(_budget.Items, _budget.IncomeItems, _girls, _adults, _leadersPay, _chargePerGirl, _chargePerAdult);
 
     protected override async Task OnInitializedAsync()
     {
@@ -62,7 +75,10 @@ public partial class EventBudget
                 if (_estimate != null)
                 {
                     _leadersPay = _estimate.LeadersPay;
-                    _adultCount = _estimate.AdultCount;
+                    _adults = _estimate.AdultCount;
+                    _girls = Math.Min(_budget.PlannedGirlCount ?? _estimate.GirlCount, _estimate.GirlCount);
+                    _chargePerGirl = _estimate.CostPerAttendee ?? 0m;
+                    _chargePerAdult = _estimate.CostPerLeader ?? 0m;
                 }
             }
         }
@@ -198,24 +214,80 @@ public partial class EventBudget
         }
     }
 
-    private async Task RecalculateAsync()
+    private void ShowAddIncome()
     {
-        if (_budget == null) return;
+        _incomeDescription = string.Empty;
+        _incomeAmount = 0;
+        _showIncomeForm = true;
+    }
 
-        if (_adultCount < 0) _adultCount = 0;
+    private void CancelIncomeForm() => _showIncomeForm = false;
 
-        var save = await BudgetService.UpdateBudgetPlanningAsync(MeetingId, _leadersPay, _adultCount);
-        if (!save.Success)
+    private async Task SaveIncome()
+    {
+        if (string.IsNullOrWhiteSpace(_incomeDescription))
         {
-            _errorMessage = save.ErrorMessage;
+            _errorMessage = "Description is required.";
             return;
         }
 
-        _estimate = await BudgetService.GetBudgetEstimateAsync(MeetingId);
-        if (_estimate != null)
+        var income = new EventBudgetIncome
         {
-            _leadersPay = _estimate.LeadersPay;
-            _adultCount = _estimate.AdultCount;
+            EventBudgetId = _budget!.Id,
+            Description = _incomeDescription,
+            Amount = _incomeAmount
+        };
+        var result = await BudgetService.AddBudgetIncomeAsync(income);
+        if (!result.Success)
+        {
+            _errorMessage = result.ErrorMessage;
+            return;
+        }
+
+        _successMessage = "Income added.";
+        _showIncomeForm = false;
+        await LoadData();
+    }
+
+    private async Task DeleteIncome(int incomeId)
+    {
+        var result = await BudgetService.DeleteBudgetIncomeAsync(incomeId);
+        if (result.Success)
+        {
+            _successMessage = "Income removed.";
+            await LoadData();
+        }
+        else
+        {
+            _errorMessage = result.ErrorMessage;
+        }
+    }
+
+    private void ApplyRecommendation()
+    {
+        var plan = Plan;
+        if (plan == null) return;
+
+        _chargePerGirl = decimal.Round(plan.RecommendedPerGirl, 2);
+        _chargePerAdult = _leadersPay ? decimal.Round(plan.RecommendedPerAdult, 2) : 0m;
+    }
+
+    private async Task SaveChargesAsync()
+    {
+        if (_budget == null) return;
+
+        decimal? costPerLeader = _leadersPay ? _chargePerAdult : null;
+        var result = await BudgetService.SaveEventChargesAsync(
+            MeetingId, _chargePerGirl, costPerLeader, _girls, _adults, _leadersPay);
+
+        if (result.Success)
+        {
+            _successMessage = "Charges saved to the event.";
+            await LoadData();
+        }
+        else
+        {
+            _errorMessage = result.ErrorMessage;
         }
     }
 

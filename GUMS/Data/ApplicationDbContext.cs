@@ -29,6 +29,7 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     public DbSet<ExpenseClaim> ExpenseClaims { get; set; }
     public DbSet<EventBudget> EventBudgets { get; set; }
     public DbSet<EventBudgetItem> EventBudgetItems { get; set; }
+    public DbSet<EventBudgetIncome> EventBudgetIncomes { get; set; }
     public DbSet<UnitBudget> UnitBudgets { get; set; }
     public DbSet<UnitBudgetItem> UnitBudgetItems { get; set; }
 
@@ -469,6 +470,21 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
                 .WithOne(i => i.EventBudget)
                 .HasForeignKey(i => i.EventBudgetId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(eb => eb.IncomeItems)
+                .WithOne(i => i.EventBudget)
+                .HasForeignKey(i => i.EventBudgetId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // EventBudgetIncome configuration
+        modelBuilder.Entity<EventBudgetIncome>(entity =>
+        {
+            entity.HasKey(i => i.Id);
+            entity.HasIndex(i => i.EventBudgetId);
+
+            entity.Property(i => i.Amount).HasPrecision(18, 2);
+            entity.Property(i => i.Description).IsRequired();
         });
 
         // EventBudgetItem configuration

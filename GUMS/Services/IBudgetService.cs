@@ -17,6 +17,19 @@ public interface IBudgetService
     /// </summary>
     Task<(bool Success, string ErrorMessage)> UpdateBudgetPlanningAsync(int meetingId, bool? leadersPay, int? plannedAdultCount);
 
+    /// <summary>Adds a grant/fundraising income line to the budget.</summary>
+    Task<(bool Success, string ErrorMessage)> AddBudgetIncomeAsync(EventBudgetIncome income);
+
+    /// <summary>Removes a grant/fundraising income line.</summary>
+    Task<(bool Success, string ErrorMessage)> DeleteBudgetIncomeAsync(int incomeId);
+
+    /// <summary>
+    /// Writes the chosen attendee charges back to the meeting (CostPerAttendee / CostPerLeader) and
+    /// remembers the planned turnout on the budget. A null leader charge means leaders don't pay.
+    /// </summary>
+    Task<(bool Success, string ErrorMessage)> SaveEventChargesAsync(
+        int meetingId, decimal costPerGirl, decimal? costPerLeader, int plannedGirlCount, int plannedAdultCount, bool leadersPay);
+
     Task<BudgetVsActual?> GetBudgetVsActualAsync(int meetingId);
 }
 

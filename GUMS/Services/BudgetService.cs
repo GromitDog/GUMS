@@ -22,6 +22,7 @@ public class BudgetService : IBudgetService
             .Include(b => b.Meeting)
             .Include(b => b.Items)
                 .ThenInclude(i => i.ExpenseAccount)
+            .Include(b => b.IncomeItems)
             .FirstOrDefaultAsync(b => b.MeetingId == meetingId);
     }
 
@@ -196,35 +197,76 @@ public class BudgetService : IBudgetService
         return (true, string.Empty);
     }
 
-    /// <summary>
-    /// Works out the break-even charge per girl and per adult for a scenario.
-    /// When leaders don't pay, the whole cost falls on the girls and the per-adult charge is zero.
-    /// When leaders pay, per-girl/per-adult items are charged directly, per-head items to everyone,
-    /// and fixed totals split evenly across every head.
-    /// </summary>
-    private static (decimal PerGirl, decimal PerAdult) CalculateBreakEven(
-        List<EventBudgetItem> items, int girls, int adults, bool leadersPay)
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage)> AddBudgetIncomeAsync(EventBudgetIncome income)
     {
-        var total = CalculateScenarioTotal(items, girls, adults);
+        var budget = await _context.EventBudgets.FindAsync(income.EventBudgetId);
+        if (budget == null)
+            return (false, "Budget not found.");
 
-        if (!leadersPay)
+        if (string.IsNullOrWhiteSpace(income.Description))
+            return (false, "Description is required.");
+
+        if (income.Amount < 0)
+            return (false, "Amount cannot be negative.");
+
+        _context.EventBudgetIncomes.Add(income);
+        budget.LastModifiedDate = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        return (true, string.Empty);
+    }
+
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage)> DeleteBudgetIncomeAsync(int incomeId)
+    {
+        var income = await _context.EventBudgetIncomes
+            .Include(i => i.EventBudget)
+            .FirstOrDefaultAsync(i => i.Id == incomeId);
+
+        if (income == null)
+            return (false, "Income line not found.");
+
+        income.EventBudget.LastModifiedDate = DateTime.UtcNow;
+        _context.EventBudgetIncomes.Remove(income);
+        await _context.SaveChangesAsync();
+
+        return (true, string.Empty);
+    }
+
+    /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage)> SaveEventChargesAsync(
+        int meetingId, decimal costPerGirl, decimal? costPerLeader, int plannedGirlCount, int plannedAdultCount, bool leadersPay)
+    {
+        if (costPerGirl < 0 || (costPerLeader ?? 0) < 0)
+            return (false, "Charges cannot be negative.");
+        if (plannedGirlCount < 0 || plannedAdultCount < 0)
+            return (false, "Attendance cannot be negative.");
+
+        var meeting = await _context.Meetings.FindAsync(meetingId);
+        if (meeting == null)
+            return (false, "Meeting not found.");
+
+        meeting.CostPerAttendee = costPerGirl;
+        // Null leader charge means "leaders don't pay" for payment generation.
+        meeting.CostPerLeader = leadersPay ? costPerLeader : null;
+
+        var budget = await _context.EventBudgets.FirstOrDefaultAsync(b => b.MeetingId == meetingId);
+        if (budget != null)
         {
-            var perGirlOnly = girls > 0 ? total / girls : 0;
-            return (perGirlOnly, 0m);
+            budget.LeadersPay = leadersPay;
+            budget.PlannedGirlCount = plannedGirlCount;
+            budget.PlannedAdultCount = plannedAdultCount;
+            budget.LastModifiedDate = DateTime.UtcNow;
         }
 
-        var perGirlItems = items.Where(i => i.CostType == BudgetCostType.PerGirl).Sum(i => i.Amount);
-        var perAdultItems = items.Where(i => i.CostType == BudgetCostType.PerAdult).Sum(i => i.Amount);
-        var perHeadItems = items.Where(i => i.CostType == BudgetCostType.PerPerson).Sum(i => i.Amount);
-        var fixedTotal = items.Where(i => i.CostType == BudgetCostType.FixedTotal).Sum(i => i.Amount);
-
-        var heads = girls + adults;
-        var fixedShare = heads > 0 ? fixedTotal / heads : 0;
-
-        var perGirl = perGirlItems + perHeadItems + fixedShare;
-        var perAdult = perAdultItems + perHeadItems + fixedShare;
-        return (perGirl, perAdult);
+        await _context.SaveChangesAsync();
+        return (true, string.Empty);
     }
+
+    private static (decimal PerGirl, decimal PerAdult) CalculateBreakEven(
+        List<EventBudgetItem> items, int girls, int adults, bool leadersPay)
+        => BudgetPlanner.CalculateBreakEven(items, girls, adults, leadersPay);
 
     /// <inheritdoc/>
     public async Task<BudgetVsActual?> GetBudgetVsActualAsync(int meetingId)
@@ -327,19 +369,5 @@ public class BudgetService : IBudgetService
     }
 
     private static decimal CalculateScenarioTotal(List<EventBudgetItem> items, int girlCount, int adultCount)
-    {
-        decimal total = 0;
-        foreach (var item in items)
-        {
-            total += item.CostType switch
-            {
-                BudgetCostType.PerGirl => item.Amount * girlCount,
-                BudgetCostType.PerAdult => item.Amount * adultCount,
-                BudgetCostType.PerPerson => item.Amount * (girlCount + adultCount),
-                BudgetCostType.FixedTotal => item.Amount,
-                _ => 0
-            };
-        }
-        return total;
-    }
+        => BudgetPlanner.CalculateCost(items, girlCount, adultCount);
 }

@@ -72,115 +72,134 @@
         }
         else
         {
-            <!-- Cost & Income Projections -->
+            <!-- Cost & Income Planner -->
             @if (_estimate != null)
             {
+                var plan = Plan!;
+                var pct = _estimate.GirlCount > 0 ? (int)Math.Round(100.0 * _girls / _estimate.GirlCount) : 0;
                 <div class="card mb-4">
                     <div class="card-header" style="background-color: var(--gg-dark-navy); color: white;">
-                        <h5 class="mb-0 text-white"><i class="bi bi-graph-up-arrow"></i> Cost &amp; Income Projections</h5>
+                        <h5 class="mb-0 text-white"><i class="bi bi-sliders"></i> Cost &amp; Income Planner</h5>
                     </div>
                     <div class="card-body">
-                        <div class="row g-3 align-items-end mb-3">
-                            <div class="col-md-5">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="leadersPaySwitch"
-                                           @bind="_leadersPay" @bind:after="RecalculateAsync" />
-                                    <label class="form-check-label" for="leadersPaySwitch">
-                                        <strong>Leaders pay towards this event</strong>
-                                    </label>
+                        <div class="row g-4">
+                            <!-- Controls -->
+                            <div class="col-lg-7">
+                                <label class="form-label mb-1">
+                                    <strong>Turnout:</strong> @_girls of @_estimate.GirlCount girls (@pct%)
+                                </label>
+                                <input type="range" class="form-range" min="0" max="@_estimate.GirlCount" step="1"
+                                       @bind="_girls" @bind:event="oninput" />
+
+                                <div class="row g-3 mt-1 align-items-end">
+                                    <div class="col-sm-5">
+                                        <label class="form-label mb-1">Adults attending</label>
+                                        <input type="number" class="form-control" min="0" step="1"
+                                               @bind="_adults" @bind:event="oninput" />
+                                    </div>
+                                    <div class="col-sm-7">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" role="switch" id="leadersPaySwitch"
+                                                   @bind="_leadersPay" />
+                                            <label class="form-check-label" for="leadersPaySwitch">
+                                                Leaders pay their way
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            @(_leadersPay ? "Adults are charged too." : "Girls cover the adults' costs.")
+                                        </small>
+                                    </div>
                                 </div>
-                                <small class="text-muted">
+
+                                <hr />
+
+                                <label class="form-label mb-2"><strong>What we'll charge</strong></label>
+                                <div class="row g-3">
+                                    <div class="col-sm-5">
+                                        <label class="form-label mb-1 small text-muted">Per girl</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">£</span>
+                                            <input type="number" class="form-control" min="0" step="0.01"
+                                                   @bind="_chargePerGirl" @bind:event="oninput" />
+                                        </div>
+                                    </div>
                                     @if (_leadersPay)
                                     {
-                                        <span>Costs are shared &mdash; each girl and adult pays their own way.</span>
+                                        <div class="col-sm-5">
+                                            <label class="form-label mb-1 small text-muted">Per adult</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">£</span>
+                                                <input type="number" class="form-control" min="0" step="0.01"
+                                                       @bind="_chargePerAdult" @bind:event="oninput" />
+                                            </div>
+                                        </div>
                                     }
-                                    else
-                                    {
-                                        <span>Leaders go free &mdash; the girls cover the adults' costs too.</span>
-                                    }
+                                </div>
+                                <button class="btn btn-primary mt-3" @onclick="SaveChargesAsync">
+                                    <i class="bi bi-save"></i> Save charges to event
+                                </button>
+                                <small class="d-block text-muted mt-1">
+                                    Writes @_chargePerGirl.ToString("C")/girl@(_leadersPay ? $" and {_chargePerAdult:C}/adult" : "") to the event so payments can be raised.
                                 </small>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label mb-1">Adults attending</label>
-                                <input type="number" class="form-control" min="0" step="1"
-                                       @bind="_adultCount" @bind:after="RecalculateAsync" />
-                            </div>
-                            <div class="col-md-4">
-                                <small class="text-muted d-block">
-                                    <i class="bi bi-people"></i> @_estimate.GirlCount girls on the roll,
-                                    @_estimate.ActiveLeaderCount active @(_estimate.ActiveLeaderCount == 1 ? "leader" : "leaders")
-                                </small>
-                                <small class="text-muted d-block">
-                                    <i class="bi bi-cash"></i>
-                                    @if (_estimate.HasCharge)
-                                    {
-                                        <span>
-                                            Charging @((_estimate.CostPerAttendee ?? 0).ToString("C"))/girl@(_leadersPay && (_estimate.CostPerLeader ?? 0) > 0 ? $", {(_estimate.CostPerLeader ?? 0):C}/leader" : "")
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span>No charge set &mdash; <a href="/Meetings/Edit/@MeetingId">set a cost on the event</a> to project income.</span>
-                                    }
-                                </small>
-                            </div>
-                        </div>
 
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-1">
-                                <thead>
-                                    <tr>
-                                        <th>Attendance</th>
-                                        <th class="text-end">Girls</th>
-                                        <th class="text-end">Adults</th>
-                                        <th class="text-end">Total cost</th>
-                                        <th class="text-end">Cost / girl</th>
-                                        <th class="text-end">Cost / adult</th>
-                                        @if (_estimate.HasCharge)
-                                        {
-                                            <th class="text-end">Projected income</th>
-                                            <th class="text-end">Surplus / (shortfall)</th>
-                                        }
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var s in _estimate.Scenarios)
+                            <!-- Live balance -->
+                            <div class="col-lg-5">
+                                <div class="p-3 rounded h-100" style="background-color: var(--gg-light, #f5f7fa);">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>Total cost</span>
+                                        <strong>@plan.TotalCost.ToString("C")</strong>
+                                    </div>
+                                    @if (plan.OtherIncome > 0)
                                     {
-                                        <tr>
-                                            <td>@s.Label</td>
-                                            <td class="text-end">@s.Girls</td>
-                                            <td class="text-end">@s.Adults</td>
-                                            <td class="text-end">@s.TotalCost.ToString("C")</td>
-                                            <td class="text-end fw-bold">@s.CostPerGirl.ToString("C")</td>
-                                            <td class="text-end">
-                                                @if (_leadersPay)
-                                                {
-                                                    <span>@s.CostPerAdult.ToString("C")</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-muted" title="Covered by the girls">&mdash;</span>
-                                                }
-                                            </td>
-                                            @if (_estimate.HasCharge)
-                                            {
-                                                <td class="text-end">@s.ProjectedIncome.ToString("C")</td>
-                                                <td class="text-end">
-                                                    <span class="@(s.Surplus >= 0 ? "text-success" : "text-danger")">
-                                                        @s.Surplus.ToString("C")
-                                                    </span>
-                                                </td>
-                                            }
-                                        </tr>
+                                        <div class="d-flex justify-content-between mb-1 text-success">
+                                            <span>Grants &amp; fundraising</span>
+                                            <span>+@plan.OtherIncome.ToString("C")</span>
+                                        </div>
                                     }
-                                </tbody>
-                            </table>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>From charges</span>
+                                        <span>+@plan.ChargeIncome.ToString("C")</span>
+                                    </div>
+                                    <hr class="my-2" />
+                                    <div class="d-flex justify-content-between">
+                                        <span>Total income</span>
+                                        <strong>@plan.TotalIncome.ToString("C")</strong>
+                                    </div>
+
+                                    <div class="text-center mt-3 p-2 rounded"
+                                         style="background-color: @(plan.IsBalanced ? "var(--gg-success)" : plan.Balance > 0 ? "var(--gg-success)" : "var(--gg-error)"); color: white;">
+                                        @if (plan.IsBalanced)
+                                        {
+                                            <div><i class="bi bi-check-circle-fill"></i> <strong>Balanced</strong></div>
+                                        }
+                                        else if (plan.Balance > 0)
+                                        {
+                                            <div><strong>Surplus of @plan.Balance.ToString("C")</strong></div>
+                                            <small>Income exceeds cost</small>
+                                        }
+                                        else
+                                        {
+                                            <div><strong>Shortfall of @((-plan.Balance).ToString("C"))</strong></div>
+                                            <small>Income doesn't cover cost</small>
+                                        }
+                                    </div>
+
+                                    @if (!plan.IsBalanced && _girls > 0)
+                                    {
+                                        <div class="mt-3 border-top pt-2 small">
+                                            <div class="mb-1">
+                                                <i class="bi bi-lightbulb"></i> To break even, charge
+                                                <strong>@plan.RecommendedPerGirl.ToString("C")</strong>/girl@(_leadersPay && plan.RecommendedPerAdult > 0 ? $" and {plan.RecommendedPerAdult:C}/adult" : "").
+                                            </div>
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="ApplyRecommendation">
+                                                Use recommended
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
                         </div>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i>
-                            <strong>Cost / girl</strong> and <strong>cost / adult</strong> are the break-even charges needed to
-                            recover the total cost. Fixed costs are split evenly across every head.
-                        </small>
                     </div>
                 </div>
             }
@@ -295,6 +314,85 @@
                                             <i class="bi bi-check-lg"></i> Save
                                         </button>
                                         <button class="btn btn-secondary" @onclick="CancelItemForm">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Other Income (grants, fundraising) -->
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background-color: var(--gg-success); color: white;">
+                            <h5 class="mb-0"><i class="bi bi-piggy-bank"></i> Other Income</h5>
+                            <button class="btn btn-sm btn-light" @onclick="ShowAddIncome">
+                                <i class="bi bi-plus-circle"></i> Add Income
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-3">Grants, fundraising or donations towards this event. These reduce what you need to charge.</p>
+                            @if (!_budget.IncomeItems.Any())
+                            {
+                                <p class="text-muted text-center py-2">No grants or fundraising added.</p>
+                            }
+                            else
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Description</th>
+                                                <th class="text-end">Amount</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var income in _budget.IncomeItems)
+                                            {
+                                                <tr>
+                                                    <td>@income.Description</td>
+                                                    <td class="text-end">@income.Amount.ToString("C")</td>
+                                                    <td class="text-end">
+                                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteIncome(income.Id)">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                        <tfoot>
+                                            <tr class="fw-bold" style="border-top: 2px solid var(--gg-dark-navy);">
+                                                <td>Total</td>
+                                                <td class="text-end">@_budget.IncomeItems.Sum(i => i.Amount).ToString("C")</td>
+                                                <td></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            }
+
+                            @if (_showIncomeForm)
+                            {
+                                <hr />
+                                <h6>Add Income</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Description</label>
+                                        <input type="text" class="form-control" @bind="_incomeDescription" maxlength="200" placeholder="e.g. District grant" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Amount</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">£</span>
+                                            <input type="number" class="form-control" @bind="_incomeAmount" step="0.01" min="0" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 d-flex align-items-end gap-2">
+                                        <button class="btn btn-primary" @onclick="SaveIncome">
+                                            <i class="bi bi-check-lg"></i> Save
+                                        </button>
+                                        <button class="btn btn-secondary" @onclick="CancelIncomeForm">
                                             Cancel
                                         </button>
                                     </div>
