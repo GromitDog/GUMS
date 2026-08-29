@@ -708,7 +708,7 @@ public class AccountingServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task BankDepositAsync_ShouldFail_WhenInsufficientCash()
+    public async Task BankDepositAsync_ShouldWarnButSucceed_WhenMoreCashThanRecorded()
     {
         // Arrange
         await EnsureDefaultAccountsAsync();
@@ -718,8 +718,47 @@ public class AccountingServiceTests : IDisposable
         var result = await _sut.BankDepositAsync(100.00m, 0, DateTime.Today);
 
         // Assert
-        result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("Insufficient cash");
+        result.Success.Should().BeTrue();
+        result.ErrorMessage.Should().BeEmpty();
+        result.Warning.Should().Contain("cash on hand");
+
+        var bankBalance = await _sut.GetBankBalanceAsync();
+        bankBalance.Should().Be(100.00m);
+        var cashOnHand = await _sut.GetCashOnHandAsync();
+        cashOnHand.Should().Be(-50.00m);
+    }
+
+    [Fact]
+    public async Task BankDepositAsync_ShouldWarnButSucceed_WhenNoChequesRecorded()
+    {
+        // Arrange — cheques handed over that were never logged as pending
+        await EnsureDefaultAccountsAsync();
+
+        // Act
+        var result = await _sut.BankDepositAsync(0, 40.00m, DateTime.Today);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Warning.Should().Contain("cheques pending");
+
+        var bankBalance = await _sut.GetBankBalanceAsync();
+        bankBalance.Should().Be(40.00m);
+    }
+
+    [Fact]
+    public async Task BankDepositAsync_ShouldNotWarn_WhenBalancesCoverDeposit()
+    {
+        // Arrange
+        await EnsureDefaultAccountsAsync();
+        await SetAssetBalanceViaTransactionAsync("1001", 50.00m);
+        await SetAssetBalanceViaTransactionAsync("1002", 25.00m);
+
+        // Act
+        var result = await _sut.BankDepositAsync(50.00m, 25.00m, DateTime.Today);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Warning.Should().BeEmpty();
     }
 
     [Fact]

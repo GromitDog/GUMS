@@ -157,8 +157,10 @@ public interface IAccountingService
 
     /// <summary>
     /// Records a bank deposit (moving cash and/or cheques to the bank account).
+    /// Banking more than the recorded balance is allowed but returns a non-empty
+    /// <c>Warning</c> describing the discrepancy.
     /// </summary>
-    Task<(bool Success, string ErrorMessage)> BankDepositAsync(
+    Task<(bool Success, string ErrorMessage, string Warning)> BankDepositAsync(
         decimal cashAmount,
         decimal chequeAmount,
         DateTime date,

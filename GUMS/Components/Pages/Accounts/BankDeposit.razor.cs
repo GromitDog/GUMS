@@ -16,6 +16,11 @@ public partial class BankDeposit
     private bool _isLoading = true;
     private bool _isSubmitting;
     private string _errorMessage = string.Empty;
+    private string _warningMessage = string.Empty;
+    private string _successMessage = string.Empty;
+
+    private decimal CashOverBanked => Math.Max(0, _formModel.CashAmount - _cashOnHand);
+    private decimal ChequesOverBanked => Math.Max(0, _formModel.ChequeAmount - _chequesPending);
 
     protected override async Task OnInitializedAsync()
     {
@@ -48,24 +53,13 @@ public partial class BankDeposit
         }
     }
 
+    /// <summary>
+    /// Only the total matters: banking more than the recorded balance warns rather than blocks,
+    /// since cheques or cash can reach the bank without having been logged first.
+    /// </summary>
     private bool IsFormValid()
     {
-        if (_formModel.CashAmount <= 0 && _formModel.ChequeAmount <= 0)
-        {
-            return false;
-        }
-
-        if (_formModel.CashAmount > _cashOnHand)
-        {
-            return false;
-        }
-
-        if (_formModel.ChequeAmount > _chequesPending)
-        {
-            return false;
-        }
-
-        return true;
+        return _formModel.CashAmount > 0 || _formModel.ChequeAmount > 0;
     }
 
     private async Task SubmitDeposit()
@@ -74,6 +68,7 @@ public partial class BankDeposit
 
         _isSubmitting = true;
         _errorMessage = string.Empty;
+        _warningMessage = string.Empty;
 
         try
         {
@@ -83,13 +78,20 @@ public partial class BankDeposit
                 _formModel.DepositDate,
                 _formModel.Notes);
 
-            if (result.Success)
+            if (!result.Success)
             {
-                NavigationManager.NavigateTo("/Accounts?success=deposit");
+                _errorMessage = result.ErrorMessage;
+            }
+            else if (!string.IsNullOrEmpty(result.Warning))
+            {
+                // Stay on the page so the discrepancy warning is actually read.
+                _successMessage = "Deposit recorded.";
+                _warningMessage = result.Warning;
+                await LoadBalances();
             }
             else
             {
-                _errorMessage = result.ErrorMessage;
+                NavigationManager.NavigateTo("/Accounts?success=deposit");
             }
         }
         catch (Exception ex)

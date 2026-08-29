@@ -13,6 +13,22 @@
         </a>
     </div>
 
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="() => _successMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_warningMessage))
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_warningMessage
+            <button type="button" class="btn-close" @onclick="() => _warningMessage = string.Empty"></button>
+        </div>
+    }
+
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -77,7 +93,8 @@
                 @if (_cashOnHand == 0 && _chequesPending == 0)
                 {
                     <div class="alert alert-info">
-                        <i class="bi bi-info-circle"></i> There are no funds available to deposit at this time.
+                        <i class="bi bi-info-circle"></i> Nothing is currently recorded as held. You can still
+                        record a deposit — for example cheques handed to you that haven't been logged yet.
                     </div>
                 }
             </div>
@@ -91,62 +108,58 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        @if (_cashOnHand == 0 && _chequesPending == 0)
-                        {
-                            <p class="text-muted">No funds available to deposit.</p>
-                        }
-                        else
-                        {
                             <EditForm Model="_formModel" OnValidSubmit="SubmitDeposit" FormName="BankDepositForm">
                                 <DataAnnotationsValidator />
 
-                                @if (_cashOnHand > 0)
-                                {
-                                    <div class="mb-3">
-                                        <label class="form-label">Cash Amount to Deposit</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text">£</span>
-                                            <InputNumber class="form-control" @bind-Value="_formModel.CashAmount" step="0.01" />
+                                <div class="mb-3">
+                                    <label class="form-label">Cash Amount to Deposit</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">£</span>
+                                        <InputNumber class="form-control" @bind-Value="_formModel.CashAmount" step="0.01" />
+                                    </div>
+                                    <small class="text-muted">Recorded on hand: @_cashOnHand.ToString("C")</small>
+                                    @if (CashOverBanked > 0)
+                                    {
+                                        <div class="text-warning small mt-1">
+                                            <i class="bi bi-exclamation-triangle-fill"></i>
+                                            @CashOverBanked.ToString("C") more than the recorded cash on hand. You can still record it.
                                         </div>
-                                        <small class="text-muted">Available: @_cashOnHand.ToString("C")</small>
-                                        @if (_formModel.CashAmount > _cashOnHand)
-                                        {
-                                            <div class="text-danger small mt-1">
-                                                Amount exceeds available cash
-                                            </div>
-                                        }
+                                    }
+                                    @if (_cashOnHand > 0)
+                                    {
                                         <div class="mt-2">
                                             <button type="button" class="btn btn-sm btn-outline-success"
                                                     @onclick="() => _formModel.CashAmount = _cashOnHand">
                                                 Deposit All Cash
                                             </button>
                                         </div>
-                                    </div>
-                                }
+                                    }
+                                </div>
 
-                                @if (_chequesPending > 0)
-                                {
-                                    <div class="mb-3">
-                                        <label class="form-label">Cheques Amount to Deposit</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text">£</span>
-                                            <InputNumber class="form-control" @bind-Value="_formModel.ChequeAmount" step="0.01" />
+                                <div class="mb-3">
+                                    <label class="form-label">Cheques Amount to Deposit</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">£</span>
+                                        <InputNumber class="form-control" @bind-Value="_formModel.ChequeAmount" step="0.01" />
+                                    </div>
+                                    <small class="text-muted">Recorded pending: @_chequesPending.ToString("C")</small>
+                                    @if (ChequesOverBanked > 0)
+                                    {
+                                        <div class="text-warning small mt-1">
+                                            <i class="bi bi-exclamation-triangle-fill"></i>
+                                            @ChequesOverBanked.ToString("C") more than the recorded cheques pending. You can still record it.
                                         </div>
-                                        <small class="text-muted">Available: @_chequesPending.ToString("C")</small>
-                                        @if (_formModel.ChequeAmount > _chequesPending)
-                                        {
-                                            <div class="text-danger small mt-1">
-                                                Amount exceeds available cheques
-                                            </div>
-                                        }
+                                    }
+                                    @if (_chequesPending > 0)
+                                    {
                                         <div class="mt-2">
                                             <button type="button" class="btn btn-sm btn-outline-warning"
                                                     @onclick="() => _formModel.ChequeAmount = _chequesPending">
                                                 Deposit All Cheques
                                             </button>
                                         </div>
-                                    </div>
-                                }
+                                    }
+                                </div>
 
                                 <div class="mb-3">
                                     <label class="form-label">Deposit Date</label>
@@ -189,7 +202,6 @@
                                     </button>
                                 </div>
                             </EditForm>
-                        }
                     </div>
                 </div>
             </div>

@@ -816,7 +816,7 @@ public class AccountingService : IAccountingService
     // ===== Banking Operations =====
 
     /// <inheritdoc/>
-    public async Task<(bool Success, string ErrorMessage)> BankDepositAsync(
+    public async Task<(bool Success, string ErrorMessage, string Warning)> BankDepositAsync(
         decimal cashAmount,
         decimal chequeAmount,
         DateTime date,
@@ -824,12 +824,12 @@ public class AccountingService : IAccountingService
     {
         if (cashAmount < 0 || chequeAmount < 0)
         {
-            return (false, "Amounts cannot be negative.");
+            return (false, "Amounts cannot be negative.", string.Empty);
         }
 
         if (cashAmount == 0 && chequeAmount == 0)
         {
-            return (false, "At least one amount must be greater than zero.");
+            return (false, "At least one amount must be greater than zero.", string.Empty);
         }
 
         var cashAccount = await GetAccountByCodeAsync(CashOnHandCode);
@@ -838,21 +838,29 @@ public class AccountingService : IAccountingService
 
         if (cashAccount == null || chequeAccount == null || bankAccount == null)
         {
-            return (false, "Required accounts not found. Please ensure default accounts have been created.");
+            return (false, "Required accounts not found. Please ensure default accounts have been created.", string.Empty);
         }
 
-        // Validate sufficient balances (calculate from transaction lines — source of truth)
+        // Banking more than the recorded balance is legitimate — cheques handed in that were
+        // never logged, cash from an unrecorded source — so a shortfall warns but never blocks.
+        // Balances are calculated from transaction lines (source of truth).
+        var warnings = new List<string>();
+
         var cashBalance = await GetAccountBalanceAsync(cashAccount.Id);
         if (cashAmount > 0 && cashBalance < cashAmount)
         {
-            return (false, $"Insufficient cash on hand. Available: {cashBalance:C}");
+            warnings.Add($"Cash banked ({cashAmount:C}) is more than the recorded cash on hand ({cashBalance:C}).");
         }
 
         var chequeBalance = await GetAccountBalanceAsync(chequeAccount.Id);
         if (chequeAmount > 0 && chequeBalance < chequeAmount)
         {
-            return (false, $"Insufficient cheques pending. Available: {chequeBalance:C}");
+            warnings.Add($"Cheques banked ({chequeAmount:C}) are more than the recorded cheques pending ({chequeBalance:C}).");
         }
+
+        var warning = warnings.Any()
+            ? string.Join(" ", warnings) + " The deposit has been recorded — check whether anything is missing from the books."
+            : string.Empty;
 
         var totalDeposit = cashAmount + chequeAmount;
         var description = notes ?? $"Bank deposit - Cash: {cashAmount:C}, Cheques: {chequeAmount:C}";
@@ -898,7 +906,7 @@ public class AccountingService : IAccountingService
         };
 
         var result = await CreateTransactionAsync(transaction);
-        return (result.Success, result.ErrorMessage);
+        return (result.Success, result.ErrorMessage, result.Success ? warning : string.Empty);
     }
 
     // ===== General Account Management =====
