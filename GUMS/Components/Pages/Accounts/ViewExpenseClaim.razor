@@ -22,6 +22,14 @@
         </div>
     }
 
+    @if (!string.IsNullOrEmpty(_warningMessage))
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_warningMessage
+            <button type="button" class="btn-close" @onclick="() => _warningMessage = string.Empty"></button>
+        </div>
+    }
+
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -216,6 +224,14 @@
                                 <label class="form-label">Settlement Date</label>
                                 <input type="date" class="form-control" @bind="_settleDate" />
                             </div>
+                            @if (SettlementShortfall is { } shortfall)
+                            {
+                                <div class="alert alert-warning py-2 small" role="alert">
+                                    <i class="bi bi-exclamation-triangle-fill"></i>
+                                    This account doesn't have enough to cover the claim — it will be
+                                    overdrawn by <strong>@shortfall.ToString("C")</strong>. You can still settle.
+                                </div>
+                            }
                             <div class="d-grid">
                                 <button class="btn btn-success" @onclick="SettleClaim" disabled="@(_isSettling || _settlePaidFromId == 0)">
                                     @if (_isSettling)

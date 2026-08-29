@@ -265,8 +265,10 @@ public interface IAccountingService
 
     /// <summary>
     /// Settles an expense claim, creating accounting entries.
+    /// A settlement that takes the paying account below zero is allowed but returns a
+    /// non-empty <c>Warning</c> describing the shortfall.
     /// </summary>
-    Task<(bool Success, string ErrorMessage)> SettleExpenseClaimAsync(int claimId, int paidFromAccountId, PaymentMethod paymentMethod, DateTime settledDate);
+    Task<(bool Success, string ErrorMessage, string Warning)> SettleExpenseClaimAsync(int claimId, int paidFromAccountId, PaymentMethod paymentMethod, DateTime settledDate);
 
     /// <summary>
     /// Gets expense claims with optional status filter.

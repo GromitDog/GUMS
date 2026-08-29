@@ -1469,7 +1469,7 @@ public class AccountingService : IAccountingService
     }
 
     /// <inheritdoc/>
-    public async Task<(bool Success, string ErrorMessage)> SettleExpenseClaimAsync(int claimId, int paidFromAccountId, PaymentMethod paymentMethod, DateTime settledDate)
+    public async Task<(bool Success, string ErrorMessage, string Warning)> SettleExpenseClaimAsync(int claimId, int paidFromAccountId, PaymentMethod paymentMethod, DateTime settledDate)
     {
         var claim = await _context.ExpenseClaims
             .Include(ec => ec.Expenses)
@@ -1478,33 +1478,33 @@ public class AccountingService : IAccountingService
 
         if (claim == null)
         {
-            return (false, "Expense claim not found.");
+            return (false, "Expense claim not found.", string.Empty);
         }
 
         if (claim.Status == ExpenseClaimStatus.Settled)
         {
-            return (false, "Claim has already been settled.");
+            return (false, "Claim has already been settled.", string.Empty);
         }
 
         if (!claim.Expenses.Any())
         {
-            return (false, "Cannot settle a claim with no expenses.");
+            return (false, "Cannot settle a claim with no expenses.", string.Empty);
         }
 
         var assetAccount = await _context.Accounts.FindAsync(paidFromAccountId);
         if (assetAccount == null || assetAccount.Type != AccountType.Asset)
         {
-            return (false, "Invalid payment account.");
+            return (false, "Invalid payment account.", string.Empty);
         }
 
         var totalAmount = claim.Expenses.Sum(e => e.Amount);
 
-        // Validate sufficient funds in the asset account
+        // A shortfall in the paying account warns but does not block: the money has already
+        // left the leader's pocket, so the claim must still be recorded.
         var availableBalance = await GetAccountBalanceAsync(paidFromAccountId);
-        if (availableBalance < totalAmount)
-        {
-            return (false, $"Insufficient funds in {assetAccount.Name}. Available: {availableBalance:C}, required: {totalAmount:C}");
-        }
+        var warning = availableBalance < totalAmount
+            ? $"{assetAccount.Name} does not have enough to cover this claim. Available: {availableBalance:C}, required: {totalAmount:C}. The account will be overdrawn by {(totalAmount - availableBalance):C}."
+            : string.Empty;
 
         // Create multi-line transaction: Debit each expense category, Credit asset account
         // Group by category AND cost centre so each line gets the right tag
@@ -1542,7 +1542,7 @@ public class AccountingService : IAccountingService
         var txResult = await CreateTransactionAsync(transaction);
         if (!txResult.Success)
         {
-            return (false, txResult.ErrorMessage);
+            return (false, txResult.ErrorMessage, string.Empty);
         }
 
         // Update claim
@@ -1554,7 +1554,7 @@ public class AccountingService : IAccountingService
 
         await _context.SaveChangesAsync();
 
-        return (true, string.Empty);
+        return (true, string.Empty, warning);
     }
 
     /// <inheritdoc/>

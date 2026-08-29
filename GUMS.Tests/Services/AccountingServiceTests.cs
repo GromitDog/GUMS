@@ -1283,7 +1283,7 @@ public class AccountingServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task SettleExpenseClaimAsync_ShouldFail_WhenInsufficientFunds()
+    public async Task SettleExpenseClaimAsync_ShouldWarnButSucceed_WhenInsufficientFunds()
     {
         // Arrange
         await EnsureDefaultAccountsAsync();
@@ -1310,8 +1310,46 @@ public class AccountingServiceTests : IDisposable
             claimResult.Claim.Id, bankAccount.Id, PaymentMethod.BankTransfer, DateTime.Today);
 
         // Assert
-        result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("Insufficient funds");
+        result.Success.Should().BeTrue();
+        result.ErrorMessage.Should().BeEmpty();
+        result.Warning.Should().NotBeEmpty();
+
+        var settledClaim = await _context.ExpenseClaims.FirstAsync(ec => ec.Id == claimResult.Claim.Id);
+        settledClaim.Status.Should().Be(ExpenseClaimStatus.Settled);
+
+        // The account is allowed to go negative
+        var bankBalance = await _sut.GetAccountBalanceAsync(bankAccount.Id);
+        bankBalance.Should().Be(-40m);
+    }
+
+    [Fact]
+    public async Task SettleExpenseClaimAsync_ShouldNotWarn_WhenFundsSufficient()
+    {
+        // Arrange
+        await EnsureDefaultAccountsAsync();
+        var suppliesAccount = await _context.Accounts.FirstAsync(a => a.Code == AccountingService.SuppliesExpenseCode);
+        var bankAccount = await _context.Accounts.FirstAsync(a => a.Code == "1003");
+        await SetAssetBalanceViaTransactionAsync("1003", 100.00m);
+
+        var claimResult = await _sut.CreateExpenseClaimAsync(new ExpenseClaim
+        {
+            ClaimedBy = "Jane Leader",
+            SubmittedDate = DateTime.Today
+        });
+
+        await _sut.AddExpenseToClaimAsync(claimResult.Claim!.Id, new Expense
+        {
+            Date = DateTime.Today, Amount = 50m,
+            ExpenseAccountId = suppliesAccount.Id, Description = "Supplies"
+        });
+
+        // Act
+        var result = await _sut.SettleExpenseClaimAsync(
+            claimResult.Claim.Id, bankAccount.Id, PaymentMethod.BankTransfer, DateTime.Today);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Warning.Should().BeEmpty();
     }
 
     [Fact]

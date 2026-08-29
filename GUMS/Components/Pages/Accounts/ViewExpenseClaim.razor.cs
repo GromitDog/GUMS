@@ -25,6 +25,23 @@ public partial class ViewExpenseClaim
     private bool _isSettling;
     private string _successMessage = string.Empty;
     private string _errorMessage = string.Empty;
+    private string _warningMessage = string.Empty;
+
+    /// <summary>
+    /// Shortfall between the selected paying account and the claim total, or null when the
+    /// account covers it. A shortfall warns but never blocks settlement.
+    /// </summary>
+    private decimal? SettlementShortfall
+    {
+        get
+        {
+            if (_claim == null || _settlePaidFromId == 0) return null;
+
+            var balance = _accountBalances.GetValueOrDefault(_settlePaidFromId);
+            var shortfall = _claim.TotalAmount - balance;
+            return shortfall > 0 ? shortfall : null;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -108,6 +125,7 @@ public partial class ViewExpenseClaim
 
         _isSettling = true;
         _errorMessage = string.Empty;
+        _warningMessage = string.Empty;
 
         try
         {
@@ -117,13 +135,20 @@ public partial class ViewExpenseClaim
                 _settlePaymentMethod,
                 _settleDate);
 
-            if (result.Success)
+            if (!result.Success)
             {
-                NavigationManager.NavigateTo("/Accounts/Claims?success=settled");
+                _errorMessage = result.ErrorMessage;
+            }
+            else if (!string.IsNullOrEmpty(result.Warning))
+            {
+                // Stay on the claim so the overdrawn-account warning is actually read.
+                _successMessage = "Claim settled.";
+                _warningMessage = result.Warning;
+                await LoadData();
             }
             else
             {
-                _errorMessage = result.ErrorMessage;
+                NavigationManager.NavigateTo("/Accounts/Claims?success=settled");
             }
         }
         catch (Exception ex)
