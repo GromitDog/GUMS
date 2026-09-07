@@ -10,6 +10,7 @@ public interface IUnitBudgetService
     Task<(bool Success, string ErrorMessage)> AddItemAsync(UnitBudgetItem item);
     Task<(bool Success, string ErrorMessage)> UpdateItemAsync(UnitBudgetItem item);
     Task<(bool Success, string ErrorMessage)> DeleteItemAsync(int itemId);
+    Task<(bool Success, string ErrorMessage, int ItemsCopied)> CopyBudgetItemsAsync(DateTime fromYearEnd, DateTime toYearEnd);
     Task<UnitBudgetSummary> GetBudgetSummaryAsync(DateTime yearEnd);
 }
 

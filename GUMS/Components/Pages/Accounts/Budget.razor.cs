@@ -16,6 +16,7 @@ public partial class Budget
     private List<Account> _expenseAccounts = new();
     private List<DateTime> _availableYearEnds = new();
     private DateTime _selectedYearEnd;
+    private bool _previousYearHasBudget;
 
     private UnitBudgetItem _newItem = new();
     private int? _editingItemId;
@@ -57,6 +58,9 @@ public partial class Budget
         {
             _summary = await UnitBudgetService.GetBudgetSummaryAsync(_selectedYearEnd);
             _budget = await UnitBudgetService.GetBudgetForYearAsync(_selectedYearEnd);
+
+            var previousBudget = await UnitBudgetService.GetBudgetForYearAsync(_selectedYearEnd.AddYears(-1));
+            _previousYearHasBudget = previousBudget?.Items.Any() == true;
         }
         catch (Exception ex)
         {
@@ -152,6 +156,33 @@ public partial class Budget
         catch (Exception ex)
         {
             _errorMessage = $"Error updating item: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task CopyFromPreviousYear()
+    {
+        _isSaving = true;
+        _errorMessage = string.Empty;
+        try
+        {
+            var result = await UnitBudgetService.CopyBudgetItemsAsync(_selectedYearEnd.AddYears(-1), _selectedYearEnd);
+            if (result.Success)
+            {
+                _successMessage = $"Copied {result.ItemsCopied} item{(result.ItemsCopied == 1 ? "" : "s")} from last year's budget.";
+                await LoadData();
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error copying budget: {ex.Message}";
         }
         finally
         {

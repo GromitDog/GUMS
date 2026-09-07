@@ -103,9 +103,17 @@
                     <div class="text-center py-4 text-muted">
                         <i class="bi bi-calculator" style="font-size: 2rem;"></i>
                         <p class="mt-2 mb-2">No budget items yet.</p>
-                        <button class="btn btn-primary" @onclick="ShowAddForm">
-                            <i class="bi bi-plus-circle"></i> Add your first cost
-                        </button>
+                        <div class="d-flex justify-content-center gap-2">
+                            @if (_previousYearHasBudget)
+                            {
+                                <button class="btn btn-primary" @onclick="CopyFromPreviousYear" disabled="@_isSaving">
+                                    <i class="bi bi-copy"></i> Copy last year's budget
+                                </button>
+                            }
+                            <button class="btn @(_previousYearHasBudget ? "btn-outline-primary" : "btn-primary")" @onclick="ShowAddForm">
+                                <i class="bi bi-plus-circle"></i> Add your first cost
+                            </button>
+                        </div>
                     </div>
                 }
                 else

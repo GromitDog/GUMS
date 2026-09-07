@@ -111,6 +111,42 @@ public class UnitBudgetService : IUnitBudgetService
     }
 
     /// <inheritdoc/>
+    public async Task<(bool Success, string ErrorMessage, int ItemsCopied)> CopyBudgetItemsAsync(DateTime fromYearEnd, DateTime toYearEnd)
+    {
+        var source = await _context.UnitBudgets
+            .AsNoTracking()
+            .Include(b => b.Items)
+            .FirstOrDefaultAsync(b => b.FinancialYearEnd.Date == fromYearEnd.Date);
+
+        if (source == null || !source.Items.Any())
+            return (false, $"No budget items found for the year ending {fromYearEnd:d MMM yyyy}.", 0);
+
+        var target = await GetOrCreateBudgetForYearAsync(toYearEnd);
+        if (target.Items.Any())
+            return (false, "This year's budget already has items, so there is nothing to copy into.", 0);
+
+        foreach (var item in source.Items)
+        {
+            _context.UnitBudgetItems.Add(new UnitBudgetItem
+            {
+                UnitBudgetId = target.Id,
+                Description = item.Description,
+                Frequency = item.Frequency,
+                Allocation = item.Allocation,
+                Amount = item.Amount,
+                ExpenseAccountId = item.ExpenseAccountId,
+                Notes = item.Notes,
+                SortOrder = item.SortOrder
+            });
+        }
+
+        target.LastModifiedDate = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        return (true, string.Empty, source.Items.Count);
+    }
+
+    /// <inheritdoc/>
     public async Task<UnitBudgetSummary> GetBudgetSummaryAsync(DateTime yearEnd)
     {
         var yearEndDate = yearEnd.Date;
