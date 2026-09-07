@@ -736,15 +736,29 @@ public class MeetingServiceTests : IDisposable
 
     #region Meeting Generation Tests
 
+    /// <summary>
+    /// The configured meeting day (Wednesday) at least a week from now. Suggested
+    /// dates never start before today, so generation tests need a term that is
+    /// wholly in the future — fixed dates would expire and break these tests.
+    /// </summary>
+    private static DateTime NextWednesday()
+    {
+        var date = DateTime.Today.AddDays(7);
+        while (date.DayOfWeek != DayOfWeek.Wednesday)
+            date = date.AddDays(1);
+        return date;
+    }
+
     [Fact]
     public async Task GetSuggestedMeetingDatesForTermAsync_ShouldReturnCorrectDates()
     {
         // Arrange
+        var firstWednesday = NextWednesday();
         var term = new Term
         {
-            Name = "Autumn 2026",
-            StartDate = new DateTime(2026, 9, 1), // Tuesday
-            EndDate = new DateTime(2026, 12, 20),
+            Name = "Future Term",
+            StartDate = firstWednesday.AddDays(-1), // Tuesday
+            EndDate = firstWednesday.AddDays(70),
             SubsAmount = 20
         };
 
@@ -779,11 +793,12 @@ public class MeetingServiceTests : IDisposable
     public async Task GenerateRegularMeetingsForTermAsync_ShouldCreateMeetings()
     {
         // Arrange
+        var firstWednesday = NextWednesday();
         var term = new Term
         {
-            Name = "Autumn 2026",
-            StartDate = new DateTime(2026, 9, 2), // Wednesday
-            EndDate = new DateTime(2026, 9, 23),  // 4 Wednesdays
+            Name = "Future Term",
+            StartDate = firstWednesday,
+            EndDate = firstWednesday.AddDays(21), // 4 Wednesdays
             SubsAmount = 20
         };
 
@@ -807,11 +822,12 @@ public class MeetingServiceTests : IDisposable
     public async Task GenerateRegularMeetingsForTermAsync_ShouldSkipExistingDates()
     {
         // Arrange
+        var firstWednesday = NextWednesday();
         var term = new Term
         {
-            Name = "Autumn 2026",
-            StartDate = new DateTime(2026, 9, 2),
-            EndDate = new DateTime(2026, 9, 23),
+            Name = "Future Term",
+            StartDate = firstWednesday,
+            EndDate = firstWednesday.AddDays(21),
             SubsAmount = 20
         };
 
@@ -819,7 +835,7 @@ public class MeetingServiceTests : IDisposable
             .ReturnsAsync(term);
 
         // Create a meeting on the first Wednesday
-        var existingMeeting = CreateMeeting("Existing", new DateTime(2026, 9, 2));
+        var existingMeeting = CreateMeeting("Existing", firstWednesday);
         _context.Meetings.Add(existingMeeting);
         await _context.SaveChangesAsync();
 
