@@ -243,6 +243,7 @@ public class UnitBudgetService : IUnitBudgetService
                 .Include(l => l.Transaction)
                 .Where(l => accountIds.Contains(l.AccountId)
                     && !l.Transaction.IsVoided
+                    && !l.Transaction.IsYearEndClose
                     && l.Transaction.Date >= yearStart
                     && l.Transaction.Date <= yearEndDate)
                 .ToListAsync();

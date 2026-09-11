@@ -1702,7 +1702,10 @@ public class AccountingService : IAccountingService
     /// <inheritdoc/>
     public async Task<IncomeReport> GetIncomeReportAsync(DateTime dateFrom, DateTime dateTo)
     {
-        var transactions = await GetTransactionsAsync(dateFrom, dateTo);
+        // Voided entries and year-end closing journals are not income activity
+        var transactions = (await GetTransactionsAsync(dateFrom, dateTo))
+            .Where(t => !t.IsVoided && !t.IsYearEndClose)
+            .ToList();
 
         // Get all income accounts so we capture the true total
         var incomeAccounts = await _context.Accounts
@@ -1718,7 +1721,7 @@ public class AccountingService : IAccountingService
         decimal activityIncome = 0;
         decimal totalIncome = 0;
 
-        foreach (var transaction in transactions.Where(t => !t.IsVoided))
+        foreach (var transaction in transactions)
         {
             foreach (var line in transaction.Lines)
             {
@@ -1739,7 +1742,7 @@ public class AccountingService : IAccountingService
             .Select(a =>
             {
                 decimal amount = 0;
-                foreach (var t in transactions.Where(t => !t.IsVoided))
+                foreach (var t in transactions)
                     foreach (var l in t.Lines.Where(l => l.AccountId == a.Id))
                         amount += l.Credit - l.Debit;
                 return new IncomeReportLine { AccountCode = a.Code, AccountName = a.Name, Amount = amount };
@@ -1798,13 +1801,15 @@ public class AccountingService : IAccountingService
     /// <inheritdoc/>
     public async Task<CostCentreReport> GetCostCentreReportAsync(DateTime dateFrom, DateTime dateTo, int? costCentreId = null)
     {
-        // Get all non-voided transaction lines in the date range with their accounts and cost centres
+        // Get all non-voided transaction lines in the date range with their accounts and cost
+        // centres. Year-end closing journals are excluded: they carry no cost centre and would
+        // otherwise cancel the year's income and expenses under "Unallocated".
         var query = _context.TransactionLines
             .AsNoTracking()
             .Include(tl => tl.Account)
             .Include(tl => tl.CostCentre)
             .Include(tl => tl.Transaction)
-            .Where(tl => !tl.Transaction.IsVoided)
+            .Where(tl => !tl.Transaction.IsVoided && !tl.Transaction.IsYearEndClose)
             .Where(tl => tl.Transaction.Date >= dateFrom && tl.Transaction.Date <= dateTo);
 
         if (costCentreId.HasValue)
@@ -1953,11 +1958,17 @@ public class AccountingService : IAccountingService
             .Where(l => !l.Transaction.IsVoided)
             .ToListAsync();
 
+        // Income and expense rows exclude year-end closing journals: a closing journal is dated
+        // on the year-end date and would otherwise cancel the year's figures to zero. The asset
+        // balances further down use allLines, because a closing journal never touches assets and
+        // point-in-time balances must include every posted entry.
         var thisYearLines = allLines
-            .Where(l => l.Transaction.Date >= thisYearStart && l.Transaction.Date <= thisYearEnd)
+            .Where(l => !l.Transaction.IsYearEndClose
+                     && l.Transaction.Date >= thisYearStart && l.Transaction.Date <= thisYearEnd)
             .ToList();
         var lastYearLines = allLines
-            .Where(l => l.Transaction.Date >= lastYearStart && l.Transaction.Date <= lastYearEnd)
+            .Where(l => !l.Transaction.IsYearEndClose
+                     && l.Transaction.Date >= lastYearStart && l.Transaction.Date <= lastYearEnd)
             .ToList();
 
         // Income accounts — Credit increases income, Debit decreases it
@@ -2199,7 +2210,8 @@ public class AccountingService : IAccountingService
         {
             Date        = yearEnd.Date,
             Description = $"Year end close – {yearEnd:d MMMM yyyy}",
-            Lines       = lines
+            Lines       = lines,
+            IsYearEndClose = true
         };
 
         // Temporarily bypass the lock check by setting lock after posting

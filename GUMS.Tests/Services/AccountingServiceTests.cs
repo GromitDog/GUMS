@@ -1876,6 +1876,7 @@ public class AccountingServiceTests : IDisposable
             .Include(t => t.Lines)
             .SingleAsync(t => t.Description.StartsWith("Year end close"));
         closing.Date.Should().Be(YearEnd2026);
+        closing.IsYearEndClose.Should().BeTrue();
         closing.Lines.Should().HaveCount(3);
         closing.Lines.Single(l => l.AccountId == campIncome.Id).Debit.Should().Be(390m);
         closing.Lines.Single(l => l.AccountId == campExpense.Id).Credit.Should().Be(292.09m);
@@ -1923,6 +1924,73 @@ public class AccountingServiceTests : IDisposable
         result.Success.Should().BeTrue(result.ErrorMessage);
         (await _context.Transactions.CountAsync()).Should().Be(0);
         _mockConfigService.Verify(x => x.SetAccountsLockedUntilAsync(YearEnd2026), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetYearEndReportAsync_ShouldStillShowTheYearsFigures_AfterFinalising()
+    {
+        // Arrange
+        await EnsureDefaultAccountsAsync();
+        var cash = await _context.Accounts.FirstAsync(a => a.Code == "1001");
+        var income = await CreateTestAccountAsync("4100", "Donations", AccountType.Income);
+        var expense = await CreateTestAccountAsync("5100", "Hall Hire", AccountType.Expense);
+
+        await PostBalancedTransactionAsync(MidYear2026, "Donation received", cash.Id, income.Id, 100m);
+        await PostBalancedTransactionAsync(MidYear2026, "Hall hire", expense.Id, cash.Id, 40m);
+
+        var finalise = await _sut.FinaliseYearEndAsync(YearEnd2026);
+        finalise.Success.Should().BeTrue(finalise.ErrorMessage);
+
+        // Act
+        var report = await _sut.GetYearEndReportAsync(YearEnd2026);
+
+        // Assert — the closing journal is dated on the year end but must not cancel the year's figures
+        report.IncomeRows.Single(r => r.Name == "Donations").ThisYear.Should().Be(100m);
+        report.ExpenseRows.Single(r => r.Name == "Hall Hire").ThisYear.Should().Be(40m);
+        report.AtYearEndRows.Single(r => r.Name == "Cash on Hand").ThisYear.Should().Be(60m);
+    }
+
+    [Fact]
+    public async Task GetIncomeReportAsync_ShouldExcludeYearEndClosingJournal()
+    {
+        // Arrange
+        await EnsureDefaultAccountsAsync();
+        var cash = await _context.Accounts.FirstAsync(a => a.Code == "1001");
+        var income = await CreateTestAccountAsync("4100", "Donations", AccountType.Income);
+        await PostBalancedTransactionAsync(MidYear2026, "Donation received", cash.Id, income.Id, 100m);
+
+        var finalise = await _sut.FinaliseYearEndAsync(YearEnd2026);
+        finalise.Success.Should().BeTrue(finalise.ErrorMessage);
+
+        // Act
+        var report = await _sut.GetIncomeReportAsync(YearEnd2026.AddYears(-1).AddDays(1), YearEnd2026);
+
+        // Assert
+        report.ActualTotalIncome.Should().Be(100m);
+        report.Lines.Single(l => l.AccountCode == "4100").Amount.Should().Be(100m);
+    }
+
+    [Fact]
+    public async Task GetCostCentreReportAsync_ShouldExcludeYearEndClosingJournal()
+    {
+        // Arrange
+        await EnsureDefaultAccountsAsync();
+        var cash = await _context.Accounts.FirstAsync(a => a.Code == "1001");
+        var income = await CreateTestAccountAsync("4100", "Donations", AccountType.Income);
+        var expense = await CreateTestAccountAsync("5100", "Hall Hire", AccountType.Expense);
+        await PostBalancedTransactionAsync(MidYear2026, "Donation received", cash.Id, income.Id, 100m);
+        await PostBalancedTransactionAsync(MidYear2026, "Hall hire", expense.Id, cash.Id, 40m);
+
+        var finalise = await _sut.FinaliseYearEndAsync(YearEnd2026);
+        finalise.Success.Should().BeTrue(finalise.ErrorMessage);
+
+        // Act
+        var report = await _sut.GetCostCentreReportAsync(YearEnd2026.AddYears(-1).AddDays(1), YearEnd2026);
+
+        // Assert — the unallocated line reflects the year's activity, not the closing journal
+        var unallocated = report.Lines.Single(l => l.CostCentreId == null);
+        unallocated.Income.Should().Be(100m);
+        unallocated.Expenses.Should().Be(40m);
     }
 
     #endregion

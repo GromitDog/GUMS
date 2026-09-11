@@ -51,6 +51,7 @@ The accounting system uses proper double-entry bookkeeping:
 - System account codes: `1001` Cash, `1002` Cheques, `1003` Bank, `2001` Member Credits (liability), `4001` Subs Income, `4002` Activity Income, `3001` Opening Balances
 - `CreateTransactionAsync` auto-updates account balances and validates debit=credit
 - Account constants defined at top of `AccountingService.cs`
+- Year-end close (`FinaliseYearEndAsync`) posts a closing journal dated on the year-end date, flagged `Transaction.IsYearEndClose`. Any period-based income/expense query must exclude flagged journals, otherwise the closed year reports as zero. Asset balances include them (a closing journal never touches an asset account)
 
 ### Payment System
 

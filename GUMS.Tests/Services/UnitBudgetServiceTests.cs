@@ -61,6 +61,60 @@ public class UnitBudgetServiceTests : IDisposable
         return budget;
     }
 
+    // ---- GetBudgetSummaryAsync -------------------------------------------
+
+    [Fact]
+    public async Task GetBudgetSummaryAsync_ActualSpend_ExcludesYearEndClosingJournal()
+    {
+        var account = await AddExpenseAccount();
+        var cash = new Account { Code = "1001", Name = "Cash on Hand", Type = AccountType.Asset };
+        var equity = new Account { Code = "3001", Name = "Opening Balances", Type = AccountType.Equity };
+        _context.Accounts.AddRange(cash, equity);
+        await _context.SaveChangesAsync();
+
+        await AddBudget(ThisYearEnd,
+            new UnitBudgetItem
+            {
+                Description = "Hall hire",
+                Frequency = BudgetFrequency.Yearly,
+                Allocation = BudgetAllocation.Fixed,
+                Amount = 300m,
+                ExpenseAccountId = account.Id
+            });
+
+        // Real spend during the year
+        _context.Transactions.Add(new Transaction
+        {
+            Date = new DateTime(2026, 3, 1),
+            Description = "Hall hire",
+            Lines =
+            {
+                new TransactionLine { AccountId = account.Id, Debit = 120m },
+                new TransactionLine { AccountId = cash.Id, Credit = 120m }
+            }
+        });
+
+        // Year-end closing journal that zeroes the expense account on the year-end date
+        _context.Transactions.Add(new Transaction
+        {
+            Date = ThisYearEnd,
+            Description = "Year end close",
+            IsYearEndClose = true,
+            Lines =
+            {
+                new TransactionLine { AccountId = equity.Id, Debit = 120m },
+                new TransactionLine { AccountId = account.Id, Credit = 120m }
+            }
+        });
+        await _context.SaveChangesAsync();
+
+        var summary = await _sut.GetBudgetSummaryAsync(ThisYearEnd);
+
+        var line = summary.ActualComparison.Single(l => l.ExpenseAccountId == account.Id);
+        line.Budgeted.Should().Be(300m);
+        line.Actual.Should().Be(120m);
+    }
+
     // ---- CopyBudgetItemsAsync --------------------------------------------
 
     [Fact]

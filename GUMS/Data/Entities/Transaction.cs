@@ -48,6 +48,14 @@ public class Transaction
     public DateTime? VoidedDate { get; set; }
 
     /// <summary>
+    /// True for the automatic year-end closing journal that transfers the year's net surplus
+    /// or deficit to equity. A closing journal zeroes the running balances of income and
+    /// expense accounts, but it is dated on the year-end date itself, so it must be excluded
+    /// from period-based income and expense reporting or the closed year reports as zero.
+    /// </summary>
+    public bool IsYearEndClose { get; set; }
+
+    /// <summary>
     /// Calculated total debits - should equal total credits
     /// </summary>
     public decimal TotalDebits => Lines.Sum(l => l.Debit);
