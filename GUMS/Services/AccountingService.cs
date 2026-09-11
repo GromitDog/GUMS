@@ -2095,6 +2095,8 @@ public class AccountingService : IAccountingService
             {
                 journalLines.Add(new YearClosingLine
                 {
+                    AccountId   = account.Id,
+                    AccountCode = account.Code,
                     AccountName = account.Name,
                     Debit = net > 0 ? net : null,
                     Credit = net < 0 ? -net : null
@@ -2120,6 +2122,8 @@ public class AccountingService : IAccountingService
             {
                 journalLines.Add(new YearClosingLine
                 {
+                    AccountId   = account.Id,
+                    AccountCode = account.Code,
                     AccountName = account.Name,
                     Debit = net < 0 ? -net : null,
                     Credit = net > 0 ? net : null
@@ -2132,8 +2136,11 @@ public class AccountingService : IAccountingService
         var netSurplus = totalIncome - totalExpenses;
         if (netSurplus != 0)
         {
+            var openingBalancesAccount = await GetAccountByCodeAsync(OpeningBalancesCode);
             journalLines.Add(new YearClosingLine
             {
+                AccountId   = openingBalancesAccount?.Id ?? 0,
+                AccountCode = OpeningBalancesCode,
                 AccountName = "Opening Balances (Equity)",
                 Debit = netSurplus < 0 ? -netSurplus : null,
                 Credit = netSurplus > 0 ? netSurplus : null
@@ -2168,46 +2175,21 @@ public class AccountingService : IAccountingService
             return (true, string.Empty);
         }
 
-        // Build the closing journal transaction
-        var openingBalancesAccount = await GetAccountByCodeAsync(OpeningBalancesCode);
-        if (openingBalancesAccount == null)
-        {
-            return (false, "Opening Balances account (3001) not found. Please ensure default accounts have been created.");
-        }
-
-        var incomeAccounts = await _context.Accounts
-            .Where(a => a.Type == AccountType.Income)
-            .AsNoTracking()
-            .ToListAsync();
-        var expenseAccounts = await _context.Accounts
-            .Where(a => a.Type == AccountType.Expense)
-            .AsNoTracking()
-            .ToListAsync();
-
-        var allPnlAccounts = incomeAccounts.Concat(expenseAccounts)
-            .ToDictionary(a => a.Name);
-
+        // Build the closing journal transaction. Lines are matched by account ID rather
+        // than name: an income account and an expense account may legitimately share a
+        // name (e.g. "Unit Camps"), so a name-keyed lookup would collide.
         var lines = new List<TransactionLine>();
 
         foreach (var jl in preview.JournalLines)
         {
-            int accountId;
-            if (jl.AccountName == "Opening Balances (Equity)")
+            if (jl.AccountId <= 0)
             {
-                accountId = openingBalancesAccount.Id;
-            }
-            else if (allPnlAccounts.TryGetValue(jl.AccountName, out var acct))
-            {
-                accountId = acct.Id;
-            }
-            else
-            {
-                return (false, $"Account '{jl.AccountName}' not found.");
+                return (false, $"Account '{jl.AccountName}' ({jl.AccountCode}) not found. Please ensure default accounts have been created.");
             }
 
             lines.Add(new TransactionLine
             {
-                AccountId = accountId,
+                AccountId = jl.AccountId,
                 Debit     = jl.Debit ?? 0,
                 Credit    = jl.Credit ?? 0
             });

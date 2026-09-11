@@ -1793,4 +1793,137 @@ public class AccountingServiceTests : IDisposable
     }
 
     #endregion
+
+    #region Year End Close Tests
+
+    private static readonly DateTime YearEnd2026 = new DateTime(2026, 7, 31);
+    private static readonly DateTime MidYear2026 = new DateTime(2026, 3, 1);
+
+    private async Task PostBalancedTransactionAsync(DateTime date, string description, int debitAccountId, int creditAccountId, decimal amount)
+    {
+        var result = await _sut.CreateTransactionAsync(new Transaction
+        {
+            Date = date,
+            Description = description,
+            Lines = new List<TransactionLine>
+            {
+                new TransactionLine { AccountId = debitAccountId, Debit = amount, Credit = 0 },
+                new TransactionLine { AccountId = creditAccountId, Debit = 0, Credit = amount }
+            }
+        });
+        result.Success.Should().BeTrue(result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task GetYearClosingPreviewAsync_ShouldCarryAccountIdsAndCodes_OnEveryLine()
+    {
+        // Arrange
+        await EnsureDefaultAccountsAsync();
+        var cash = await _context.Accounts.FirstAsync(a => a.Code == "1001");
+        var openingBalances = await _context.Accounts.FirstAsync(a => a.Code == "3001");
+        var income = await CreateTestAccountAsync("4100", "Donations", AccountType.Income);
+        var expense = await CreateTestAccountAsync("5100", "Venue Hire", AccountType.Expense);
+
+        await PostBalancedTransactionAsync(MidYear2026, "Donation received", cash.Id, income.Id, 100m);
+        await PostBalancedTransactionAsync(MidYear2026, "Hall hire", expense.Id, cash.Id, 40m);
+
+        // Act
+        var preview = await _sut.GetYearClosingPreviewAsync(YearEnd2026);
+
+        // Assert
+        preview.AlreadyFinalised.Should().BeFalse();
+        preview.TotalIncome.Should().Be(100m);
+        preview.TotalExpenses.Should().Be(40m);
+        preview.JournalLines.Should().HaveCount(3);
+
+        var incomeLine = preview.JournalLines.Single(l => l.AccountId == income.Id);
+        incomeLine.AccountCode.Should().Be("4100");
+        incomeLine.Debit.Should().Be(100m);
+        incomeLine.Credit.Should().BeNull();
+
+        var expenseLine = preview.JournalLines.Single(l => l.AccountId == expense.Id);
+        expenseLine.AccountCode.Should().Be("5100");
+        expenseLine.Credit.Should().Be(40m);
+        expenseLine.Debit.Should().BeNull();
+
+        var equityLine = preview.JournalLines.Single(l => l.AccountId == openingBalances.Id);
+        equityLine.AccountCode.Should().Be("3001");
+        equityLine.Credit.Should().Be(60m);
+        equityLine.Debit.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task FinaliseYearEndAsync_ShouldSucceed_WhenIncomeAndExpenseAccountsShareAName()
+    {
+        // Arrange — a unit can legitimately have "Unit Camps" as both an income and an expense account.
+        // Finalising used to build a name-keyed dictionary of P&L accounts and throw on the duplicate.
+        await EnsureDefaultAccountsAsync();
+        var cash = await _context.Accounts.FirstAsync(a => a.Code == "1001");
+        var openingBalances = await _context.Accounts.FirstAsync(a => a.Code == "3001");
+        var campIncome = await CreateTestAccountAsync("4200", "Unit Camps", AccountType.Income);
+        var campExpense = await CreateTestAccountAsync("5200", "Unit Camps", AccountType.Expense);
+
+        await PostBalancedTransactionAsync(MidYear2026, "Camp fees received", cash.Id, campIncome.Id, 390m);
+        await PostBalancedTransactionAsync(MidYear2026, "Campsite booking", campExpense.Id, cash.Id, 292.09m);
+
+        // Act
+        var result = await _sut.FinaliseYearEndAsync(YearEnd2026);
+
+        // Assert
+        result.Success.Should().BeTrue(result.ErrorMessage);
+
+        var closing = await _context.Transactions
+            .Include(t => t.Lines)
+            .SingleAsync(t => t.Description.StartsWith("Year end close"));
+        closing.Date.Should().Be(YearEnd2026);
+        closing.Lines.Should().HaveCount(3);
+        closing.Lines.Single(l => l.AccountId == campIncome.Id).Debit.Should().Be(390m);
+        closing.Lines.Single(l => l.AccountId == campExpense.Id).Credit.Should().Be(292.09m);
+        closing.Lines.Single(l => l.AccountId == openingBalances.Id).Credit.Should().Be(97.91m);
+
+        // Both same-named P&L accounts are zeroed by the close
+        (await _context.Accounts.SingleAsync(a => a.Id == campIncome.Id)).Balance.Should().Be(0m);
+        (await _context.Accounts.SingleAsync(a => a.Id == campExpense.Id)).Balance.Should().Be(0m);
+
+        _mockConfigService.Verify(x => x.SetAccountsLockedUntilAsync(YearEnd2026), Times.Once);
+    }
+
+    [Fact]
+    public async Task FinaliseYearEndAsync_ShouldFail_WhenYearAlreadyFinalised()
+    {
+        // Arrange
+        await EnsureDefaultAccountsAsync();
+        _mockConfigService.Setup(x => x.GetConfigurationAsync())
+            .ReturnsAsync(new UnitConfiguration
+            {
+                FinancialYearEndDay = 31,
+                FinancialYearEndMonth = 7,
+                AccountsLockedUntil = YearEnd2026
+            });
+
+        // Act
+        var result = await _sut.FinaliseYearEndAsync(YearEnd2026);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("already been finalised");
+        _mockConfigService.Verify(x => x.SetAccountsLockedUntilAsync(It.IsAny<DateTime?>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task FinaliseYearEndAsync_ShouldLockPeriod_WhenThereIsNoActivityToClose()
+    {
+        // Arrange
+        await EnsureDefaultAccountsAsync();
+
+        // Act
+        var result = await _sut.FinaliseYearEndAsync(YearEnd2026);
+
+        // Assert
+        result.Success.Should().BeTrue(result.ErrorMessage);
+        (await _context.Transactions.CountAsync()).Should().Be(0);
+        _mockConfigService.Verify(x => x.SetAccountsLockedUntilAsync(YearEnd2026), Times.Once);
+    }
+
+    #endregion
 }

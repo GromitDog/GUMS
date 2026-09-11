@@ -424,7 +424,7 @@
                                 @foreach (var line in _preview.JournalLines)
                                 {
                                     <tr>
-                                        <td>@line.AccountName</td>
+                                        <td><code>@line.AccountCode</code> @line.AccountName</td>
                                         <td class="text-end">@(line.Debit.HasValue ? FormatMoney(line.Debit) : string.Empty)</td>
                                         <td class="text-end">@(line.Credit.HasValue ? FormatMoney(line.Credit) : string.Empty)</td>
                                     </tr>

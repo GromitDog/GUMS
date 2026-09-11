@@ -505,6 +505,12 @@ public class YearClosingPreview
 /// <summary>A single debit or credit line in the year-end closing journal preview.</summary>
 public class YearClosingLine
 {
+    /// <summary>ID of the account this line posts to; 0 if the account could not be found.</summary>
+    public int AccountId { get; set; }
+
+    /// <summary>Account code, shown alongside the name so accounts that share a name can be told apart.</summary>
+    public string AccountCode { get; set; } = string.Empty;
+
     public string AccountName { get; set; } = string.Empty;
     public decimal? Debit { get; set; }
     public decimal? Credit { get; set; }
