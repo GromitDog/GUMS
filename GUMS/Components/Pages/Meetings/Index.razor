@@ -41,8 +41,8 @@
         </div>
     }
 
-    <!-- Summary Stats -->
-    <div class="row mb-4">
+    <!-- Summary Stats (hidden on phones so the meetings list is on screen straight away) -->
+    <div class="row mb-4 d-none d-md-flex">
         <div class="col-md-4">
             <div class="card">
                 <div class="card-body text-center">
@@ -88,6 +88,28 @@
     }
     else
     {
+        <!-- Phones: today's register is the first thing on the page -->
+        @foreach (var meeting in todayMeetings)
+        {
+            var todayStats = attendanceStatsCache.GetValueOrDefault(meeting.Id);
+            <div class="card mb-3 d-md-none border-primary" style="border-width: 2px;">
+                <div class="card-body">
+                    <span class="badge bg-success mb-2">Today</span>
+                    <h5 class="mb-1">@meeting.Title</h5>
+                    <p class="text-muted mb-3">
+                        @meeting.StartTime.ToString("HH:mm")-@meeting.EndTime.ToString("HH:mm")
+                        @if (todayStats is { Attended: > 0 })
+                        {
+                            <span class="ms-2 text-success"><i class="bi bi-check-circle-fill"></i> @todayStats.Attended present</span>
+                        }
+                    </p>
+                    <a href="/Meetings/Attendance/@meeting.Id" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-clipboard-check"></i> Take Register
+                    </a>
+                </div>
+            </div>
+        }
+
         @if (upcomingMeetings.Any())
         {
             <!-- Upcoming Meetings -->
@@ -97,8 +119,19 @@
                         <i class="bi bi-calendar-check"></i> Upcoming Meetings (@upcomingMeetings.Count)
                     </h5>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
+                <div class="card-body p-0 p-md-3">
+                    <!-- Phones: each row opens the register; the info button opens the plan -->
+                    <div class="list-group list-group-flush d-md-none">
+                        @foreach (var meeting in upcomingMeetings)
+                        {
+                            <MobileMeetingRow @key="meeting.Id"
+                                              Meeting="meeting"
+                                              Stats="attendanceStatsCache.GetValueOrDefault(meeting.Id)"
+                                              IsToday="todayMeetingIds.Contains(meeting.Id)" />
+                        }
+                    </div>
+
+                    <div class="table-responsive d-none d-md-block">
                         <table class="table table-hover">
                             <thead>
                                 <tr>
@@ -204,7 +237,16 @@
                                    value="@pastSearchText" @oninput="OnPastSearchChanged" />
                         </div>
                         @{ var filtered = FilteredPastMeetings; }
-                        <div class="table-responsive">
+                        <div class="list-group d-md-none">
+                            @foreach (var meeting in filtered.Take(pastPageSize))
+                            {
+                                <MobileMeetingRow @key="meeting.Id"
+                                                  Meeting="meeting"
+                                                  Stats="attendanceStatsCache.GetValueOrDefault(meeting.Id)"
+                                                  IsToday="todayMeetingIds.Contains(meeting.Id)" />
+                            }
+                        </div>
+                        <div class="table-responsive d-none d-md-block">
                             <table class="table table-hover">
                                 <thead>
                                     <tr>
@@ -262,16 +304,16 @@
                                     }
                                 </tbody>
                             </table>
-                            @if (filtered.Count > pastPageSize)
-                            {
-                                <div class="text-center mt-2">
-                                    <p class="text-muted mb-2">Showing @Math.Min(pastPageSize, filtered.Count) of @filtered.Count past meetings</p>
-                                    <button class="btn btn-outline-secondary btn-sm" @onclick="ShowMorePastMeetings">
-                                        <i class="bi bi-arrow-down-circle"></i> Show More
-                                    </button>
-                                </div>
-                            }
                         </div>
+                        @if (filtered.Count > pastPageSize)
+                        {
+                            <div class="text-center mt-2">
+                                <p class="text-muted mb-2">Showing @Math.Min(pastPageSize, filtered.Count) of @filtered.Count past meetings</p>
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="ShowMorePastMeetings">
+                                    <i class="bi bi-arrow-down-circle"></i> Show More
+                                </button>
+                            </div>
+                        }
                     </div>
                 }
             </div>
