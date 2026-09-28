@@ -421,21 +421,21 @@
                                 {
                                     var member = memberLookup[record.MembershipNumber];
                                     <label class="list-group-item register-row d-flex justify-content-between align-items-center mb-0 @(record.Attended ? "list-group-item-success" : "")">
-                                        <div class="d-flex align-items-center">
-                                            <div class="form-check form-switch me-3">
+                                        <span class="d-flex align-items-center">
+                                            <span class="form-check form-switch me-3">
                                                 <input class="form-check-input" type="checkbox" role="switch"
                                                        id="att-@record.MembershipNumber"
                                                        checked="@record.Attended"
                                                        @onchange="@(e => ToggleAttendance(record, (bool)(e.Value ?? false)))"
                                                        style="width: 3em; height: 1.5em;" />
-                                            </div>
-                                            <div>
+                                            </span>
+                                            <span>
                                                 <strong>@member.FullName</strong>
                                                 <br />
                                                 <small class="text-muted">@member.MembershipNumber @(member.Section != null ? $"- {member.Section}" : "")</small>
-                                            </div>
-                                        </div>
-                                        <div>
+                                            </span>
+                                        </span>
+                                        <span>
                                             @if (record.Attended)
                                             {
                                                 <span class="badge bg-success">Present</span>
@@ -444,7 +444,7 @@
                                             {
                                                 <span class="badge bg-secondary">Absent</span>
                                             }
-                                        </div>
+                                        </span>
                                     </label>
                                 }
                             </div>
@@ -460,21 +460,21 @@
                                 {
                                     var member = memberLookup[record.MembershipNumber];
                                     <label class="list-group-item register-row d-flex justify-content-between align-items-center mb-0 @(record.Attended ? "list-group-item-success" : "")">
-                                        <div class="d-flex align-items-center">
-                                            <div class="form-check form-switch me-3">
+                                        <span class="d-flex align-items-center">
+                                            <span class="form-check form-switch me-3">
                                                 <input class="form-check-input" type="checkbox" role="switch"
                                                        id="att-@record.MembershipNumber"
                                                        checked="@record.Attended"
                                                        @onchange="@(e => ToggleAttendance(record, (bool)(e.Value ?? false)))"
                                                        style="width: 3em; height: 1.5em;" />
-                                            </div>
-                                            <div>
+                                            </span>
+                                            <span>
                                                 <strong>@member.FullName</strong>
                                                 <br />
                                                 <small class="text-muted">@member.MembershipNumber - Leader</small>
-                                            </div>
-                                        </div>
-                                        <div>
+                                            </span>
+                                        </span>
+                                        <span>
                                             @if (record.Attended)
                                             {
                                                 <span class="badge bg-success">Present</span>
@@ -483,7 +483,7 @@
                                             {
                                                 <span class="badge bg-secondary">Absent</span>
                                             }
-                                        </div>
+                                        </span>
                                     </label>
                                 }
                             </div>
