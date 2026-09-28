@@ -355,6 +355,12 @@ h1:focus {
         padding-right: 0.75rem !important;
     }
 
+    /* The layout's px-4 gutter on top of the container above wasted a fifth of a phone's width */
+    article.content {
+        padding-left: 0.25rem !important;
+        padding-right: 0.25rem !important;
+    }
+
     /* Mobile consent card layout */
     .mobile-consent-card {
         border: 1px solid #dee2e6;
