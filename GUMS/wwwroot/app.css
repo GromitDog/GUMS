@@ -315,6 +315,11 @@ h1:focus {
 .modal-header-refund { background-color: var(--gg-theme-be-well); color: white; }
 .modal-header-delete { background-color: var(--gg-error); color: white; }
 
+/* Register rows are labels: tapping anywhere on the row toggles present/absent */
+.register-row {
+    cursor: pointer;
+}
+
 /* ===== Mobile-friendly styles ===== */
 @media (max-width: 767.98px) {
     /* Sticky action bar at bottom of screen */
@@ -331,7 +336,12 @@ h1:focus {
 
     /* Bottom padding so sticky bar doesn't cover content */
     .mobile-sticky-page {
-        padding-bottom: 5rem !important;
+        padding-bottom: 6rem !important;
+    }
+
+    /* Quick taps on register rows shouldn't select the names */
+    .register-row {
+        user-select: none;
     }
 
     /* Reduce page title sizes on mobile */
