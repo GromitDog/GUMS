@@ -10,16 +10,22 @@ public class MeetingService : IMeetingService
     private readonly ApplicationDbContext _context;
     private readonly IConfigurationService _configService;
     private readonly ITermService _termService;
+    private readonly TimeProvider _timeProvider;
 
     public MeetingService(
         ApplicationDbContext context,
         IConfigurationService configService,
-        ITermService termService)
+        ITermService termService,
+        TimeProvider? timeProvider = null)
     {
         _context = context;
         _configService = configService;
         _termService = termService;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
+
+    // Tests pin the clock so date-relative behaviour doesn't drift as real time passes
+    private DateTime Today => _timeProvider.GetLocalNow().Date;
 
     // ===== Meeting CRUD Operations =====
 
@@ -53,7 +59,7 @@ public class MeetingService : IMeetingService
     public async Task<List<Meeting>> GetUpcomingAsync(int? limit = null)
     {
         // Keep meetings visible for 3 weeks after meeting date before moving to past
-        var cutoff = DateTime.Today.AddDays(-21);
+        var cutoff = Today.AddDays(-21);
         var query = _context.Meetings
             .Include(m => m.MeetingActivities.OrderBy(a => a.SortOrder))
             .AsNoTracking()
@@ -71,7 +77,7 @@ public class MeetingService : IMeetingService
     public async Task<List<Meeting>> GetPastAsync(int? limit = null)
     {
         // Meetings move to past 3 weeks after their date (matches GetUpcomingAsync cutoff)
-        var cutoff = DateTime.Today.AddDays(-21);
+        var cutoff = Today.AddDays(-21);
         var query = _context.Meetings
             .Include(m => m.MeetingActivities.OrderBy(a => a.SortOrder))
             .AsNoTracking()
@@ -291,7 +297,7 @@ public class MeetingService : IMeetingService
 
         var config = await _configService.GetConfigurationAsync();
         var meetingDay = config.MeetingDayOfWeek;
-        var today = DateTime.Today;
+        var today = Today;
 
         var suggestedDates = new List<DateTime>();
         var currentDate = term.StartDate < today ? today : term.StartDate;
@@ -406,7 +412,7 @@ public class MeetingService : IMeetingService
 
     public async Task<DateTime?> GetNextMeetingDateAsync()
     {
-        var today = DateTime.Today;
+        var today = Today;
         var nextMeeting = await _context.Meetings
             .Where(m => m.Date >= today)
             .OrderBy(m => m.Date)

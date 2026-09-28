@@ -751,8 +751,10 @@ public class MeetingServiceTests : IDisposable
         _mockTermService.Setup(x => x.GetByIdAsync(1))
             .ReturnsAsync(term);
 
+        var sut = CreateSutWithToday(new DateTime(2026, 8, 1));
+
         // Act - Looking for Wednesdays (configured day)
-        var result = await _sut.GetSuggestedMeetingDatesForTermAsync(1);
+        var result = await sut.GetSuggestedMeetingDatesForTermAsync(1);
 
         // Assert
         result.Should().NotBeEmpty();
@@ -790,8 +792,11 @@ public class MeetingServiceTests : IDisposable
         _mockTermService.Setup(x => x.GetByIdAsync(1))
             .ReturnsAsync(term);
 
+        // Past dates are never suggested, so pin "today" before the term starts
+        var sut = CreateSutWithToday(new DateTime(2026, 8, 1));
+
         // Act
-        var result = await _sut.GenerateRegularMeetingsForTermAsync(1, "Test Meeting");
+        var result = await sut.GenerateRegularMeetingsForTermAsync(1, "Test Meeting");
 
         // Assert
         result.Success.Should().BeTrue();
@@ -823,8 +828,10 @@ public class MeetingServiceTests : IDisposable
         _context.Meetings.Add(existingMeeting);
         await _context.SaveChangesAsync();
 
+        var sut = CreateSutWithToday(new DateTime(2026, 8, 1));
+
         // Act
-        var result = await _sut.GenerateRegularMeetingsForTermAsync(1);
+        var result = await sut.GenerateRegularMeetingsForTermAsync(1);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -1106,6 +1113,18 @@ public class MeetingServiceTests : IDisposable
             Title = title,
             LocationName = "Hall"
         };
+    }
+
+    private MeetingService CreateSutWithToday(DateTime today)
+    {
+        return new MeetingService(_context, _mockConfigService.Object, _mockTermService.Object,
+            new FixedTimeProvider(today));
+    }
+
+    private sealed class FixedTimeProvider(DateTime today) : TimeProvider
+    {
+        public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
+        public override DateTimeOffset GetUtcNow() => new(DateTime.SpecifyKind(today, DateTimeKind.Utc));
     }
 
     #endregion
