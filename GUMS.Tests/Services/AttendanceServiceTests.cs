@@ -79,6 +79,24 @@ public class AttendanceServiceTests : IDisposable
         return person;
     }
 
+    private async Task<Meeting> CreateTestCampAsync(DateTime date, DateTime endDate)
+    {
+        var meeting = new Meeting
+        {
+            Date = date,
+            EndDate = endDate,
+            StartTime = new TimeOnly(10, 00),
+            EndTime = new TimeOnly(16, 00),
+            MeetingType = MeetingType.Extra,
+            Title = "Camp",
+            LocationName = "Camp Site"
+        };
+
+        _context.Meetings.Add(meeting);
+        await _context.SaveChangesAsync();
+        return meeting;
+    }
+
     private async Task<Term> CreateTestTermAsync(DateTime? startDate = null, DateTime? endDate = null)
     {
         var term = new Term
@@ -1478,6 +1496,246 @@ public class AttendanceServiceTests : IDisposable
         var saved = await _context.Attendances
             .SingleAsync(a => a.MeetingId == meeting.Id && a.MembershipNumber == "L001");
         saved.PlanningToAttend.Should().BeTrue();
+    }
+
+    #endregion
+
+    #region Day Camper Tests
+
+    [Fact]
+    public async Task SaveAttendanceRecordAsync_ShouldGiveDayCamperZeroNightsAway_ForMultiDayMeeting()
+    {
+        // Arrange
+        var meeting = await CreateTestCampAsync(new DateTime(2026, 1, 5), new DateTime(2026, 1, 7));
+        var attendance = new Attendance
+        {
+            MeetingId = meeting.Id,
+            MembershipNumber = "M001",
+            Attended = true,
+            IsDayCamper = true
+        };
+
+        // Act
+        var result = await _sut.SaveAttendanceRecordAsync(attendance);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Attendance!.IsDayCamper.Should().BeTrue();
+        result.Attendance.NightsAway.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task SaveAttendanceRecordAsync_ShouldResetNightsAway_WhenExistingAttendeeBecomesDayCamper()
+    {
+        // Arrange
+        var meeting = await CreateTestCampAsync(new DateTime(2026, 1, 5), new DateTime(2026, 1, 7));
+        _context.Attendances.Add(new Attendance
+        {
+            MeetingId = meeting.Id,
+            MembershipNumber = "M001",
+            Attended = true,
+            NightsAway = 2
+        });
+        await _context.SaveChangesAsync();
+
+        var attendance = new Attendance
+        {
+            MeetingId = meeting.Id,
+            MembershipNumber = "M001",
+            Attended = true,
+            IsDayCamper = true,
+            NightsAway = 2 // Stale value from before she was switched to a day camper
+        };
+
+        // Act
+        var result = await _sut.SaveAttendanceRecordAsync(attendance);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        var saved = await _context.Attendances
+            .SingleAsync(a => a.MeetingId == meeting.Id && a.MembershipNumber == "M001");
+        saved.IsDayCamper.Should().BeTrue();
+        saved.NightsAway.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task SaveAttendanceRecordAsync_ShouldClearNightsAway_WhenDayCamperNotAttended()
+    {
+        // Arrange
+        var meeting = await CreateTestCampAsync(new DateTime(2026, 1, 5), new DateTime(2026, 1, 7));
+        var attendance = new Attendance
+        {
+            MeetingId = meeting.Id,
+            MembershipNumber = "M001",
+            Attended = false,
+            IsDayCamper = true
+        };
+
+        // Act
+        var result = await _sut.SaveAttendanceRecordAsync(attendance);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Attendance!.IsDayCamper.Should().BeTrue();
+        result.Attendance.NightsAway.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SaveBulkAttendanceAsync_ShouldGiveDayCampersNoNights_AndFullCampersTheFullStay()
+    {
+        // Arrange
+        var meeting = await CreateTestCampAsync(new DateTime(2026, 1, 5), new DateTime(2026, 1, 7));
+        var attendances = new List<Attendance>
+        {
+            new() { MembershipNumber = "M001", Attended = true },
+            new() { MembershipNumber = "M002", Attended = true, IsDayCamper = true },
+            new() { MembershipNumber = "M003", Attended = true, IsDayCamper = true, NightsAway = 2 }
+        };
+
+        // Act
+        var result = await _sut.SaveBulkAttendanceAsync(meeting.Id, attendances);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        var saved = await _context.Attendances
+            .Where(a => a.MeetingId == meeting.Id)
+            .OrderBy(a => a.MembershipNumber)
+            .ToListAsync();
+
+        saved.Should().HaveCount(3);
+        saved[0].IsDayCamper.Should().BeFalse();
+        saved[0].NightsAway.Should().Be(2);
+        saved[1].IsDayCamper.Should().BeTrue();
+        saved[1].NightsAway.Should().Be(0);
+        saved[2].IsDayCamper.Should().BeTrue();
+        saved[2].NightsAway.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task SaveBulkAttendanceAsync_ShouldUpdateIsDayCamper_WhenRecordExists()
+    {
+        // Arrange
+        var meeting = await CreateTestCampAsync(new DateTime(2026, 1, 5), new DateTime(2026, 1, 7));
+        _context.Attendances.Add(new Attendance
+        {
+            MeetingId = meeting.Id,
+            MembershipNumber = "M001",
+            ConsentFormReceived = true
+        });
+        await _context.SaveChangesAsync();
+
+        var updated = new List<Attendance>
+        {
+            new() { MembershipNumber = "M001", ConsentFormReceived = true, IsDayCamper = true }
+        };
+
+        // Act
+        var result = await _sut.SaveBulkAttendanceAsync(meeting.Id, updated);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        var record = await _context.Attendances
+            .SingleAsync(a => a.MeetingId == meeting.Id && a.MembershipNumber == "M001");
+        record.IsDayCamper.Should().BeTrue();
+        record.ConsentFormReceived.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UpdateNightsAwayAsync_ShouldFail_ForDayCamper()
+    {
+        // Arrange
+        var meeting = await CreateTestCampAsync(new DateTime(2026, 1, 5), new DateTime(2026, 1, 7));
+        var attendance = new Attendance
+        {
+            MeetingId = meeting.Id,
+            MembershipNumber = "M001",
+            Attended = true,
+            IsDayCamper = true,
+            NightsAway = 0
+        };
+        _context.Attendances.Add(attendance);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _sut.UpdateNightsAwayAsync(attendance.Id, 2);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Day campers");
+
+        var unchanged = await _context.Attendances.FindAsync(attendance.Id);
+        unchanged!.NightsAway.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetTotalNightsAwayAsync_ShouldNotCountDayCamperEvents()
+    {
+        // Arrange - full camper at one camp, day camper at another
+        var camp1 = await CreateTestCampAsync(new DateTime(2026, 1, 5), new DateTime(2026, 1, 7));
+        var camp2 = await CreateTestCampAsync(new DateTime(2026, 2, 10), new DateTime(2026, 2, 13));
+
+        await _sut.SaveAttendanceRecordAsync(new Attendance
+        {
+            MeetingId = camp1.Id,
+            MembershipNumber = "M001",
+            Attended = true
+        });
+        await _sut.SaveAttendanceRecordAsync(new Attendance
+        {
+            MeetingId = camp2.Id,
+            MembershipNumber = "M001",
+            Attended = true,
+            IsDayCamper = true
+        });
+
+        // Act
+        var result = await _sut.GetTotalNightsAwayAsync("M001");
+
+        // Assert
+        result.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetNightsAwaySummaryAsync_ShouldExcludeMembersWhoOnlyDayCamped()
+    {
+        // Arrange
+        var meeting = await CreateTestCampAsync(new DateTime(2026, 1, 5), new DateTime(2026, 1, 7));
+        await CreateTestPersonAsync("M001", PersonType.Girl);
+        await CreateTestPersonAsync("M002", PersonType.Girl);
+
+        await _sut.SaveBulkAttendanceAsync(meeting.Id, new List<Attendance>
+        {
+            new() { MembershipNumber = "M001", Attended = true },
+            new() { MembershipNumber = "M002", Attended = true, IsDayCamper = true }
+        });
+
+        // Act
+        var result = await _sut.GetNightsAwaySummaryAsync();
+
+        // Assert
+        result.Should().ContainSingle();
+        result[0].MembershipNumber.Should().Be("M001");
+        result[0].TotalNightsAway.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetMeetingAttendanceStatsAsync_ShouldCountDayCampers()
+    {
+        // Arrange
+        var meeting = await CreateTestCampAsync(new DateTime(2026, 1, 5), new DateTime(2026, 1, 7));
+        _context.Attendances.AddRange(
+            new Attendance { MeetingId = meeting.Id, MembershipNumber = "M001", Attended = true },
+            new Attendance { MeetingId = meeting.Id, MembershipNumber = "M002", Attended = true, IsDayCamper = true, NightsAway = 0 },
+            new Attendance { MeetingId = meeting.Id, MembershipNumber = "M003", Attended = false, IsDayCamper = true }
+        );
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _sut.GetMeetingAttendanceStatsAsync(meeting.Id);
+
+        // Assert
+        result.DayCampers.Should().Be(2);
+        result.Attended.Should().Be(2);
     }
 
     #endregion

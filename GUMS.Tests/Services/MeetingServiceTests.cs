@@ -50,6 +50,22 @@ public class MeetingServiceTests : IDisposable
         _sut = new MeetingService(_context, _mockConfigService.Object, _mockTermService.Object);
     }
 
+    /// <summary>
+    /// Builds a service whose "today" is fixed, so tests with hardcoded term dates
+    /// don't start failing once those dates are in the past.
+    /// </summary>
+    private MeetingService CreateSutWithToday(DateTime today)
+    {
+        return new MeetingService(_context, _mockConfigService.Object, _mockTermService.Object,
+            new FixedTimeProvider(new DateTimeOffset(today, TimeSpan.Zero)));
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+        public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
+    }
+
     public void Dispose()
     {
         _context?.Dispose();
@@ -764,9 +780,10 @@ public class MeetingServiceTests : IDisposable
 
         _mockTermService.Setup(x => x.GetByIdAsync(1))
             .ReturnsAsync(term);
+        var sut = CreateSutWithToday(new DateTime(2026, 8, 1)); // Before the term starts
 
         // Act - Looking for Wednesdays (configured day)
-        var result = await _sut.GetSuggestedMeetingDatesForTermAsync(1);
+        var result = await sut.GetSuggestedMeetingDatesForTermAsync(1);
 
         // Assert
         result.Should().NotBeEmpty();
@@ -804,9 +821,10 @@ public class MeetingServiceTests : IDisposable
 
         _mockTermService.Setup(x => x.GetByIdAsync(1))
             .ReturnsAsync(term);
+        var sut = CreateSutWithToday(new DateTime(2026, 8, 1)); // Before the term starts
 
         // Act
-        var result = await _sut.GenerateRegularMeetingsForTermAsync(1, "Test Meeting");
+        var result = await sut.GenerateRegularMeetingsForTermAsync(1, "Test Meeting");
 
         // Assert
         result.Success.Should().BeTrue();
@@ -833,6 +851,7 @@ public class MeetingServiceTests : IDisposable
 
         _mockTermService.Setup(x => x.GetByIdAsync(1))
             .ReturnsAsync(term);
+        var sut = CreateSutWithToday(new DateTime(2026, 8, 1)); // Before the term starts
 
         // Create a meeting on the first Wednesday
         var existingMeeting = CreateMeeting("Existing", firstWednesday);
@@ -840,7 +859,7 @@ public class MeetingServiceTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _sut.GenerateRegularMeetingsForTermAsync(1);
+        var result = await sut.GenerateRegularMeetingsForTermAsync(1);
 
         // Assert
         result.Success.Should().BeTrue();
