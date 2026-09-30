@@ -147,6 +147,10 @@
                                             <th class="text-center">Email</th>
                                             <th class="text-center">Form In</th>
                                             <th class="text-center">Declined</th>
+                                            @if (isMultiDayMeeting)
+                                            {
+                                                <th class="text-center">Day Camper</th>
+                                            }
                                             <th>Status</th>
                                         </tr>
                                     </thead>
@@ -171,6 +175,15 @@
                                                            checked="@record.ConsentDeclined"
                                                            @onchange="@(e => ToggleConsentDeclined(record, (bool)(e.Value ?? false)))" />
                                                 </td>
+                                                @if (isMultiDayMeeting)
+                                                {
+                                                    <td class="text-center">
+                                                        <input type="checkbox" class="form-check-input"
+                                                               checked="@record.IsDayCamper"
+                                                               disabled="@record.ConsentDeclined"
+                                                               @onchange="@(e => ToggleDayCamper(record, (bool)(e.Value ?? false)))" />
+                                                    </td>
+                                                }
                                                 <td>
                                                     @if (record.ConsentFormReceived)
                                                     {
@@ -239,6 +252,16 @@
                                                        @onchange="@(e => ToggleConsentDeclined(record, (bool)(e.Value ?? false)))" />
                                                 <label class="form-check-label small">Declined</label>
                                             </div>
+                                            @if (isMultiDayMeeting)
+                                            {
+                                                <div class="form-check">
+                                                    <input type="checkbox" class="form-check-input"
+                                                           checked="@record.IsDayCamper"
+                                                           disabled="@record.ConsentDeclined"
+                                                           @onchange="@(e => ToggleDayCamper(record, (bool)(e.Value ?? false)))" />
+                                                    <label class="form-check-label small">Day Camper</label>
+                                                </div>
+                                            }
                                         </div>
                                     </div>
                                 }
@@ -250,11 +273,12 @@
                                 var consentDeclinedCount = allGirlRecords.Count(r => r.ConsentDeclined);
                                 var consentResponded = consentFormsIn + consentDeclinedCount;
                                 var consentToChase = allGirlRecords.Count - consentResponded;
+                                var consentDayCampers = allGirlRecords.Count(r => r.IsDayCamper);
                             }
                             <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-light rounded">
                                 <div>
                                     <strong>@consentResponded / @allGirlRecords.Count responded</strong>
-                                    <span class="text-muted ms-2">(@consentFormsIn consented, @consentDeclinedCount declined)</span>
+                                    <span class="text-muted ms-2">(@consentFormsIn consented, @consentDeclinedCount declined@(isMultiDayMeeting ? $", {consentDayCampers} day camper{(consentDayCampers != 1 ? "s" : "")}" : ""))</span>
                                 </div>
                                 @if (consentToChase > 0)
                                 {
@@ -396,7 +420,17 @@
                                                 <small class="text-muted">@member.MembershipNumber @(member.Section != null ? $"- {member.Section}" : "")</small>
                                             </div>
                                         </div>
-                                        <div>
+                                        <div class="d-flex align-items-center gap-3">
+                                            @if (isMultiDayMeeting)
+                                            {
+                                                <div class="form-check mb-0">
+                                                    <input class="form-check-input" type="checkbox"
+                                                           id="day-@record.MembershipNumber"
+                                                           checked="@record.IsDayCamper"
+                                                           @onchange="@(e => ToggleDayCamper(record, (bool)(e.Value ?? false)))" />
+                                                    <label class="form-check-label small" for="day-@record.MembershipNumber">Day camper</label>
+                                                </div>
+                                            }
                                             @if (record.Attended)
                                             {
                                                 <span class="badge bg-success">Present</span>
@@ -531,6 +565,7 @@
                             <p class="text-muted mb-3">
                                 This is a multi-day event (@defaultNightsAway night@(defaultNightsAway != 1 ? "s" : "")).
                                 Nights away are auto-calculated when marking attendance, but you can adjust if someone left early.
+                                Day campers go home each night, so they don't get any nights away.
                             </p>
 
                             <div class="table-responsive">
@@ -548,12 +583,17 @@
                                             <tr>
                                                 <td>
                                                     @member.FullName
+                                                    @if (record.IsDayCamper)
+                                                    {
+                                                        <span class="badge bg-info ms-1">Day camper</span>
+                                                    }
                                                     <small class="text-muted d-block">@(member.PersonType == PersonType.Leader ? "Leader" : member.Section?.ToString())</small>
                                                 </td>
                                                 <td class="text-center">
                                                     <input type="number" class="form-control form-control-sm text-center"
                                                            min="0" max="@defaultNightsAway"
                                                            value="@(record.NightsAway ?? defaultNightsAway)"
+                                                           disabled="@record.IsDayCamper"
                                                            @onchange="@(e => UpdateNightsAway(record, int.TryParse(e.Value?.ToString(), out var n) ? n : null))"
                                                            style="width: 80px; display: inline-block;" />
                                                 </td>
@@ -575,6 +615,13 @@
                                     <div>
                                         <strong>Total:</strong>
                                         <span class="ms-2">@attendanceRecords.Where(a => a.Attended).Sum(a => a.NightsAway ?? 0) nights across @attendanceRecords.Count(a => a.Attended) attendees</span>
+                                        @{
+                                            var presentDayCampers = attendanceRecords.Count(a => a.Attended && a.IsDayCamper);
+                                        }
+                                        @if (presentDayCampers > 0)
+                                        {
+                                            <span class="text-muted ms-1">(@presentDayCampers day camper@(presentDayCampers != 1 ? "s" : ""))</span>
+                                        }
                                     </div>
                                 </div>
                             }
@@ -633,6 +680,10 @@
                             @if (requiresConsent)
                             {
                                 <li class="mb-2">Track consent forms below - check "Email" when parent confirms, "Form" when paper form received</li>
+                            }
+                            @if (isMultiDayMeeting)
+                            {
+                                <li class="mb-2">Tick "Day camper" for girls coming in the day but going home at night - they still pay and need consent, but get no nights away</li>
                             }
                         </ul>
                     </div>

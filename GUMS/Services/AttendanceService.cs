@@ -76,16 +76,10 @@ public class AttendanceService : IAttendanceService
             return (false, "Membership number is required.", null);
         }
 
-        // Auto-calculate NightsAway for multi-day meetings if not already set
-        if (attendance.Attended && meeting.EndDate.HasValue && !attendance.NightsAway.HasValue)
-        {
-            attendance.NightsAway = _meetingService.CalculateNightsForMeeting(meeting.Date, meeting.EndDate);
-        }
-        else if (!attendance.Attended)
-        {
-            // If not attended, clear nights away
-            attendance.NightsAway = null;
-        }
+        var defaultNights = meeting.EndDate.HasValue
+            ? _meetingService.CalculateNightsForMeeting(meeting.Date, meeting.EndDate)
+            : (int?)null;
+        attendance.NightsAway = ResolveNightsAway(attendance, defaultNights);
 
         // Check if record already exists
         var existingRecord = await _context.Attendances
@@ -106,6 +100,7 @@ public class AttendanceService : IAttendanceService
             existingRecord.Notes = attendance.Notes;
             existingRecord.NightsAway = attendance.NightsAway;
             existingRecord.PlanningToAttend = attendance.PlanningToAttend;
+            existingRecord.IsDayCamper = attendance.IsDayCamper;
 
             await _context.SaveChangesAsync();
             return (true, string.Empty, existingRecord);
@@ -153,16 +148,7 @@ public class AttendanceService : IAttendanceService
             }
 
             record.MeetingId = meetingId; // Ensure meeting ID is set
-
-            // Auto-calculate NightsAway for multi-day meetings if not already set
-            if (record.Attended && defaultNights.HasValue && !record.NightsAway.HasValue)
-            {
-                record.NightsAway = defaultNights;
-            }
-            else if (!record.Attended)
-            {
-                record.NightsAway = null;
-            }
+            record.NightsAway = ResolveNightsAway(record, defaultNights);
 
             if (existingRecords.TryGetValue(record.MembershipNumber, out var existing))
             {
@@ -178,6 +164,7 @@ public class AttendanceService : IAttendanceService
                 existing.Notes = record.Notes;
                 existing.NightsAway = record.NightsAway;
                 existing.PlanningToAttend = record.PlanningToAttend;
+                existing.IsDayCamper = record.IsDayCamper;
             }
             else
             {
@@ -396,6 +383,7 @@ public class AttendanceService : IAttendanceService
             ConsentFormReceived = records.Count(r => r.ConsentFormReceived),
             ConsentDeclined = records.Count(r => r.ConsentDeclined),
             OutstandingConsent = records.Count(r => r.ConsentEmailReceived && !r.ConsentFormReceived && !r.ConsentDeclined),
+            DayCampers = records.Count(r => r.IsDayCamper),
             HasBeenRecorded = records.Any()
         };
     }
@@ -637,6 +625,22 @@ public class AttendanceService : IAttendanceService
 
     // ===== Nights Away Tracking =====
 
+    /// <summary>
+    /// Works out the nights away to store for a record. Absentees get none, day campers
+    /// on a multi-day meeting get 0, and everyone else keeps any manual value or falls
+    /// back to the meeting's full length. defaultNights is null for single-day meetings.
+    /// </summary>
+    private static int? ResolveNightsAway(Attendance record, int? defaultNights)
+    {
+        if (!record.Attended)
+            return null;
+
+        if (!defaultNights.HasValue)
+            return record.NightsAway;
+
+        return record.IsDayCamper ? 0 : record.NightsAway ?? defaultNights;
+    }
+
     public async Task<int> GetTotalNightsAwayAsync(string membershipNumber)
     {
         return await _context.Attendances
@@ -667,6 +671,11 @@ public class AttendanceService : IAttendanceService
         if (nightsAway.HasValue && nightsAway.Value < 0)
         {
             return (false, "Nights away cannot be negative.");
+        }
+
+        if (record.IsDayCamper && nightsAway > 0)
+        {
+            return (false, "Day campers don't stay overnight, so can't have nights away.");
         }
 
         record.NightsAway = nightsAway;
