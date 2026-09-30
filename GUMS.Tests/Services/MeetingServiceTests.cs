@@ -739,12 +739,13 @@ public class MeetingServiceTests : IDisposable
     [Fact]
     public async Task GetSuggestedMeetingDatesForTermAsync_ShouldReturnCorrectDates()
     {
-        // Arrange
+        // Arrange - the service never suggests dates before today, so the term must be upcoming
+        var startDate = NextDateAfterToday(DayOfWeek.Tuesday);
         var term = new Term
         {
-            Name = "Autumn 2026",
-            StartDate = new DateTime(2026, 9, 1), // Tuesday
-            EndDate = new DateTime(2026, 12, 20),
+            Name = "Upcoming Term",
+            StartDate = startDate,
+            EndDate = startDate.AddDays(110),
             SubsAmount = 20
         };
 
@@ -778,12 +779,13 @@ public class MeetingServiceTests : IDisposable
     [Fact]
     public async Task GenerateRegularMeetingsForTermAsync_ShouldCreateMeetings()
     {
-        // Arrange
+        // Arrange - the service never generates dates before today, so the term must be upcoming
+        var startDate = NextDateAfterToday(DayOfWeek.Wednesday);
         var term = new Term
         {
-            Name = "Autumn 2026",
-            StartDate = new DateTime(2026, 9, 2), // Wednesday
-            EndDate = new DateTime(2026, 9, 23),  // 4 Wednesdays
+            Name = "Upcoming Term",
+            StartDate = startDate,
+            EndDate = startDate.AddDays(21), // 4 Wednesdays
             SubsAmount = 20
         };
 
@@ -806,12 +808,13 @@ public class MeetingServiceTests : IDisposable
     [Fact]
     public async Task GenerateRegularMeetingsForTermAsync_ShouldSkipExistingDates()
     {
-        // Arrange
+        // Arrange - the service never generates dates before today, so the term must be upcoming
+        var startDate = NextDateAfterToday(DayOfWeek.Wednesday);
         var term = new Term
         {
-            Name = "Autumn 2026",
-            StartDate = new DateTime(2026, 9, 2),
-            EndDate = new DateTime(2026, 9, 23),
+            Name = "Upcoming Term",
+            StartDate = startDate,
+            EndDate = startDate.AddDays(21), // 4 Wednesdays
             SubsAmount = 20
         };
 
@@ -819,7 +822,7 @@ public class MeetingServiceTests : IDisposable
             .ReturnsAsync(term);
 
         // Create a meeting on the first Wednesday
-        var existingMeeting = CreateMeeting("Existing", new DateTime(2026, 9, 2));
+        var existingMeeting = CreateMeeting("Existing", startDate);
         _context.Meetings.Add(existingMeeting);
         await _context.SaveChangesAsync();
 
@@ -1106,6 +1109,16 @@ public class MeetingServiceTests : IDisposable
             Title = title,
             LocationName = "Hall"
         };
+    }
+
+    private static DateTime NextDateAfterToday(DayOfWeek dayOfWeek)
+    {
+        var date = DateTime.Today.AddDays(1);
+        while (date.DayOfWeek != dayOfWeek)
+        {
+            date = date.AddDays(1);
+        }
+        return date;
     }
 
     #endregion
