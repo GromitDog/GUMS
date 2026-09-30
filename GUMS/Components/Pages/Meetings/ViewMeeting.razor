@@ -292,6 +292,12 @@
                             <p class="text-center text-muted mt-2 mb-0">
                                 @attendanceStats.AttendancePercent.ToString("F0")% attendance rate
                             </p>
+                            @if (attendanceStats.DayCampers > 0)
+                            {
+                                <p class="text-center text-muted mt-1 mb-0">
+                                    <i class="bi bi-sun"></i> @attendanceStats.DayCampers day camper@(attendanceStats.DayCampers != 1 ? "s" : "") (no nights away)
+                                </p>
+                            }
 
                             @if (requiresConsent && (attendanceStats.ConsentEmailReceived > 0 || attendanceStats.ConsentFormReceived > 0))
                             {

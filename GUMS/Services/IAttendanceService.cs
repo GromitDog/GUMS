@@ -137,6 +137,7 @@ public interface IAttendanceService
 
     /// <summary>
     /// Updates the nights away for a specific attendance record (manual override).
+    /// Day campers can't be given nights away.
     /// </summary>
     Task<(bool Success, string ErrorMessage)> UpdateNightsAwayAsync(int attendanceId, int? nightsAway);
 
@@ -183,6 +184,7 @@ public class AttendanceStats
     public int ConsentFormReceived { get; set; }
     public int ConsentDeclined { get; set; }
     public int OutstandingConsent { get; set; }
+    public int DayCampers { get; set; }
     public bool HasBeenRecorded { get; set; }
 
     public double AttendancePercent => TotalMembers > 0 ? (double)Attended / TotalMembers * 100 : 0;
