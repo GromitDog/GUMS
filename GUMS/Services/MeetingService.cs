@@ -24,7 +24,6 @@ public class MeetingService : IMeetingService
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    // Tests pin the clock so date-relative behaviour doesn't drift as real time passes
     private DateTime Today => _timeProvider.GetLocalNow().Date;
 
     // ===== Meeting CRUD Operations =====

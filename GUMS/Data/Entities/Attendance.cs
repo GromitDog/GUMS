@@ -38,12 +38,18 @@ public class Attendance
     /// </summary>
     public bool PlanningToAttend { get; set; } = false;
 
+    /// <summary>
+    /// Attending an overnight event during the day only, going home each night.
+    /// Day campers still pay and need consent like everyone else, but never accrue nights away.
+    /// </summary>
+    public bool IsDayCamper { get; set; } = false;
+
     public string? Notes { get; set; }
 
     /// <summary>
     /// Number of nights stayed for multi-day events.
     /// Auto-calculated from meeting dates but manually editable.
-    /// Null for single-day meetings.
+    /// Null for single-day meetings. Always 0 for day campers.
     /// </summary>
     [Range(0, 365)]
     public int? NightsAway { get; set; }

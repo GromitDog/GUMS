@@ -148,7 +148,7 @@ public partial class RecordAttendance
         {
             if (attended && !record.NightsAway.HasValue)
             {
-                record.NightsAway = defaultNightsAway;
+                record.NightsAway = record.IsDayCamper ? 0 : defaultNightsAway;
             }
             else if (!attended)
             {
@@ -185,6 +185,17 @@ public partial class RecordAttendance
     {
         record.PlanningToAttend = planning;
         _savedAt = null;
+    }
+
+    private void ToggleDayCamper(Attendance record, bool isDayCamper)
+    {
+        record.IsDayCamper = isDayCamper;
+        _savedAt = null;
+        if (record.Attended)
+        {
+            // Day campers go home each night; switching back restores the full stay
+            record.NightsAway = isDayCamper ? 0 : defaultNightsAway;
+        }
     }
 
     private void ToggleConsentEmail(Attendance record, bool received)
@@ -236,6 +247,7 @@ public partial class RecordAttendance
             record.ConsentEmailDate = null;
             record.ConsentFormReceived = false;
             record.ConsentFormDate = null;
+            record.IsDayCamper = false;
         }
         else
         {
