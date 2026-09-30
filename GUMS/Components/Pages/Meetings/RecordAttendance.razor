@@ -47,12 +47,15 @@
     }
     else
     {
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-2">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 mb-md-4 gap-2">
             <div>
-                <h2>Record Attendance</h2>
-                <p class="text-muted mb-0">
+                <h2 class="d-none d-md-block">Record Attendance</h2>
+                <p class="text-muted mb-0 d-none d-md-block">
                     <strong>@meeting.Title</strong> - @meeting.Date.ToString("dddd, dd MMMM yyyy")
                 </p>
+                <!-- Phones: the meeting is the heading, leaving more of the screen for the list -->
+                <h2 class="h4 mb-0 d-md-none">@meeting.Title</h2>
+                <p class="text-muted mb-0 d-md-none">@meeting.Date.ToString("dddd d MMMM")</p>
             </div>
             <div class="d-none d-md-block">
                 <button class="btn btn-success btn-lg" @onclick="SaveAttendance" disabled="@isSaving">
@@ -65,41 +68,72 @@
             </div>
         </div>
 
+        @if (HasSectionChoice)
+        {
+            <!-- Phones: one section at a time, opening on the job for this meeting's date -->
+            <div class="btn-group w-100 mb-3 d-md-none" role="group" aria-label="Register sections">
+                <input type="radio" class="btn-check" name="registerSection" id="sectionRegister" autocomplete="off"
+                       checked="@(_activeSection == RegisterSection.Register)"
+                       @onchange="@(() => ShowSection(RegisterSection.Register))" />
+                <label class="btn btn-outline-primary" for="sectionRegister">
+                    <i class="bi bi-clipboard-check"></i> Register
+                </label>
+                @if (requiresConsent)
+                {
+                    <input type="radio" class="btn-check" name="registerSection" id="sectionConsent" autocomplete="off"
+                           checked="@(_activeSection == RegisterSection.Consent)"
+                           @onchange="@(() => ShowSection(RegisterSection.Consent))" />
+                    <label class="btn btn-outline-primary" for="sectionConsent">
+                        <i class="bi bi-file-earmark-check"></i> Consent
+                    </label>
+                }
+                @if (OffersAvailabilitySection)
+                {
+                    <input type="radio" class="btn-check" name="registerSection" id="sectionAvailability" autocomplete="off"
+                           checked="@(_activeSection == RegisterSection.Availability)"
+                           @onchange="@(() => ShowSection(RegisterSection.Availability))" />
+                    <label class="btn btn-outline-primary" for="sectionAvailability">
+                        <i class="bi bi-person-badge"></i> Leaders
+                    </label>
+                }
+            </div>
+        }
+
         <div class="row">
             <div class="col-lg-8">
-                <!-- Quick Stats -->
-                <div class="card mb-3">
+                <!-- Quick Stats (not while planning leaders on a phone, where present/absent means nothing yet) -->
+                <div class="card mb-3 @(_activeSection == RegisterSection.Availability ? "d-none d-md-flex" : "")">
                     <div class="card-body py-2">
                         @{
                             var visibleRecords = GetVisibleAttendanceRecords();
                             var girlAttendanceRecords = attendanceRecords.Where(a => memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == Data.Enums.PersonType.Girl).ToList();
                         }
-                        @if (requiresConsent)
+                        @if (_activeSection == RegisterSection.Consent)
                         {
                             var saidYes = girlAttendanceRecords.Count(a => a.ConsentFormReceived || a.ConsentEmailReceived);
                             var saidNo = girlAttendanceRecords.Count(a => a.ConsentDeclined);
                             var noAnswer = girlAttendanceRecords.Count(a => !a.ConsentEmailReceived && !a.ConsentFormReceived && !a.ConsentDeclined);
                             var chaseForForms = girlAttendanceRecords.Count(a => a.ConsentEmailReceived && !a.ConsentFormReceived && !a.ConsentDeclined);
-                            <div class="d-flex justify-content-around text-center">
+                            <div class="d-flex justify-content-around text-center gap-2">
                                 <div>
                                     <h4 class="mb-0 text-success">@saidYes</h4>
-                                    <small class="text-muted">Said Yes</small>
+                                    <small class="text-muted d-block lh-sm">Said Yes</small>
                                 </div>
                                 <div>
                                     <h4 class="mb-0 text-danger">@saidNo</h4>
-                                    <small class="text-muted">Declined</small>
+                                    <small class="text-muted d-block lh-sm">Declined</small>
                                 </div>
                                 <div>
                                     <h4 class="mb-0 @(noAnswer > 0 ? "text-secondary" : "")">@noAnswer</h4>
-                                    <small class="text-muted">No Answer</small>
+                                    <small class="text-muted d-block lh-sm">No Answer</small>
                                 </div>
                                 <div>
                                     <h4 class="mb-0 @(chaseForForms > 0 ? "text-warning" : "text-success")">@chaseForForms</h4>
-                                    <small class="text-muted">Chase Forms</small>
+                                    <small class="text-muted d-block lh-sm">Chase Forms</small>
                                 </div>
                                 <div>
                                     <h4 class="mb-0">@girlAttendanceRecords.Count</h4>
-                                    <small class="text-muted">Total</small>
+                                    <small class="text-muted d-block lh-sm">Total</small>
                                 </div>
                             </div>
                         }
@@ -123,17 +157,17 @@
                     </div>
                 </div>
 
-                <!-- Consent Tracking (if meeting requires consent) - shown ABOVE attendance -->
+                <!-- Consent Tracking (if meeting requires consent) - above attendance on desktop, its own tab on phones -->
                 @if (requiresConsent)
                 {
-                    <div class="card mb-3">
+                    <div class="card mb-3 @PhoneSectionClass(RegisterSection.Consent)">
                         <div class="card-header" style="background-color: #FFC107; color: #212529;">
                             <h5 class="mb-0">
                                 <i class="bi bi-file-earmark-check"></i> Consent Form Tracking
                             </h5>
                         </div>
                         <div class="card-body">
-                            <p class="text-muted mb-3">
+                            <p class="text-muted mb-3 d-none d-md-block">
                                 This meeting has activities that require consent forms. Track the status of consent below.
                                 Only members with a received consent form will appear in the attendance checklist.
                             </p>
@@ -208,7 +242,7 @@
                                 </table>
                             </div>
 
-                            <!-- Mobile: card view -->
+                            <!-- Mobile: card view with big toggles, Form in first as it's the usual job -->
                             <div class="d-md-none">
                                 @foreach (var record in attendanceRecords.Where(a => memberLookup.ContainsKey(a.MembershipNumber) && memberLookup[a.MembershipNumber].PersonType == PersonType.Girl).OrderBy(a => memberLookup[a.MembershipNumber].FullName))
                                 {
@@ -233,36 +267,32 @@
                                                 <span class="badge bg-light text-dark border">Not Started</span>
                                             }
                                         </div>
-                                        <div class="d-flex gap-3">
-                                            <div class="form-check">
-                                                <input type="checkbox" class="form-check-input"
-                                                       checked="@record.ConsentEmailReceived"
-                                                       @onchange="@(e => ToggleConsentEmail(record, (bool)(e.Value ?? false)))" />
-                                                <label class="form-check-label small">Email</label>
-                                            </div>
-                                            <div class="form-check">
-                                                <input type="checkbox" class="form-check-input"
-                                                       checked="@record.ConsentFormReceived"
-                                                       @onchange="@(e => ToggleConsentForm(record, (bool)(e.Value ?? false)))" />
-                                                <label class="form-check-label small">Form In</label>
-                                            </div>
-                                            <div class="form-check">
-                                                <input type="checkbox" class="form-check-input"
-                                                       checked="@record.ConsentDeclined"
-                                                       @onchange="@(e => ToggleConsentDeclined(record, (bool)(e.Value ?? false)))" />
-                                                <label class="form-check-label small">Declined</label>
-                                            </div>
-                                            @if (isMultiDayMeeting)
-                                            {
-                                                <div class="form-check">
-                                                    <input type="checkbox" class="form-check-input"
-                                                           checked="@record.IsDayCamper"
-                                                           disabled="@record.ConsentDeclined"
-                                                           @onchange="@(e => ToggleDayCamper(record, (bool)(e.Value ?? false)))" />
-                                                    <label class="form-check-label small">Day Camper</label>
-                                                </div>
-                                            }
+                                        <div class="d-flex gap-2">
+                                            <input type="checkbox" class="btn-check" id="consent-form-@record.MembershipNumber" autocomplete="off"
+                                                   checked="@record.ConsentFormReceived"
+                                                   @onchange="@(e => ToggleConsentForm(record, (bool)(e.Value ?? false)))" />
+                                            <label class="btn btn-outline-success flex-grow-1" for="consent-form-@record.MembershipNumber">
+                                                <i class="bi bi-file-earmark-check"></i> Form in
+                                            </label>
+                                            <input type="checkbox" class="btn-check" id="consent-email-@record.MembershipNumber" autocomplete="off"
+                                                   checked="@record.ConsentEmailReceived"
+                                                   @onchange="@(e => ToggleConsentEmail(record, (bool)(e.Value ?? false)))" />
+                                            <label class="btn btn-outline-primary" for="consent-email-@record.MembershipNumber">Email</label>
+                                            <input type="checkbox" class="btn-check" id="consent-declined-@record.MembershipNumber" autocomplete="off"
+                                                   checked="@record.ConsentDeclined"
+                                                   @onchange="@(e => ToggleConsentDeclined(record, (bool)(e.Value ?? false)))" />
+                                            <label class="btn btn-outline-secondary" for="consent-declined-@record.MembershipNumber">Declined</label>
                                         </div>
+                                        @if (isMultiDayMeeting)
+                                        {
+                                            <input type="checkbox" class="btn-check" id="consent-daycamper-@record.MembershipNumber" autocomplete="off"
+                                                   checked="@record.IsDayCamper"
+                                                   disabled="@record.ConsentDeclined"
+                                                   @onchange="@(e => ToggleDayCamper(record, (bool)(e.Value ?? false)))" />
+                                            <label class="btn btn-outline-info btn-sm w-100 mt-2" for="consent-daycamper-@record.MembershipNumber">
+                                                <i class="bi bi-sun"></i> Day camper
+                                            </label>
+                                        }
                                     </div>
                                 }
                             </div>
@@ -305,7 +335,7 @@
                 }
                 @if (leaderRecords.Any())
                 {
-                    <div class="card mb-3">
+                    <div class="card mb-3 @PhoneSectionClass(RegisterSection.Availability)">
                         <div class="card-header" style="background-color: #FFF3CD; color: #212529;">
                             <h5 class="mb-0">
                                 <i class="bi bi-person-badge"></i> Leader Availability
@@ -347,17 +377,15 @@
                                 @foreach (var record in leaderRecords)
                                 {
                                     var member = memberLookup[record.MembershipNumber];
-                                    <div class="mobile-consent-card">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <strong>@member.FullName</strong>
-                                            <div class="form-check">
-                                                <input type="checkbox" class="form-check-input"
-                                                       checked="@record.PlanningToAttend"
-                                                       @onchange="@(e => TogglePlanningToAttend(record, (bool)(e.Value ?? false)))" />
-                                                <label class="form-check-label small">Attending</label>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <label class="mobile-consent-card d-flex justify-content-between align-items-center">
+                                        <strong>@member.FullName</strong>
+                                        <span class="form-check mb-0">
+                                            <input type="checkbox" class="form-check-input"
+                                                   checked="@record.PlanningToAttend"
+                                                   @onchange="@(e => TogglePlanningToAttend(record, (bool)(e.Value ?? false)))" />
+                                            <span class="form-check-label small">Planning to attend</span>
+                                        </span>
+                                    </label>
                                 }
                             </div>
 
@@ -371,16 +399,16 @@
                 }
 
                 <!-- Attendance Checklist -->
-                <div class="card">
+                <div class="card @PhoneSectionClass(RegisterSection.Register)">
                     <div class="card-header d-flex justify-content-between align-items-center" style="background-color: var(--gg-primary-blue); color: white;">
-                        <h5 class="mb-0">
+                        <h5 class="mb-0 d-none d-md-block">
                             <i class="bi bi-people"></i> Attendance Checklist
                         </h5>
-                        <div>
-                            <button class="btn btn-sm btn-light me-1" @onclick="MarkAllPresent">
+                        <div class="d-flex gap-2 flex-fill flex-md-grow-0">
+                            <button class="btn btn-sm btn-light flex-fill flex-md-grow-0" @onclick="MarkAllPresent">
                                 <i class="bi bi-check-all"></i> All Present
                             </button>
-                            <button class="btn btn-sm btn-outline-light" @onclick="MarkAllAbsent">
+                            <button class="btn btn-sm btn-outline-light flex-fill flex-md-grow-0" @onclick="MarkAllAbsent">
                                 <i class="bi bi-x"></i> Clear All
                             </button>
                         </div>
@@ -396,6 +424,17 @@
                                 .ToList();
                         }
 
+                        @if (requiresConsent)
+                        {
+                            <div class="px-3 py-2 small text-muted border-bottom">
+                                <i class="bi bi-info-circle"></i> Only girls with a consent form in are listed.
+                                <button type="button" class="btn btn-link btn-sm p-0 align-baseline d-md-none"
+                                        @onclick="@(() => ShowSection(RegisterSection.Consent))">
+                                    Record a form
+                                </button>
+                            </div>
+                        }
+
                         @if (girls.Any())
                         {
                             <div class="px-3 py-2" style="background-color: #E3F2FD;">
@@ -405,22 +444,22 @@
                                 @foreach (var record in girls)
                                 {
                                     var member = memberLookup[record.MembershipNumber];
-                                    <div class="list-group-item d-flex justify-content-between align-items-center @(record.Attended ? "list-group-item-success" : "")">
-                                        <div class="d-flex align-items-center">
-                                            <div class="form-check form-switch me-3">
+                                    <div class="list-group-item p-0 d-flex align-items-stretch @(record.Attended ? "list-group-item-success" : "")">
+                                        <label class="register-row d-flex align-items-center flex-grow-1 mb-0 ps-3 py-2">
+                                            <span class="form-check form-switch me-3">
                                                 <input class="form-check-input" type="checkbox" role="switch"
                                                        id="att-@record.MembershipNumber"
                                                        checked="@record.Attended"
                                                        @onchange="@(e => ToggleAttendance(record, (bool)(e.Value ?? false)))"
                                                        style="width: 3em; height: 1.5em;" />
-                                            </div>
-                                            <div>
+                                            </span>
+                                            <span>
                                                 <strong>@member.FullName</strong>
                                                 <br />
                                                 <small class="text-muted">@member.MembershipNumber @(member.Section != null ? $"- {member.Section}" : "")</small>
-                                            </div>
-                                        </div>
-                                        <div class="d-flex align-items-center gap-3">
+                                            </span>
+                                        </label>
+                                        <div class="d-flex flex-column flex-md-row justify-content-center align-items-end align-items-md-center gap-1 gap-md-3 pe-3 text-nowrap">
                                             @if (isMultiDayMeeting)
                                             {
                                                 <div class="form-check mb-0">
@@ -454,22 +493,22 @@
                                 @foreach (var record in leaders)
                                 {
                                     var member = memberLookup[record.MembershipNumber];
-                                    <div class="list-group-item d-flex justify-content-between align-items-center @(record.Attended ? "list-group-item-success" : "")">
-                                        <div class="d-flex align-items-center">
-                                            <div class="form-check form-switch me-3">
+                                    <div class="list-group-item p-0 d-flex align-items-stretch @(record.Attended ? "list-group-item-success" : "")">
+                                        <label class="register-row d-flex align-items-center flex-grow-1 mb-0 ps-3 py-2">
+                                            <span class="form-check form-switch me-3">
                                                 <input class="form-check-input" type="checkbox" role="switch"
                                                        id="att-@record.MembershipNumber"
                                                        checked="@record.Attended"
                                                        @onchange="@(e => ToggleAttendance(record, (bool)(e.Value ?? false)))"
                                                        style="width: 3em; height: 1.5em;" />
-                                            </div>
-                                            <div>
+                                            </span>
+                                            <span>
                                                 <strong>@member.FullName</strong>
                                                 <br />
                                                 <small class="text-muted">@member.MembershipNumber - Leader</small>
-                                            </div>
-                                        </div>
-                                        <div>
+                                            </span>
+                                        </label>
+                                        <div class="d-flex flex-column flex-md-row justify-content-center align-items-end align-items-md-center gap-1 gap-md-3 pe-3 text-nowrap">
                                             @if (record.Attended)
                                             {
                                                 <span class="badge bg-success">Present</span>
@@ -490,7 +529,7 @@
                                 <i class="bi bi-people" style="font-size: 2rem;"></i>
                                 @if (requiresConsent)
                                 {
-                                    <p class="mb-0">No members with consent forms received. Use the consent tracking section above to record received forms.</p>
+                                    <p class="mb-0">No members with consent forms received yet. Record received forms under Consent Form Tracking.</p>
                                 }
                                 else
                                 {
@@ -504,7 +543,7 @@
                 <!-- Activity Completions -->
                 @if (_meetingActivities.Any(a => a.BadgeClauseId.HasValue || a.UmaDefinitionId.HasValue || a.BadgeDefinitionId.HasValue))
                 {
-                    <div class="card mt-4">
+                    <div class="card mt-4 @PhoneSectionClass(RegisterSection.Register)">
                         <div class="card-header" style="background-color: #7B1FA2; color: white;">
                             <h5 class="mb-0">
                                 <i class="bi bi-check2-square"></i> Record Activity Completions
@@ -539,9 +578,10 @@
                                             <div class="col-md-4 col-lg-3 mb-1">
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox"
+                                                           id="done-@activity.Id-@record.MembershipNumber"
                                                            checked="@GetCompletion(activity.Id, record.MembershipNumber)"
                                                            @onchange="@(e => SetCompletion(activity.Id, record.MembershipNumber, (bool)(e.Value ?? false)))" />
-                                                    <label class="form-check-label small">@member.FullName</label>
+                                                    <label class="form-check-label small" for="done-@activity.Id-@record.MembershipNumber">@member.FullName</label>
                                                 </div>
                                             </div>
                                         }
@@ -555,7 +595,7 @@
                 <!-- Nights Away Tracking (for multi-day meetings) -->
                 @if (isMultiDayMeeting)
                 {
-                    <div class="card mt-4">
+                    <div class="card mt-4 @PhoneSectionClass(RegisterSection.Register)">
                         <div class="card-header" style="background-color: #198754; color: white;">
                             <h5 class="mb-0">
                                 <i class="bi bi-moon-stars"></i> Nights Away Tracking
@@ -689,9 +729,9 @@
                     </div>
                 </div>
 
-                <!-- Actions -->
+                <!-- Actions (phones save from the sticky bar instead) -->
                 <div class="d-grid gap-2 mt-3">
-                    <button class="btn btn-success btn-lg" @onclick="SaveAttendance" disabled="@isSaving">
+                    <button class="btn btn-success btn-lg d-none d-md-block" @onclick="SaveAttendance" disabled="@isSaving">
                         @if (isSaving)
                         {
                             <span class="spinner-border spinner-border-sm me-1" role="status"></span>
@@ -705,15 +745,30 @@
             </div>
         </div>
 
-        <!-- Mobile sticky save button -->
+        <!-- Mobile sticky save bar: stays on the register so late arrivals can still be ticked off -->
         <div class="d-md-none mobile-sticky-action">
-            <button class="btn btn-success w-100" @onclick="SaveAttendance" disabled="@isSaving">
-                @if (isSaving)
-                {
-                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                }
-                <i class="bi bi-check-lg"></i> Save Attendance
-            </button>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="small text-danger mb-2">
+                    <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+                </div>
+            }
+            @if (_savedAt.HasValue)
+            {
+                <button class="btn btn-outline-success btn-lg w-100" @onclick="SaveAndStay" disabled="@isSaving">
+                    <i class="bi bi-check-circle-fill"></i> Saved at @_savedAt.Value.ToString("HH:mm")
+                </button>
+            }
+            else
+            {
+                <button class="btn btn-success btn-lg w-100" @onclick="SaveAndStay" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    }
+                    <i class="bi bi-check-lg"></i> Save Attendance
+                </button>
+            }
         </div>
     }
 </div>

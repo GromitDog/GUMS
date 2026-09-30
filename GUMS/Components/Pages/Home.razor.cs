@@ -21,7 +21,7 @@ public partial class Home
     // Meeting info
     private DateTime? _nextMeetingDate;
     private int _upcomingMeetingCount;
-    private Meeting? _todayMeeting;
+    private List<Meeting> _todayMeetings = new();
 
     // Attendance alerts
     private int _attendanceConcernCount;
@@ -63,14 +63,7 @@ public partial class Home
             _nextMeetingDate = await MeetingService.GetNextMeetingDateAsync();
             var upcomingMeetings = await MeetingService.GetUpcomingAsync();
             _upcomingMeetingCount = upcomingMeetings.Count;
-
-            // A meeting is "today" if it starts today, or is a multi-day event spanning today
-            var today = DateTime.Today;
-            _todayMeeting = upcomingMeetings
-                .Where(m => m.Date.Date == today
-                            || (m.Date.Date <= today && m.EndDate.HasValue && m.EndDate.Value.Date >= today))
-                .OrderBy(m => m.StartTime)
-                .FirstOrDefault();
+            _todayMeetings = await MeetingService.GetMeetingsHappeningOnAsync(DateTime.Today);
 
             // Load attendance alerts — 5+ consecutive regular meetings missed
             var attendanceConcerns = await AttendanceService.GetConsecutiveAbsenceAlertsAsync(5);

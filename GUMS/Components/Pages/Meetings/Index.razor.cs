@@ -12,6 +12,8 @@ public partial class Index
 
     private List<Meeting> upcomingMeetings = new();
     private List<Meeting> pastMeetings = new();
+    private List<Meeting> todayMeetings = new();
+    private HashSet<int> todayMeetingIds = new();
     private DateTime? nextMeetingDate;
     private Dictionary<int, AttendanceStats> attendanceStatsCache = new();
 
@@ -57,9 +59,12 @@ public partial class Index
             upcomingMeetings = await MeetingService.GetUpcomingAsync();
             pastMeetings = await MeetingService.GetPastAsync();
             nextMeetingDate = await MeetingService.GetNextMeetingDateAsync();
+            todayMeetings = await MeetingService.GetMeetingsHappeningOnAsync(DateTime.Today);
+            todayMeetingIds = todayMeetings.Select(m => m.Id).ToHashSet();
 
-            // Load attendance stats for recent past meetings
-            foreach (var meeting in pastMeetings.Take(20))
+            // Stats drive the register/consent status on each row, so load them for the
+            // upcoming list and the most recent past meetings
+            foreach (var meeting in upcomingMeetings.Concat(pastMeetings.Take(20)))
             {
                 var stats = await AttendanceService.GetMeetingAttendanceStatsAsync(meeting.Id);
                 attendanceStatsCache[meeting.Id] = stats;

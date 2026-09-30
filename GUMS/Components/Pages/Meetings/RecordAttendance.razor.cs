@@ -30,6 +30,23 @@ public partial class RecordAttendance
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
 
+    // Phones show one section at a time; desktop shows them all
+    private enum RegisterSection { Register, Consent, Availability }
+    private RegisterSection _activeSection = RegisterSection.Register;
+
+    // Set by the phone save bar, which stays on the page; cleared by the next change
+    private DateTime? _savedAt;
+
+    private bool IsFutureMeeting => meeting != null && meeting.Date.Date > DateTime.Today;
+
+    private bool HasLeaders => attendanceRecords.Any(a =>
+        memberLookup.TryGetValue(a.MembershipNumber, out var person) && person.PersonType == PersonType.Leader);
+
+    // Leader availability is for planning, so on the day it would only be mistaken for the register
+    private bool OffersAvailabilitySection => IsFutureMeeting && HasLeaders;
+
+    private bool HasSectionChoice => requiresConsent || OffersAvailabilitySection;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
@@ -46,6 +63,12 @@ public partial class RecordAttendance
             if (meeting == null) return;
 
             requiresConsent = await AttendanceService.MeetingRequiresConsentAsync(MeetingId);
+
+            // Before an event that needs consent the job is recording returned forms;
+            // on the day, or afterwards, it's ticking off who is here
+            _activeSection = requiresConsent && IsFutureMeeting
+                ? RegisterSection.Consent
+                : RegisterSection.Register;
 
             isMultiDayMeeting = meeting.EndDate.HasValue && meeting.EndDate.Value > meeting.Date;
             if (isMultiDayMeeting)
@@ -96,6 +119,15 @@ public partial class RecordAttendance
         }
     }
 
+    private void ShowSection(RegisterSection section)
+    {
+        _activeSection = section;
+    }
+
+    // Sections other than the active one are hidden on phones only
+    private string PhoneSectionClass(RegisterSection section) =>
+        section == _activeSection ? string.Empty : "d-none d-md-flex";
+
     private bool GetCompletion(int activityId, string membershipNumber)
     {
         return _completions.GetValueOrDefault((activityId, membershipNumber), false);
@@ -104,11 +136,13 @@ public partial class RecordAttendance
     private void SetCompletion(int activityId, string membershipNumber, bool completed)
     {
         _completions[(activityId, membershipNumber)] = completed;
+        _savedAt = null;
     }
 
     private void ToggleAttendance(Attendance record, bool attended)
     {
         record.Attended = attended;
+        _savedAt = null;
 
         if (isMultiDayMeeting)
         {
@@ -144,16 +178,19 @@ public partial class RecordAttendance
     private void UpdateNightsAway(Attendance record, int? nights)
     {
         record.NightsAway = nights;
+        _savedAt = null;
     }
 
     private void TogglePlanningToAttend(Attendance record, bool planning)
     {
         record.PlanningToAttend = planning;
+        _savedAt = null;
     }
 
     private void ToggleDayCamper(Attendance record, bool isDayCamper)
     {
         record.IsDayCamper = isDayCamper;
+        _savedAt = null;
         if (record.Attended)
         {
             // Day campers go home each night; switching back restores the full stay
@@ -164,6 +201,7 @@ public partial class RecordAttendance
     private void ToggleConsentEmail(Attendance record, bool received)
     {
         record.ConsentEmailReceived = received;
+        _savedAt = null;
         if (received)
         {
             if (!record.ConsentEmailDate.HasValue)
@@ -181,6 +219,7 @@ public partial class RecordAttendance
     private void ToggleConsentForm(Attendance record, bool received)
     {
         record.ConsentFormReceived = received;
+        _savedAt = null;
         if (received)
         {
             if (!record.ConsentFormDate.HasValue)
@@ -198,6 +237,7 @@ public partial class RecordAttendance
     private void ToggleConsentDeclined(Attendance record, bool declined)
     {
         record.ConsentDeclined = declined;
+        _savedAt = null;
         if (declined)
         {
             if (!record.ConsentDeclinedDate.HasValue)
@@ -239,7 +279,13 @@ public partial class RecordAttendance
         }
     }
 
-    private async Task SaveAttendance()
+    // Desktop saves return to the meeting page. The phone save bar stays on the register so a
+    // leader can save as girls arrive and keep ticking off late arrivals.
+    private Task SaveAttendance() => SaveAsync(stayOnPage: false);
+
+    private Task SaveAndStay() => SaveAsync(stayOnPage: true);
+
+    private async Task SaveAsync(bool stayOnPage)
     {
         isSaving = true;
         errorMessage = string.Empty;
@@ -264,6 +310,12 @@ public partial class RecordAttendance
                 if (completionRecords.Any())
                 {
                     await ProgrammeService.SaveCompletionsAsync(MeetingId, completionRecords);
+                }
+
+                if (stayOnPage)
+                {
+                    _savedAt = DateTime.Now;
+                    return;
                 }
 
                 NavigationManager.NavigateTo($"/Meetings/View/{MeetingId}?success=attendance");

@@ -8,6 +8,12 @@
     </div>
 </div>
 
+<!-- Phones: taking the register is one tap from any page -->
+<a href="/Meetings/Attendance/Today" class="register-shortcut"
+   onclick="document.querySelector('.navbar-toggler').checked = false">
+    <span class="bi bi-clipboard-check" aria-hidden="true"></span> Register
+</a>
+
 <input type="checkbox" title="Navigation menu" class="navbar-toggler"/>
 
 <div class="nav-scrollable" onclick="if(event.target.closest('a.nav-link')) document.querySelector('.navbar-toggler').click()">

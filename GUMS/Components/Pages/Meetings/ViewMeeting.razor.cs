@@ -128,6 +128,10 @@ public partial class ViewMeeting
         }
     }
 
+    // Before an event that needs consent, the register page is where returned forms get ticked off
+    private bool ConsentFormsAreTheJob =>
+        meeting != null && requiresConsent && meeting.Date.Date > DateTime.Today;
+
     // ===== Event Payments =====
 
     private bool HasEventCost =>

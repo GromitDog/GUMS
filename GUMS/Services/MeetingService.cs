@@ -409,6 +409,20 @@ public class MeetingService : IMeetingService
         return await _context.Meetings.AnyAsync(m => m.Date.Date == date.Date);
     }
 
+    public async Task<List<Meeting>> GetMeetingsHappeningOnAsync(DateTime date)
+    {
+        var day = date.Date;
+        var nextDay = day.AddDays(1);
+
+        return await _context.Meetings
+            .Include(m => m.MeetingActivities.OrderBy(a => a.SortOrder))
+            .AsNoTracking()
+            .Where(m => m.Date < nextDay && (m.EndDate ?? m.Date) >= day)
+            .OrderBy(m => m.Date)
+            .ThenBy(m => m.StartTime)
+            .ToListAsync();
+    }
+
     public async Task<DateTime?> GetNextMeetingDateAsync()
     {
         var today = Today;

@@ -38,6 +38,13 @@ public interface IMeetingService
     // ===== Query Helpers =====
 
     Task<bool> MeetingExistsOnDateAsync(DateTime date);
+
+    /// <summary>
+    /// Meetings taking place on the given day: those starting that day plus multi-day
+    /// events whose span includes it, in start order.
+    /// </summary>
+    Task<List<Meeting>> GetMeetingsHappeningOnAsync(DateTime date);
+
     Task<DateTime?> GetNextMeetingDateAsync();
     Task<int> GetMeetingCountInRangeAsync(DateTime startDate, DateTime endDate);
 }

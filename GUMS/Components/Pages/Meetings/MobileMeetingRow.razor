@@ -1,0 +1,28 @@
+<div class="list-group-item p-0 d-flex align-items-stretch @(IsToday ? "mobile-meeting-today" : "")">
+    <a href="/Meetings/Attendance/@Meeting.Id"
+       class="mobile-meeting-link d-flex align-items-center gap-2 flex-grow-1 text-reset text-decoration-none">
+        <div class="mobile-meeting-date text-center">
+            @if (IsToday)
+            {
+                <div class="small text-uppercase mobile-meeting-cta">Today</div>
+            }
+            else
+            {
+                <div class="small text-muted text-uppercase">@Meeting.Date.ToString("ddd")</div>
+            }
+            <div class="fs-4 fw-semibold lh-1">@Meeting.Date.Day</div>
+            <div class="small text-muted text-uppercase">@Meeting.Date.ToString("MMM")</div>
+        </div>
+        <div class="mobile-meeting-text flex-grow-1">
+            <div class="fw-semibold mobile-meeting-title">@Meeting.Title</div>
+            <div class="small @_statusClass">
+                <i class="bi @_statusIcon"></i> @_statusText
+            </div>
+        </div>
+        <i class="bi bi-chevron-right text-muted"></i>
+    </a>
+    <a href="/Meetings/View/@Meeting.Id" class="mobile-meeting-details d-flex align-items-center justify-content-center"
+       title="Meeting details" aria-label="Details for @Meeting.Title">
+        <i class="bi bi-info-circle"></i>
+    </a>
+</div>

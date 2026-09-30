@@ -15,6 +15,31 @@
     background-color: rgba(255, 255, 255, 0.5);
 }
 
+.register-shortcut {
+    position: absolute;
+    top: 0.5rem;
+    right: 5rem;
+    height: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.9rem;
+    border-radius: 6px;
+    background-color: var(--gg-white);
+    color: var(--gg-dark-navy);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.register-shortcut:hover {
+    background-color: var(--gg-light-cyan);
+    color: var(--gg-dark-navy);
+}
+
+.register-shortcut .bi {
+    color: inherit;
+    margin-right: 0.4rem;
+}
+
 .top-row {
     min-height: 5rem;
     display: flex;
@@ -109,7 +134,8 @@
 }
 
 @media (min-width: 641px) {
-    .navbar-toggler {
+    .navbar-toggler,
+    .register-shortcut {
         display: none;
     }
 

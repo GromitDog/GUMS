@@ -45,7 +45,7 @@ namespace GUMS.Pages.Account
             return Page();
         }
 
-        public async Task<IActionResult> OnPostAsync()
+        public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
         {
             if (!ModelState.IsValid)
             {
@@ -60,6 +60,13 @@ namespace GUMS.Pages.Account
 
             if (result.Succeeded)
             {
+                // Back to the page that needed the login (e.g. the phone Register shortcut).
+                // Local URLs only, so a crafted login link can't send someone to another site.
+                if (Url.IsLocalUrl(returnUrl))
+                {
+                    return LocalRedirect(returnUrl);
+                }
+
                 return Redirect("/");
             }
 

@@ -823,6 +823,7 @@ public class MeetingServiceTests : IDisposable
             .ReturnsAsync(term);
         var sut = CreateSutWithToday(new DateTime(2026, 8, 1)); // Before the term starts
 
+
         // Act
         var result = await sut.GenerateRegularMeetingsForTermAsync(1, "Test Meeting");
 
@@ -896,6 +897,93 @@ public class MeetingServiceTests : IDisposable
 
         // Assert
         result.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetMeetingsHappeningOnAsync_ShouldReturnMeetingsStartingThatDay_AndIgnoreOtherDays()
+    {
+        // Arrange
+        _context.Meetings.AddRange(
+            CreateMeeting("Day Before", new DateTime(2026, 5, 14)),
+            CreateMeeting("On The Day", new DateTime(2026, 5, 15)),
+            CreateMeeting("Day After", new DateTime(2026, 5, 16))
+        );
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _sut.GetMeetingsHappeningOnAsync(new DateTime(2026, 5, 15));
+
+        // Assert
+        result.Select(m => m.Title).Should().Equal("On The Day");
+    }
+
+    [Fact]
+    public async Task GetMeetingsHappeningOnAsync_ShouldIncludeMultiDayEventsSpanningTheDay()
+    {
+        // Arrange
+        _context.Meetings.AddRange(
+            CreateMultiDayMeeting("Spans The Day", new DateTime(2026, 5, 14), new DateTime(2026, 5, 16)),
+            CreateMultiDayMeeting("Ends On The Day", new DateTime(2026, 5, 13), new DateTime(2026, 5, 15)),
+            CreateMultiDayMeeting("Ended Day Before", new DateTime(2026, 5, 12), new DateTime(2026, 5, 14)),
+            CreateMultiDayMeeting("Starts Day After", new DateTime(2026, 5, 16), new DateTime(2026, 5, 18))
+        );
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _sut.GetMeetingsHappeningOnAsync(new DateTime(2026, 5, 15));
+
+        // Assert
+        result.Select(m => m.Title).Should().BeEquivalentTo("Spans The Day", "Ends On The Day");
+    }
+
+    [Fact]
+    public async Task GetMeetingsHappeningOnAsync_ShouldOrderByStartDateThenStartTime()
+    {
+        // Arrange
+        var evening = CreateMeeting("Evening", new DateTime(2026, 5, 15));
+        evening.StartTime = new TimeOnly(18, 30);
+        evening.EndTime = new TimeOnly(20, 0);
+        var morning = CreateMeeting("Morning", new DateTime(2026, 5, 15));
+        morning.StartTime = new TimeOnly(9, 0);
+        morning.EndTime = new TimeOnly(11, 0);
+        var camp = CreateMultiDayMeeting("Camp", new DateTime(2026, 5, 14), new DateTime(2026, 5, 16));
+
+        _context.Meetings.AddRange(evening, morning, camp);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _sut.GetMeetingsHappeningOnAsync(new DateTime(2026, 5, 15));
+
+        // Assert
+        result.Select(m => m.Title).Should().Equal("Camp", "Morning", "Evening");
+    }
+
+    [Fact]
+    public async Task GetMeetingsHappeningOnAsync_ShouldIgnoreTimeOfDayOnDateArgument()
+    {
+        // Arrange
+        _context.Meetings.Add(CreateMeeting("On The Day", new DateTime(2026, 5, 15)));
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _sut.GetMeetingsHappeningOnAsync(new DateTime(2026, 5, 15, 19, 45, 0));
+
+        // Assert
+        result.Should().ContainSingle(m => m.Title == "On The Day");
+    }
+
+    [Fact]
+    public async Task GetMeetingsHappeningOnAsync_ShouldReturnEmpty_WhenNothingThatDay()
+    {
+        // Arrange
+        _context.Meetings.Add(CreateMeeting("Another Day", new DateTime(2026, 5, 20)));
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _sut.GetMeetingsHappeningOnAsync(new DateTime(2026, 5, 15));
+
+        // Assert
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -1141,6 +1229,14 @@ public class MeetingServiceTests : IDisposable
             Title = title,
             LocationName = "Hall"
         };
+    }
+
+    private Meeting CreateMultiDayMeeting(string title, DateTime startDate, DateTime endDate)
+    {
+        var meeting = CreateMeeting(title, startDate);
+        meeting.EndDate = endDate;
+        meeting.MeetingType = MeetingType.Extra;
+        return meeting;
     }
 
     #endregion
