@@ -223,7 +223,13 @@ public class MeetingService : IMeetingService
 
     public async Task<List<MeetingActivity>> GetActivitiesForMeetingAsync(int meetingId)
     {
+        // Load the linked badge clause, fun badge and UMA so callers can show
+        // what each activity counts towards without a second round trip.
         return await _context.MeetingActivities
+            .Include(a => a.BadgeClause)
+                .ThenInclude(c => c!.BadgeDefinition)
+            .Include(a => a.BadgeDefinition)
+            .Include(a => a.UmaDefinition)
             .AsNoTracking()
             .Where(a => a.MeetingId == meetingId)
             .OrderBy(a => a.SortOrder)

@@ -667,6 +667,61 @@ public class MeetingServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetActivitiesForMeetingAsync_ShouldLoadLinkedBadgeClauseUmaAndFunBadge()
+    {
+        // Arrange
+        var skillsBuilder = new BadgeDefinition
+        {
+            Name = "Innovate Stage 2",
+            SkillsBuilderName = "Innovate",
+            Stage = 2,
+            BadgeType = BadgeType.SkillsBuilder,
+            Section = Section.Brownie,
+            Theme = Theme.SkillsForMyFuture
+        };
+        var clause = new BadgeClause { Name = "Design a gadget", BadgeDefinition = skillsBuilder, EstimatedMinutes = 30 };
+        var funBadge = new BadgeDefinition { Name = "Penguin Party", BadgeType = BadgeType.FunBadge, Section = Section.Brownie };
+        var uma = new UmaDefinition { Name = "Toads on Roads", Theme = Theme.TakeAction, Minutes = 20 };
+        _context.BadgeClauses.Add(clause);
+        _context.BadgeDefinitions.Add(funBadge);
+        _context.UmaDefinitions.Add(uma);
+        await _context.SaveChangesAsync();
+
+        var meeting = CreateMeeting("Meeting", new DateTime(2026, 3, 4));
+        meeting.MeetingActivities.Add(new MeetingActivity { Name = "Gadgets", BadgeClauseId = clause.Id, SortOrder = 0 });
+        meeting.MeetingActivities.Add(new MeetingActivity { Name = "Huddle and Waddle", BadgeDefinitionId = funBadge.Id, SortOrder = 1 });
+        meeting.MeetingActivities.Add(new MeetingActivity { Name = "Toads on Roads", UmaDefinitionId = uma.Id, SortOrder = 2 });
+        meeting.MeetingActivities.Add(new MeetingActivity { Name = "Games", SortOrder = 3 });
+        _context.Meetings.Add(meeting);
+        await _context.SaveChangesAsync();
+        _context.ChangeTracker.Clear();
+
+        // Act
+        var result = await _sut.GetActivitiesForMeetingAsync(meeting.Id);
+
+        // Assert
+        result.Should().HaveCount(4);
+
+        result[0].BadgeClause.Should().NotBeNull();
+        result[0].BadgeClause!.Name.Should().Be("Design a gadget");
+        result[0].BadgeClause!.BadgeDefinition.Should().NotBeNull();
+        result[0].BadgeClause!.BadgeDefinition.SkillsBuilderName.Should().Be("Innovate");
+        result[0].BadgeClause!.BadgeDefinition.Stage.Should().Be(2);
+
+        result[1].BadgeDefinition.Should().NotBeNull();
+        result[1].BadgeDefinition!.Name.Should().Be("Penguin Party");
+        result[1].BadgeDefinition!.BadgeType.Should().Be(BadgeType.FunBadge);
+
+        result[2].UmaDefinition.Should().NotBeNull();
+        result[2].UmaDefinition!.Theme.Should().Be(Theme.TakeAction);
+        result[2].UmaDefinition!.Minutes.Should().Be(20);
+
+        result[3].BadgeClause.Should().BeNull();
+        result[3].BadgeDefinition.Should().BeNull();
+        result[3].UmaDefinition.Should().BeNull();
+    }
+
+    [Fact]
     public async Task AddActivityAsync_ShouldAddActivity_WithCorrectSortOrder()
     {
         // Arrange
