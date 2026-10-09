@@ -783,6 +783,45 @@ public class MeetingServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateActivityAsync_ShouldPersistBadgeUmaAndFunBadgeLinks()
+    {
+        // Arrange
+        var skillsBuilder = new BadgeDefinition { Name = "Lead Stage 1", BadgeType = BadgeType.SkillsBuilder, Section = Section.Brownie };
+        var clause = new BadgeClause { Name = "Lead a game", BadgeDefinition = skillsBuilder };
+        var funBadge = new BadgeDefinition { Name = "Penguin Party", BadgeType = BadgeType.FunBadge, Section = Section.Brownie };
+        var uma = new UmaDefinition { Name = "Toads on Roads", Theme = Theme.TakeAction, Minutes = 20 };
+        _context.BadgeClauses.Add(clause);
+        _context.BadgeDefinitions.Add(funBadge);
+        _context.UmaDefinitions.Add(uma);
+
+        var meeting = CreateMeeting("Meeting", new DateTime(2026, 3, 4));
+        meeting.MeetingActivities.Add(new MeetingActivity { Name = "Unlinked" });
+        _context.Meetings.Add(meeting);
+        await _context.SaveChangesAsync();
+        var activityId = meeting.MeetingActivities[0].Id;
+        _context.ChangeTracker.Clear();
+
+        // Act - edit a detached copy, as the edit page does
+        var result = await _sut.UpdateActivityAsync(new MeetingActivity
+        {
+            Id = activityId,
+            MeetingId = meeting.Id,
+            Name = "Unlinked",
+            BadgeClauseId = clause.Id,
+            BadgeDefinitionId = funBadge.Id,
+            UmaDefinitionId = uma.Id
+        });
+
+        // Assert
+        result.Success.Should().BeTrue();
+
+        var updated = await _context.MeetingActivities.AsNoTracking().FirstAsync(a => a.Id == activityId);
+        updated.BadgeClauseId.Should().Be(clause.Id);
+        updated.BadgeDefinitionId.Should().Be(funBadge.Id);
+        updated.UmaDefinitionId.Should().Be(uma.Id);
+    }
+
+    [Fact]
     public async Task DeleteActivityAsync_ShouldDeleteActivity()
     {
         // Arrange

@@ -269,6 +269,7 @@ public class MeetingService : IMeetingService
         existingActivity.RequiresConsent = activity.RequiresConsent;
         existingActivity.SortOrder = activity.SortOrder;
         existingActivity.BadgeClauseId = activity.BadgeClauseId;
+        existingActivity.BadgeDefinitionId = activity.BadgeDefinitionId;
         existingActivity.UmaDefinitionId = activity.UmaDefinitionId;
 
         await _context.SaveChangesAsync();
