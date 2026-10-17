@@ -27,6 +27,7 @@ public partial class Index
     private string pastSearchText = string.Empty;
     private int pastPageSize = 20;
     private const int PageIncrement = 20;
+    private bool showNotOnGoOnly;
 
     protected override async Task OnInitializedAsync()
     {
@@ -76,13 +77,20 @@ public partial class Index
     }
 
     private List<Meeting> FilteredPastMeetings =>
-        string.IsNullOrWhiteSpace(pastSearchText)
-            ? pastMeetings
-            : pastMeetings.Where(m =>
+        pastMeetings
+            .Where(m => !showNotOnGoOnly || IsAwaitingGo(m))
+            .Where(m => string.IsNullOrWhiteSpace(pastSearchText) ||
                 m.Title.Contains(pastSearchText, StringComparison.OrdinalIgnoreCase) ||
                 m.Date.ToString("ddd dd MMM yyyy").Contains(pastSearchText, StringComparison.OrdinalIgnoreCase) ||
                 m.LocationName.Contains(pastSearchText, StringComparison.OrdinalIgnoreCase))
             .ToList();
+
+    private bool IsAwaitingGo(Meeting meeting) =>
+        MeetingService.CanRecordOnGo(meeting) && !meeting.RecordedOnGo;
+
+    // Recent meetings sit in the upcoming list for 3 weeks, so count both lists
+    private int NotOnGoCount =>
+        upcomingMeetings.Concat(pastMeetings).Count(IsAwaitingGo);
 
     private void TogglePastMeetings()
     {
@@ -99,6 +107,38 @@ public partial class Index
     {
         pastSearchText = e.Value?.ToString() ?? string.Empty;
         await EnsureAttendanceStatsLoaded();
+    }
+
+    private async Task OnNotOnGoOnlyChanged(ChangeEventArgs e)
+    {
+        showNotOnGoOnly = (bool)(e.Value ?? false);
+        await EnsureAttendanceStatsLoaded();
+    }
+
+    private async Task ToggleRecordedOnGo(Meeting meeting, ChangeEventArgs e)
+    {
+        var recorded = (bool)(e.Value ?? false);
+        errorMessage = string.Empty;
+
+        try
+        {
+            var result = await MeetingService.SetRecordedOnGoAsync(meeting.Id, recorded);
+
+            if (result.Success)
+            {
+                meeting.RecordedOnGo = recorded;
+                // With the "not yet on Go" filter on, ticking drops the row and pulls in another
+                await EnsureAttendanceStatsLoaded();
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
     }
 
     private async Task EnsureAttendanceStatsLoaded()

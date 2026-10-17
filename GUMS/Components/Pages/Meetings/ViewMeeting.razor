@@ -402,6 +402,16 @@
                             </p>
                         }
 
+                        @if (MeetingService.CanRecordOnGo(meeting))
+                        {
+                            <hr />
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="recordedOnGo"
+                                       checked="@meeting.RecordedOnGo" @onchange="ToggleRecordedOnGo" />
+                                <label class="form-check-label" for="recordedOnGo">Recorded on Go</label>
+                            </div>
+                        }
+
                         @if (HasEventCost)
                         {
                             <hr />

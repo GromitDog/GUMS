@@ -128,6 +128,34 @@ public partial class ViewMeeting
         }
     }
 
+    // ===== Go Recording =====
+
+    private async Task ToggleRecordedOnGo(ChangeEventArgs e)
+    {
+        if (meeting == null) return;
+
+        var recorded = (bool)(e.Value ?? false);
+        errorMessage = string.Empty;
+
+        try
+        {
+            var result = await MeetingService.SetRecordedOnGoAsync(MeetingId, recorded);
+
+            if (result.Success)
+            {
+                meeting.RecordedOnGo = recorded;
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+    }
+
     // ===== Event Payments =====
 
     private bool HasEventCost =>
