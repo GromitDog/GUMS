@@ -984,6 +984,9 @@ namespace GUMS.Migrations
                     b.Property<string>("ProgrammeNotes")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("RecordedOnGo")
+                        .HasColumnType("INTEGER");
+
                     b.Property<TimeOnly>("StartTime")
                         .HasColumnType("TEXT");
 

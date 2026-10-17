@@ -1128,6 +1128,136 @@ public class MeetingServiceTests : IDisposable
 
     #endregion
 
+    #region Go Recording Tests
+
+    private static readonly DateTime GoToday = new(2026, 3, 18);
+
+    [Fact]
+    public void CanRecordOnGo_ShouldBeTrue_ForPastMeeting()
+    {
+        var sut = CreateSutWithToday(GoToday);
+
+        sut.CanRecordOnGo(CreateMeeting("Past", GoToday.AddDays(-7))).Should().BeTrue();
+    }
+
+    [Fact]
+    public void CanRecordOnGo_ShouldBeTrue_ForMeetingToday()
+    {
+        var sut = CreateSutWithToday(GoToday);
+
+        sut.CanRecordOnGo(CreateMeeting("Tonight", GoToday)).Should().BeTrue();
+    }
+
+    [Fact]
+    public void CanRecordOnGo_ShouldBeFalse_ForFutureMeeting()
+    {
+        var sut = CreateSutWithToday(GoToday);
+
+        sut.CanRecordOnGo(CreateMeeting("Next Week", GoToday.AddDays(7))).Should().BeFalse();
+    }
+
+    [Fact]
+    public void CanRecordOnGo_ShouldBeFalse_WhileMultiDayEventIsStillRunning()
+    {
+        var sut = CreateSutWithToday(GoToday);
+        var camp = CreateMeeting("Camp", GoToday.AddDays(-1));
+        camp.EndDate = GoToday.AddDays(1);
+
+        sut.CanRecordOnGo(camp).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SetRecordedOnGoAsync_ShouldMarkPastMeetingAsRecorded()
+    {
+        // Arrange
+        var sut = CreateSutWithToday(GoToday);
+        var meeting = CreateMeeting("Past Meeting", GoToday.AddDays(-7));
+        _context.Meetings.Add(meeting);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await sut.SetRecordedOnGoAsync(meeting.Id, true);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        var saved = await _context.Meetings.AsNoTracking().FirstAsync(m => m.Id == meeting.Id);
+        saved.RecordedOnGo.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SetRecordedOnGoAsync_ShouldClearFlag_WhenUnticked()
+    {
+        // Arrange
+        var sut = CreateSutWithToday(GoToday);
+        var meeting = CreateMeeting("Past Meeting", GoToday.AddDays(-7));
+        meeting.RecordedOnGo = true;
+        _context.Meetings.Add(meeting);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await sut.SetRecordedOnGoAsync(meeting.Id, false);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        var saved = await _context.Meetings.AsNoTracking().FirstAsync(m => m.Id == meeting.Id);
+        saved.RecordedOnGo.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SetRecordedOnGoAsync_ShouldFail_WhenMeetingHasNotHappenedYet()
+    {
+        // Arrange
+        var sut = CreateSutWithToday(GoToday);
+        var meeting = CreateMeeting("Next Week", GoToday.AddDays(7));
+        _context.Meetings.Add(meeting);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await sut.SetRecordedOnGoAsync(meeting.Id, true);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("hasn't happened yet");
+        var saved = await _context.Meetings.AsNoTracking().FirstAsync(m => m.Id == meeting.Id);
+        saved.RecordedOnGo.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SetRecordedOnGoAsync_ShouldFail_WhenMeetingNotFound()
+    {
+        // Act
+        var result = await _sut.SetRecordedOnGoAsync(999, true);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("Meeting not found.");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldNotResetRecordedOnGo()
+    {
+        // Arrange - the edit form doesn't carry the Go flag, so editing must leave it alone
+        var meeting = CreateMeeting("Original", GoToday.AddDays(-7));
+        meeting.RecordedOnGo = true;
+        _context.Meetings.Add(meeting);
+        await _context.SaveChangesAsync();
+        _context.ChangeTracker.Clear();
+
+        var edited = CreateMeeting("Renamed", GoToday.AddDays(-7));
+        edited.Id = meeting.Id;
+
+        // Act
+        var result = await _sut.UpdateAsync(edited);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        var saved = await _context.Meetings.AsNoTracking().FirstAsync(m => m.Id == meeting.Id);
+        saved.Title.Should().Be("Renamed");
+        saved.RecordedOnGo.Should().BeTrue();
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private Meeting CreateMeeting(string title, DateTime date)

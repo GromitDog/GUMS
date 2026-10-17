@@ -402,6 +402,33 @@ public class MeetingService : IMeetingService
         return await query.ToListAsync();
     }
 
+    // ===== Go Recording =====
+
+    public bool CanRecordOnGo(Meeting meeting)
+    {
+        return (meeting.EndDate ?? meeting.Date).Date <= Today;
+    }
+
+    public async Task<(bool Success, string ErrorMessage)> SetRecordedOnGoAsync(int meetingId, bool recorded)
+    {
+        var meeting = await _context.Meetings.FindAsync(meetingId);
+        if (meeting == null)
+        {
+            return (false, "Meeting not found.");
+        }
+
+        // Unticking is always allowed so a mistake can be undone
+        if (recorded && !CanRecordOnGo(meeting))
+        {
+            return (false, "This meeting hasn't happened yet, so it can't be recorded on Go.");
+        }
+
+        meeting.RecordedOnGo = recorded;
+        await _context.SaveChangesAsync();
+
+        return (true, string.Empty);
+    }
+
     // ===== Query Helpers =====
 
     public async Task<bool> MeetingExistsOnDateAsync(DateTime date)

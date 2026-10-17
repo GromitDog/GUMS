@@ -69,6 +69,12 @@ public class Meeting
     /// </summary>
     public int? CostCentreId { get; set; }
 
+    /// <summary>
+    /// Leader has logged this meeting's programme on Go (Girlguiding's online system).
+    /// Set via IMeetingService.SetRecordedOnGoAsync, not by editing the meeting.
+    /// </summary>
+    public bool RecordedOnGo { get; set; }
+
     // Navigation properties
     public Account? IncomeAccount { get; set; }
     public CostCentre? CostCentre { get; set; }

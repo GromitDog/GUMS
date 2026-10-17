@@ -35,6 +35,15 @@ public interface IMeetingService
     int CalculateNightsForMeeting(DateTime startDate, DateTime? endDate);
     Task<List<Meeting>> GetMultiDayMeetingsAsync(int? limit = null);
 
+    // ===== Go Recording =====
+
+    /// <summary>
+    /// True once the meeting (or the last day of a multi-day event) has been reached,
+    /// so its programme can be logged on Go.
+    /// </summary>
+    bool CanRecordOnGo(Meeting meeting);
+    Task<(bool Success, string ErrorMessage)> SetRecordedOnGoAsync(int meetingId, bool recorded);
+
     // ===== Query Helpers =====
 
     Task<bool> MeetingExistsOnDateAsync(DateTime date);
